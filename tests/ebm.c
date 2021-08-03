@@ -143,5 +143,5 @@ int main(int argc, char *argv[])
 
     if(p_brown < pProd)
 	Fatal("Oops, something wrong: p_brown should be < product(pVals), but p_brown = %g while product = %g", p_brown, pProd);
-    printf("p-value < %g = bitscore %g (product gives %g ; bitscore %g)\n", p_brown, -log_p_brown/log(2.0), pProd, -log_pProd/log(2));
+    printf("p-value < %g = bitscore %g (product gives %g ; bitscore %g )\n", p_brown, -log_p_brown/log(2.0), pProd, -log_pProd/log(2));
 }
