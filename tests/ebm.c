@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 	if(pVal[i]>0) {
 	    x += -log(pVal[i]); log_pProd+=log(pVal[i]); pProd *= pVal[i];
 	}
-	else fprintf(stderr, "skipping pVal[%d]=%g\n",i, pVal[i]);
+	else if(getenv("VERBOSE")) fprintf(stderr, "skipping pVal[%d]=%g\n",i, pVal[i]);
     x *= 2;
     //printf("x = %g\n", x);
     log_p_brown = logChi2_pair((int)(df_brown+0.5), 1.0*x/c);
