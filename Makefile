@@ -1,3 +1,6 @@
+# Attempt to figure out what kind of machine we're on.
+ARCH=$(shell uname -a | awk '{if(/CYGWIN/){V="CYGWIN"}else if(/Darwin/){V="Darwin"}else if(/Linux/){V="Linux"}}END{if(V){print V;exit}else{print "unknown OS" > "/dev/stderr"; exit 1}}')
+
 # Number of cores to use when invoking parallelism
 ifndef CORES
     CORES := 2
@@ -39,7 +42,7 @@ debug:
 libwayne:
 	$(MAKE) $(LIBOUT)
 	mv src/$(LIBOUT) .
-	[ `arch` = Darwin ] || ar r $(LIBOUT)
+	[ "$(ARCH)" = Darwin ] || ar r $(LIBOUT)
 
 debug_clean:
 	@$(MAKE) 'DEBUG=-ggdb' 'LIBOUT=libwayne-g.a' raw_clean
