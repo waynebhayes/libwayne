@@ -338,7 +338,7 @@ const char* getFileExtension(char* filename) {
 unsigned int GetFancySeed(Boolean trulyRandom)
 {
     unsigned int seed = 0;
-    const char *cmd = "(hostname -i || hostname | sum | awk '{srand(); printf "%d.%d.%d.%d\n",256*rand(),256*rand(),$1/256,$1%256}') 2>/dev/null | awk '{for(i=1;i<=NF;i++)if(match($i,\"^[0-9]*\\\\.[0-9]*\\\\.[0-9]*\\\\.[0-9]*$\")){IP=$i;exit}}END{if(!IP)IP=\"127.0.0.1\"; print IP}'";
+    const char *cmd = "(hostname -i || hostname | sum | awk '{srand(); printf \"%d.%d.%d.%d\n\",256*rand(),256*rand(),$1/256,$1%256}') 2>/dev/null | awk '{for(i=1;i<=NF;i++)if(match($i,\"^[0-9]*\\\\.[0-9]*\\\\.[0-9]*\\\\.[0-9]*$\")){IP=$i;exit}}END{if(!IP)IP=\"127.0.0.1\"; print IP}'";
     FILE *fp=popen(cmd,"r");
     int i, ip[4], host_ip=0;
     if(4!=fscanf(fp," %d.%d.%d.%d ", ip, ip+1, ip+2, ip+3)) Fatal("Attempt to get IPv4 address failed:\n%s\n",cmd);
