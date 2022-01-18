@@ -9,7 +9,7 @@
 # The below variables should be set by a parent process
 #LIBWAYNE_HOME:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/..
 #CC=$(LIBWAYNE_HOME)/bin/wgcc
-#CC=../bin/wgcc -g
+CC=../bin/wgcc -g
 
 #% : %.c
 #	$(CC) -c $(CFLAGS) %.c
