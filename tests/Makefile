@@ -5,9 +5,11 @@
 # If you think your change is spiffy, send it to me and maybe I'll include it
 # 
 # Wayne Hayes, whayes@uci.edu (previously wayne@cs.toronto.edu)
+
+# The below variables should be set by a parent process
 #LIBWAYNE_HOME:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/..
 #CC=$(LIBWAYNE_HOME)/bin/wgcc
-CC=../bin/wgcc -g
+#CC=../bin/wgcc -g
 
 #% : %.c
 #	$(CC) -c $(CFLAGS) %.c

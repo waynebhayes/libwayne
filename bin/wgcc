@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # The options below turn on lots and lots of gcc warnings.
 export CC="gcc -Wno-pointer-sign"
 
@@ -35,11 +35,15 @@ else
     fi
 fi
 
+STACKSIZE=$(uname -a | awk '/CYGWIN/{print "-Wl,--stack,83886080"}/Darwin/{print "-Wl,-stack_size -Wl,0x5000000"}')
 LIBWAYNE_HOME="`echo "$0" | sed 's,/[^/]*/[^/]*$,,'`"
-LIBWAYNE="-L '$LIBWAYNE_HOME' -I '$LIBWAYNE_HOME/include' '-lwayne$LIB_OPT' -lm '$STACKSIZE' -Wno-unused-command-line-argument $'SPEED'"
+LIBWAYNE_COPTS="-I $LIBWAYNE_HOME/include $STACKSIZE -Wno-unused-command-line-argument $SPEED"
+LIBWAYNE_LINK="-L $LIBWAYNE_HOME -lwayne$LIB_OPT -lm"
 
 if $doLink; then
-    exec $CC -I $LIBWAYNE_HOME/include $OtherIncs $everythingElse -L $LIBWAYNE_HOME $OtherLibs -lwayne$LIB_OPT -lm $libList `/bin/ls $LIBWAYNE_HOME/*.o 2>/dev/null`
+    set -x
+    exec $CC $LIBWAYNE_COPTS $OtherIncs $everythingElse $LIBWAYNE_LINK $OtherLibs $libList `/bin/ls $LIBWAYNE_HOME/*.o 2>/dev/null`
 else
-    exec $CC -c -I$LIBWAYNE_HOME/include $OtherIncs $everythingElse
+    set -x
+    exec $CC -c $LIBWAYNE_COPTS $OtherIncs $everythingElse
 fi
