@@ -18,7 +18,7 @@ all:
 	$(MAKE) tests
 	touch made
 
-libwayne.a:
+libwayne_all:
 	# Make the pg versions (for profiling)
 	$(MAKE) debug_clean
 	$(MAKE) -j$(CORES) 'PG=-pg' debug
@@ -31,7 +31,7 @@ libwayne.a:
 	$(MAKE) opt_clean
 	$(MAKE) -j$(CORES) opt
 
-tests: libwayne.a
+tests: libwayne_all
 	for x in ebm covar stats hashtest htree-test bintree-test; do (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | wc); done
 
 opt:
@@ -42,7 +42,6 @@ debug:
 
 libwayne:
 	$(MAKE) $(LIBOUT)
-	mv src/$(LIBOUT) .
 	[ "$(ARCH)" = Darwin ] || ar r $(LIBOUT)
 
 debug_clean:
@@ -65,6 +64,7 @@ clean:
 
 $(LIBOUT): src/$(LIBOUT)
 	ranlib src/$(LIBOUT)
+	mv src/$(LIBOUT) .
 
 src/$(LIBOUT):
 	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'DEBUG=$(DEBUG)'
