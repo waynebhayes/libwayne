@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "htree.h" // bintree is included there
 
 /*-------------------  Types  ------------------*/
@@ -115,3 +118,6 @@ void HTreeFree(HTREE *h)
 {
     HTreeFreeHelper(h, 0, h->tree);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

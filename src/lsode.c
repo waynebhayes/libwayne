@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using the FORTRAN routine LSODE.
  */
@@ -152,3 +155,6 @@ void LsodeFree(LSODE *l)
     free(l->RWORK);
     free(l);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

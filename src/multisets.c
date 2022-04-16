@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "multisets.h"
 #include "misc.h"
 #include <assert.h>
@@ -177,3 +180,6 @@ MULTISET *MultisetSubtract(MULTISET *C, MULTISET *A, MULTISET *B) {
     }
     return C;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

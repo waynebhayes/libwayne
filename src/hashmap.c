@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * Found by WBH via Google on 2020-12-23 and taken from https://gist.github.com/warmwaffles/6fb6786be7c86ed51fce
  * Original comment:
@@ -336,3 +339,6 @@ int hashmap_length(hashmap_t in){
     if(m != NULL) return m->size;
     else return 0;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

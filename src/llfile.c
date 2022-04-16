@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdio.h>
 #include <assert.h>
 #include <strings.h>
@@ -470,3 +473,6 @@ int llfscanf(LLFILE *llfp, const char *fmt, ...)
 
     return result;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

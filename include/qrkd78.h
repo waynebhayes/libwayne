@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _QRKD78_H
 #define _QRKD78_H
 
@@ -31,3 +34,6 @@ long double Qrkd78Integrate(QRKD78 *r, long double TOUT);
 void Qrkd78Free(QRKD78 *r);
 
 #endif  /* _QRKD78_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

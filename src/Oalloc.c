@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdio.h>
 #include <malloc.h>
 #include "misc.h"
@@ -75,3 +78,6 @@ void Ofree(void)
     }
     numLeft = 0;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

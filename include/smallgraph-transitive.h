@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SMALLGRAPH_TRANSITIVE_H
 #define _SMALLGRAPH_TRANSITIVE_H 1
 
@@ -47,3 +50,6 @@ SMALL_GRAPH_CIRCULANTS *SmallGraphCirculantUniqueNext(SMALL_GRAPH_CIRCULANTS *rr
 void SmallGraphCirculantUniqueFree(SMALL_GRAPH_CIRCULANTS *rrg);
 
 #endif /* _SMALLGRAPH_TRANSITIVE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

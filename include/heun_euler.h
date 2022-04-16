@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _HEUN_EULER_H
 #define _HEUN_EULER_H
 
@@ -16,3 +19,6 @@ void init_heun_euler(int n, double t0, double dt, double *r, double *v, FF_EVAL 
 double integrate_heun_euler(double tout);
 
 #endif  /* _HEUN_EULER_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

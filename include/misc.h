@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _MISC_H
 #define _MISC_H
 #include <stdio.h>
@@ -167,3 +170,6 @@ unsigned int GetFancySeed(Boolean trulyRandom);
 
 #endif  /* _MISC_H */
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

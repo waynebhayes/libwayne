@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _HEAP_H
 #define _HEAP_H
 
@@ -45,3 +48,6 @@ int     HeapSanityCheck(HEAP*);   /* sanity check, for debugging */
 void    HeapPrint(HEAP*);   /* dump an entire heap.  You must have defined a HEAP_PRINT_FCN at HeapAlloc time. */
 
 #endif  /* _HEAP_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

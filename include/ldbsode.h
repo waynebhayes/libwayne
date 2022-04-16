@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _LDBSODE_H
 #define _LDBSODE_H
 
@@ -32,3 +35,6 @@ long double LDBsodeIntegrate(LDBSODE *b, long double TOUT);
 void LDBsodeFree(LDBSODE *b);
 
 #endif  /* _BSODE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

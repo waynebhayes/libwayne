@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _OALLOC_H
 #define _OALLOC_H
 #include <sys/types.h>
@@ -31,3 +34,6 @@ void *Ocalloc(unsigned n, size_t s);
 void Ofree(void);   /* note there are no arguments */
 
 #endif /* _OALLOC_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

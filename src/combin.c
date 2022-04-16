@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "misc.h"
 #include "sets.h"
 #include "combin.h"
@@ -329,3 +332,6 @@ double CombinCumulativeBinomialDensity(int n, int k, double x)
     assert(false);
     return 0.;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

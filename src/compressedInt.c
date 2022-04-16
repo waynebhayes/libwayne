@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* Read and write "compressed" signed but positive longs; these are stored
 ** as follows: MSB first, only 7 bits used per int.  High bit == 1 means
 ** there are more bytes coming to this integer; high bit==0 means this is
@@ -42,3 +45,6 @@ long CompressedIntWrite(long value, FILE *fp)
 	return EOF;
     return storeValue;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

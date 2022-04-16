@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 ** Eigen: compute eigenvalues & eigenvectors of SYMMETRIC input matrix A.
 ** Since the matrix is symmetric, it is sufficient if the upper right of
@@ -16,3 +19,6 @@
 #define EigenMaxN (1<<EigenLogMaxN)
 
 int Eigen(int N, double A[N][N], double eigval[N], double eigvec[N][N]);
+#ifdef __cplusplus
+} // end extern "C"
+#endif

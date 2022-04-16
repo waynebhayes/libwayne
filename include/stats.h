@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _STATS_H
 #define _STATS_H
 
@@ -89,3 +92,6 @@ double StatConfInterval(STAT*, double confidence);
 double StatTDistP2Z(double quantile, long freedom);
 
 #endif /* _STATS_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

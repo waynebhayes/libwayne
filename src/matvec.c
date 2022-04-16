@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
 #include "misc.h"
 #include "matvec.h"
@@ -682,4 +685,7 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+#endif
+#ifdef __cplusplus
+} // end extern "C"
 #endif

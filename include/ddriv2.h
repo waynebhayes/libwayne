@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _DDRIV2_H
 #define _DDRIV2_H
 
@@ -56,3 +59,6 @@ int Ddriv2WhichRoot(DDRIV2 *d);
 void Ddriv2Free(DDRIV2 *d);
 
 #endif  /* _DDRIV2_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

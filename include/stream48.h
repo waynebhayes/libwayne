@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*  math.c  --  should be in global math library  */
 #include <math.h>
 #include <unistd.h>
@@ -32,3 +35,6 @@ long Stream48Randomize(void);	 /* randomize current stream.  Return seed. */
 long Stream48RandInt(long minimum, long maximum); /* min, max inclusive */
 double Stream48Rand(void);	/* drand48 with min of 1e-10 */
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

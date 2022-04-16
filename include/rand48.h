@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _RAND48_H
 #define _RAND48_H
 
@@ -49,3 +52,6 @@ unsigned short *seed48(unsigned short seed16v[3]);
 void lcong48(unsigned short param[7]);
 
 #endif  /* _RAND48_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

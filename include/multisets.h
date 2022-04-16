@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _MULTI_SETS_H
 #define _MULTI_SETS_H
 #include "sets.h"
@@ -34,4 +37,7 @@ MULTISET *MultisetDeleteSet(MULTISET *mset, SET *s); /* remove a set of elements
 MULTISET *MultisetSum(MULTISET *C, MULTISET *A, MULTISET *B);  /* C = sum of A and B (sum is disjoint union)*/
 MULTISET *MultisetSubtract(MULTISET *C, MULTISET *A, MULTISET *B); /* C = difference of A and B. Negative result -> error */
 
+#endif
+#ifdef __cplusplus
+} // end extern "C"
 #endif

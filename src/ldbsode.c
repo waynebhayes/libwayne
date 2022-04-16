@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
 #include <assert.h>
 #include <malloc.h>
@@ -72,3 +75,6 @@ void LDBsodeFree(LDBSODE *b)
 {
     free(b);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using a symplectic 5-stage, 4th order Runge-Kutta formula.
  * We use a fixed timestep.  Stolen from dsweet@andamooka.org (David Sweet),
@@ -146,3 +149,6 @@ void Rk4sFree(RK4S *l)
     free(l->internalY);
     free(l);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

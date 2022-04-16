@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
 #include <assert.h>
 #include <malloc.h>
@@ -69,3 +72,6 @@ void BsodeFree(BSODE *b)
 {
     free(b);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _VARIABLE_LEAPFROG_H
 #define _VARIABLE_LEAPFROG_H
 
@@ -22,3 +25,6 @@ void init_variable_leapfrog(int n, double t0, TSTEP_EVAL dt_eval,
 double integrate_variable_leapfrog(double tout);
 
 #endif  /* _VARIABLE_LEAPFROG_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SETS_H
 #define _SETS_H
 /* Blame this on Wayne Hayes, wayne@csri.utoronto.ca.
@@ -217,3 +220,6 @@ void SSetDictFree(SSETDICT*);
 #endif
 
 #endif /* _SETS_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

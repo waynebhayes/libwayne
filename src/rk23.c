@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 *    Heun-Euler
 *
@@ -116,3 +119,6 @@ double Rk23Integrate(RK23 *r, double B)
     }
     return B;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

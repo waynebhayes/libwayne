@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _DVERK_H
 #define _DVERK_H
 
@@ -32,3 +35,6 @@ double DverkIntegrate(DVERK *r, double TOUT);
 void DverkFree(DVERK *d);
 
 #endif  /* _DVERK_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

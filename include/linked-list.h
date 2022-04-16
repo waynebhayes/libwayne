@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 ** linked-list.h
 */
@@ -119,3 +122,6 @@ foint LinkedListDelete( LINKED_LIST *ll, pCmpFcn CmpFcn, foint entry );
 void LinkedListSanityCheck( LINKED_LIST *ll, Boolean ordered );
 
 #endif  /* _LINKED_LIST_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

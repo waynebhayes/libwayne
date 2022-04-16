@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _LEAPFROG_H
 #define _LEAPFROG_H
 
@@ -15,3 +18,6 @@ void init_leapfrog(int n, double t0, double dt, double *r, double *v, FF_EVAL f)
 double integrate_leapfrog(double tout);
 
 #endif  /* _LEAPFROG_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 ** mem-debug.c
 */
@@ -256,3 +259,6 @@ void EnableMemoryTracking( const char *file, const int line )
 	Fatal_fl( "could not initialize memory tracking and leak detection",
 	    file, line);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

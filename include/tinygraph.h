@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _TINYGRAPH_H
 #define _TINYGRAPH_H
 
@@ -66,3 +69,6 @@ Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
 Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2);
 
 #endif /* _TINYGRAPH_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

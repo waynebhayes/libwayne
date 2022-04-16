@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _PRIORITY_QUEUE_H
 #define _PRIORITY_QUEUE_H
 
@@ -52,3 +55,6 @@ typedef LINKED_LIST PRIORITY_QUEUE;
 
 #endif /* PQ_HEAP / PQ_LL */
 #endif  /* _PRIORITY_QUEUE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

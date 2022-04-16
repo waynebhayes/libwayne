@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SDRIV2_H
 #define _SDRIV2_H
 
@@ -20,3 +23,6 @@ void init_sdriv2(int n, double time, double *y, F_EVAL f, int stiff_flag, double
 double integrate_sdriv2(double TOUT);
 
 #endif  /* _SDRIV2_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

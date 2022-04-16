@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _ADAPTIVE_RALSTON_H
 #define _ADAPTIVE_RALSTON_H
 
@@ -15,3 +18,6 @@ void init_adaptive_ralston(int n, double t0, double dt, double *r, double *v, FF
 double integrate_adaptive_ralston(double tout);
 
 #endif  /* _ADAPTIVE_RALSTON_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

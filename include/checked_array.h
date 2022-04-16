@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #define MAX_DIMENSIONS  8
 
 typedef struct _checked_array
@@ -12,3 +15,6 @@ typedef struct _checked_array
 */
 CHECKED_ARRAY *ArrayAlloc(int elementSize, int dim, ...);
 void *ArrayAccess(CHECKED_ARRAY *, ...);
+#ifdef __cplusplus
+} // end extern "C"
+#endif

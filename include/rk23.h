@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
@@ -19,3 +22,6 @@ RK23 *Rk23Alloc(int n, double t, double *y, F_EVAL f, int stiff_flag,
 double Rk23Integrate(RK23 *r, double B);
 
 #define Rk23Free(r) Free(r)
+#ifdef __cplusplus
+} // end extern "C"
+#endif

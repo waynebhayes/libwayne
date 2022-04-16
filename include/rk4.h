@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _RK4_H
 #define _RK4_H
 
@@ -25,3 +28,6 @@ double Rk4Integrate(RK4 *l, double TOUT);
 void Rk4Free(RK4 *l);
 
 #endif  /* _RK4_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

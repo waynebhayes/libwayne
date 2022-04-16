@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SEARCH_H
 #define _SEARCH_H
 
@@ -16,3 +19,6 @@ extern SearchFcn
     BinarySearch;	/* My version */
 
 #endif  /* _SEARCH_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

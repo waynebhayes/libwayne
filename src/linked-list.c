@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 ** linked-list.c
 */
@@ -285,3 +288,6 @@ void LinkedListSanityCheck( LINKED_LIST *ll, Boolean ordered )
         assert( ll->last->next == NULL );
     }
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _HTREE_H
 #define _HTREE_H
 
@@ -35,3 +38,6 @@ int HTreeSizes(HTREE *, char *keys[], int sizes[]);
 void HTreeFree(HTREE *);
 
 #endif  /* _HTREE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

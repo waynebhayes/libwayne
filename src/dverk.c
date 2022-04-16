@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using the FORTRAN routine DVERK.
  */
@@ -116,3 +119,6 @@ double DverkIntegrate(DVERK *r, double TOUT) /* returns actual tout */
     }
     return r->T;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _LSODE_H
 #define _LSODE_H
 
@@ -38,3 +41,6 @@ double LsodeIntegrate(LSODE *l, double TOUT);
 void LsodeFree(LSODE *l);
 
 #endif  /* _LSODE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

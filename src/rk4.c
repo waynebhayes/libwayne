@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using classical 4-stage, 4th order Runge-Kutta formula.
  * We use a fixed timestep.
@@ -114,3 +117,6 @@ void Rk4Free(RK4 *l)
 {
     free(l);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

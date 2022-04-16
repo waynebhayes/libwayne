@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "misc.h"
 #include "dynarray.h"
 #include <assert.h>
@@ -98,3 +101,6 @@ foint ArrayRemoveAll(ARRAY *A, foint elem, pCmpFcn cmp)
 
 
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

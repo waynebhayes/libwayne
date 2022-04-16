@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
  * Found by WBH via Google on 2020-12-23 and taken from https://gist.github.com/warmwaffles/6fb6786be7c86ed51fce
  * Adopted to allow foint rather than void* by Wayne B. Hayes.
@@ -79,3 +82,6 @@ extern void hashmap_free(hashmap_t in);
 extern int hashmap_length(hashmap_t in);
 
 #endif //__HASHMAP_H__
+#ifdef __cplusplus
+} // end extern "C"
+#endif

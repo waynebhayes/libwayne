@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* Version 0.0
 ** From "Wayne's Little DSA Library" (DSA == Data Structures and
 ** Algorithms) Feel free to change, modify, or burn these sources, but if
@@ -94,3 +97,6 @@ long long getll(FILE *fp)
     assert(1==fscanf(fp, "%s", word));
     return atoll(word);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

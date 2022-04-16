@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "graph.h"
 #include "graph-transitive.h"
 
@@ -515,3 +518,6 @@ void SmallGraphCirculantUniqueFree(GRAPH_CIRCULANTS *rrg)
     CombinFree(rrg->C);
     Free(rrg);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

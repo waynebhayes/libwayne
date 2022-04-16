@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* FA accesses a 1D FORTRAN array using FORTRAN semantics, ie, from 1
  * If you compiled your FORTRAN code using -r8, then integers take up
  * 64 bits, although half of them are not used. (Repeat after me:
@@ -13,3 +16,6 @@
 #define IFA(name, index) (*((name) + R8*((index)-1)))   /* integer array */
 #define RFA(name, index) (*((name) + (index)-1))        /* Real array */
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

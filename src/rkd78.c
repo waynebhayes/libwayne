@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using the FORTRAN routine RDMETH78.
  */
@@ -105,3 +108,6 @@ double Rkd78Integrate(RKD78 *r, double TOUT) /* returns actual tout */
     }
     return r->T;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

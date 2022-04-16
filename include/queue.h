@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* array implementation of queues of foints, from Lewis & Denenberg, p 77. */
 
 #ifndef _QUEUE_H
@@ -27,3 +30,6 @@ foint QueueBelowTop(QUEUE *q, int n);
 int QueueSize(QUEUE *q);
 
 #endif  /* _QUEUE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _STACK_H
 #define _STACK_H
 
@@ -27,3 +30,6 @@ foint StackBelowTop(STACK *s, int n);
 int StackSize(STACK *s);
 
 #endif  /* _STACK_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

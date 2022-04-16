@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _XSTUFF_H
 #define _XSTUFF_H
 
@@ -52,3 +55,6 @@ void rectangle(int x1, int y1, int x2, int y2);
 void clear_area(int x1, int y1, int x2, int y2);
 
 #endif  /* _XSTUFF_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

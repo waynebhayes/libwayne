@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "misc.h"
 
 /* Dynamic arrays: arrays that expand to fill the size needed
@@ -25,3 +28,6 @@ foint ArrayRemoveAll(ARRAY *A, foint elem, pCmpFcn cmp);
 ARRAY *ArrayAppend(ARRAY *C, ARRAY *A, ARRAY *B);
 int ArraySize(ARRAY *A);
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

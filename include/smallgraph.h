@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SMALLGRAPH_H
 #define _SMALLGRAPH_H
 
@@ -93,3 +96,6 @@ void SmallGraphCliqueFree(CLIQUE *);
 Boolean SmallGraphsIsomorphic(int *perm, SMALL_GRAPH *G1, SMALL_GRAPH *G2);
 
 #endif /* _SMALLGRAPH_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

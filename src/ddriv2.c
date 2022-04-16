@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  *
  * Integrate using the FORTRAN routine DDRIV2 from the book _Numerical
@@ -174,3 +177,6 @@ double Ddriv2Integrate(DDRIV2 *d, double TOUT) /* returns actual tout */
     }
     return d->T;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

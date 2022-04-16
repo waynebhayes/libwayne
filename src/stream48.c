@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*  math.c  --  should be in global math library  */
 #include "misc.h"
 #include "rand48.h"
@@ -81,3 +84,6 @@ int Stream48 (int n)
 
     return old;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

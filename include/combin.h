@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _COMBINATORICS_H
 #define _COMBINATORICS_H
 #include "misc.h"
@@ -63,3 +66,6 @@ Boolean CombinAllCombinations(int n, int m, Boolean (*fcn)(int, int *));
 Boolean CombinAllPermutations(int n, int array[n], Boolean (*fcn)(int, int *));
 
 #endif /* _COMBINATORICS_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

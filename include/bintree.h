@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _BINTREE_H
 #define _BINTREE_H
 
@@ -49,3 +52,6 @@ void BinTreeRebalance(BINTREE *tree);
 void BinTreeFree(BINTREE *);
 
 #endif  /* _BINTREE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

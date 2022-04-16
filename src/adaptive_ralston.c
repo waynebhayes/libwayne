@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -218,3 +221,6 @@ double integrate_adaptive_ralston(double tout)
 
     return tout;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

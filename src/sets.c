@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* Version 0.0
 ** From "Wayne's Little DSA Library" (DSA == Data Structures and
 ** Algorithms) Feel free to change, modify, or burn these sources, but if
@@ -716,4 +719,7 @@ char *TSetToString(int len, char s[], TSET set)
     s[len-1] = '\0';
     return s;
 }
+#endif
+#ifdef __cplusplus
+} // end extern "C"
 #endif

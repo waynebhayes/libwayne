@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* integrate.c
  * Integrate using the FORTRAN routine QRDMETH78.
  * (This is just a quad precision version of rkd78/rdmeth78)
@@ -106,3 +109,6 @@ long double Qrkd78Integrate(QRKD78 *r, long double TOUT) /* returns actual tout 
     }
     return r->T;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

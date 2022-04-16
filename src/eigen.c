@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "misc.h"
 #include "eigen.h"
 
@@ -25,3 +28,6 @@ int Eigen(int N, double A[N][N], double eigval[N], double eigvec[N][N])
 
     return INFO;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

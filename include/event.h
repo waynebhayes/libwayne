@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _EVENT_H
 #define _EVENT_H
 
@@ -37,3 +40,6 @@ extern Time _event_now;
 #define EventNow() _event_now
 
 #endif  /* _EVENT_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

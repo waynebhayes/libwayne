@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _SORTS_H
 #define _SORTS_H
 
@@ -40,3 +43,6 @@ extern int PointerSort(SortFcn, void *, size_t nel, size_t width, pfnCmpFcn);
 #endif
 
 #endif  /* _SORTS_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

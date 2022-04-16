@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _LONGLONG_H
 #define _LONGLONG_H
 
@@ -16,3 +19,6 @@ long long getll(FILE *fp);
 #define MAX_LLTOA_BUFS 100
 
 #endif  /* _LONGLONG_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

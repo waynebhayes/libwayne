@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _GRAPH_TRANSITIVE_H
 #define _GRAPH_TRANSITIVE_H 1
 
@@ -45,3 +48,6 @@ GRAPH_CIRCULANTS *GraphCirculantUniqueNext(GRAPH_CIRCULANTS *rrg);
 void GraphCirculantUniqueFree(GRAPH_CIRCULANTS *rrg);
 
 #endif /* _GRAPH_TRANSITIVE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

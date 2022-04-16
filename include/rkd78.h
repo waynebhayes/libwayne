@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _RKD78_H
 #define _RKD78_H
 
@@ -30,3 +33,6 @@ double Rkd78Integrate(RKD78 *r, double TOUT);
 void Rkd78Free(RKD78 *r);
 
 #endif  /* _RKD78_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

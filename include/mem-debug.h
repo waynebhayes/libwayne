@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /*
 ** mem-debug.h: note that memory tracking is available regardless of whether
 ** DEBUG is defined or not; it's dependent only upon whether or not you
@@ -154,3 +157,6 @@ void debugprintf( const char *format, ... ); /* do not call this function direct
 #endif
 
 #endif /* _DEBUG_H_ */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

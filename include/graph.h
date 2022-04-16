@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _GRAPH_H
 #define _GRAPH_H
 
@@ -128,3 +131,6 @@ void GraphCliqueFree(CLIQUE *);
 Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2);
 
 #endif /* _GRAPH_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif

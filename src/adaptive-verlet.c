@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <math.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -110,3 +113,6 @@ double integrate_leapfrog(double tout)
 */
     return tout;
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

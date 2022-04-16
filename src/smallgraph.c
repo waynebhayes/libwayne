@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "misc.h"
 #include "sets.h"
 #include "smallgraph.h"
@@ -508,3 +511,6 @@ Boolean SmallGraphsIsomorphic(int *perm, SMALL_GRAPH *G1, SMALL_GRAPH *G2)
     isoG1 = G1; isoG2 = G2;
     return !!CombinAllPermutations(n, perm, _permutationIdentical);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif

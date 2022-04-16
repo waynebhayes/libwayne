@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _MATVEC_H
 #define _MATVEC_H
 /*
@@ -98,3 +101,6 @@ void MatExpMat(int n, double result[n][n], double const A[n][n], double eps);
 */
 void MatGaussJordan(int n, double A[n][n], int m, double B[n][m]);
 #endif // _MATVEC_H
+#ifdef __cplusplus
+} // end extern "C"
+#endif

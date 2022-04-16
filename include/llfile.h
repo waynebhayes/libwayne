@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
  ** LLFILE: files whose length can be as long as the maximum "long long" int,
  ** which currently under gcc is 64 bits.
@@ -49,3 +52,6 @@ extern int llfscanf(LLFILE *stream, const char *fmt, ...);
 FILE *llfileNextSubfile(LLFILE *llfp);
 FILE *llfilePrevSubfile(LLFILE *llfp);
 
+#ifdef __cplusplus
+} // end extern "C"
+#endif

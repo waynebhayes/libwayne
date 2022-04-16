@@ -1,3 +1,6 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifndef _BSODE_H
 #define _BSODE_H
 
@@ -32,3 +35,6 @@ double BsodeIntegrate(BSODE *b, double TOUT);
 void BsodeFree(BSODE *b);
 
 #endif  /* _BSODE_H */
+#ifdef __cplusplus
+} // end extern "C"
+#endif
