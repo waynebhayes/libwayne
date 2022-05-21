@@ -88,12 +88,14 @@ GRAPH *GraphCopy(GRAPH *Gc, GRAPH *G)
 	Gc = GraphAlloc(G->n, G->sparse, G->supportNodeNames);
 
     Gc->sparse = G->sparse;
-    if(G->n > Gc->n)
+    if(true || G->n > Gc->n)
     {
 	if(G->sparse >= true)
 	{
 	    Gc->A = NULL;
 	    Gc->neighbor = Realloc(Gc->neighbor, G->n * sizeof(Gc->neighbor[0]));
+	    for(i=0;i<G->n;i++)
+		Gc->neighbor[i] = Realloc(NULL, G->degree[i] * sizeof(Gc->neighbor[i][0]));
 	    Gc->numEdges = G->numEdges;
 	    Gc->maxEdges = G->maxEdges;
 	    Gc->edgeList = Realloc(Gc->edgeList, 2*G->maxEdges*sizeof(int));
@@ -103,14 +105,16 @@ GRAPH *GraphCopy(GRAPH *Gc, GRAPH *G)
 		Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
 	    }
 	}
-	if(!G->sparse || G->sparse==both)
+	if(!G->sparse || G->sparse==both) {
 	    Gc->A = Realloc(Gc->A, G->n * sizeof(Gc->A[0]));
+	    for(i=0;i<G->n;i++) Gc->A[i] = SetCopy(NULL, G->A[i]);
+	}
 	Gc->degree = Realloc(Gc->degree, G->n * sizeof(Gc->degree[0]));
 	/* reallaoc doesn't zero out new entries, damn it */
 	for(i=Gc->n; i < G->n; i++)
 	{
 	    if(Gc->sparse >= true)
-		Gc->neighbor[i] = NULL;
+		Gc->neighbor[i] = Realloc(NULL, G->degree[i] * sizeof(Gc->neighbor[i][0]));
 	    if(!Gc->sparse || Gc->sparse==both)
 		Gc->A[i] = NULL;
 	}
