@@ -21,12 +21,12 @@ typedef struct _Graph {
     int n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
-    int *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
-    int **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
+    unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
+    unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
 #if SORT_NEIGHBORS
     SET *sorted; // Boolean array: when sparse, is the neighbor list of node[i] sorted or not?
 #endif
-    int maxEdges, numEdges, *edgeList; /* UNSORTED list of all edges in the graph, edgeList[0,..2*numEdges] */
+    unsigned maxEdges, numEdges, *edgeList; /* UNSORTED list of all edges in the graph, edgeList[0,..2*numEdges] */
     // next two members are only used if called with supportNodeNames=true;
     Boolean supportNodeNames;
     BINTREE *nameDict;	// string to int map

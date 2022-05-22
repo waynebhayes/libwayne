@@ -291,7 +291,8 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
 	else
 #endif
 	{
-	    int k, n, *neighbors, me, other;
+	    int k, n, me, other;
+	    unsigned *neighbors;
 	    // Check through the shorter list
 	    if(G->degree[i] < G->degree[j])
 	    {
@@ -331,7 +332,7 @@ int GraphNumCommonNeighbors(GRAPH *G, int i, int j)
     int numCommon1 = 0, numCommon2 = 0;
     if(G->sparse>=true) // loop version is MUCH faster, so use it if possible
     {
-	int k, n, *neighbors, me, other;
+	unsigned k, n, *neighbors, me, other;
 	// Check through the shorter list
 	if(G->degree[i] < G->degree[j])
 	{
