@@ -35,14 +35,16 @@ else
     fi
 fi
 
-STACKSIZE=$(uname -a | awk '/CYGWIN/{print "-Wl,--stack,83886080"}/Darwin/{print "-Wl,-stack_size -Wl,0x5000000"}')
+STACKSIZE=$(($CC -v 2>&1; uname -a) |
+    awk '/CYGWIN/{print "-Wl,--stack,83886080"}/gcc-/{actualGCC=1}actualGCC&&/Darwin/{print "-Wl,-stack_size -Wl,0x5000000"}')
 LIBWAYNE_HOME="`echo "$0" | sed 's,/[^/]*/[^/]*$,,'`"
 LIBWAYNE_COPTS="-I $LIBWAYNE_HOME/include $STACKSIZE -Wno-unused-command-line-argument $SPEED"
 LIBWAYNE_LINK="-L $LIBWAYNE_HOME -lwayne$LIB_OPT -lm"
 
 if $doLink; then
+    FILES=`/bin/ls $LIBWAYNE_HOME/*.o 2>/dev/null`
     set -x
-    exec $CC $LIBWAYNE_COPTS $OtherIncs $everythingElse $LIBWAYNE_LINK $OtherLibs $libList `/bin/ls $LIBWAYNE_HOME/*.o 2>/dev/null`
+    exec $CC $LIBWAYNE_COPTS $OtherIncs $everythingElse $LIBWAYNE_LINK $OtherLibs $libList $FILES
 else
     set -x
     exec $CC -c $LIBWAYNE_COPTS $OtherIncs $everythingElse
