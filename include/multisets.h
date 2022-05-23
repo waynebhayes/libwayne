@@ -11,11 +11,11 @@ extern "C" {
     Designed to quickly return and maintain the support(number of distinct elements) of the multiset.
 */
 
-typedef unsigned short int FREQTYPE; //Using unsigned char limits multiset to a multiplicty of 255
-#define MAX_MULTISET_FREQ 65535 //The largest number that can be stored in freqtype
+typedef unsigned char FREQTYPE; // unsigned char allows at most 255, use unsigned short for more.
+#define MAX_MULTISET_FREQ ((1U<<(8*sizeof(FREQTYPE)))-1) //The largest number that can be stored in freqtype
 typedef struct _multisetType {
-    unsigned int n; //is sizeof the array
-    unsigned int support; //number of distinct elements
+    unsigned int n; // sizeof the array
+    unsigned int support; // number of distinct elements
     FREQTYPE* array;
     SET *set; // The set version, without keeping count.
 } MULTISET;

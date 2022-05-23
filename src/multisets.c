@@ -79,6 +79,7 @@ FREQTYPE MultisetMultiplicity(MULTISET *mset, unsigned element) {
 MULTISET *MultisetAdd(MULTISET *mset, unsigned element) {
     assert(element < mset->n);
     SetAdd(mset->set, element);
+    assert(MAX_MULTISET_FREQ > 0);
     if (mset->array[element] == 0) mset->support++; //If there weren't any before cardinality goes up
     if (mset->array[element] == MAX_MULTISET_FREQ) //Check for unsigned overflow before incrementing
         Fatal("Multiset attempted to incremement past limit: %d", MAX_MULTISET_FREQ);
