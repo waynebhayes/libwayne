@@ -6,22 +6,31 @@
 #include "misc.h"
 #include "stats.h"
 
-char USAGE[] = "USAGE: %s batchSize precision confidence\n"
+char USAGE[] = "USAGE: %s batchSize confidence interval\n"
     "read numbers on the standard input (no files!), in batches of batchSize\n"
-    "keep reading until we know the mean within precision (smaller is better),\n"
-    "with confidence 'confidence' (closer to 1 is better)\n";
+    "keep reading until we know the mean within interval (smaller is better),\n"
+    "with confidence 'confidence' (closer to 1 is better)\n"
+    "NOTE: with no arguments, the default is batchSize 100 conf 0.99 interval 0.01\n";
 
 int main(int argc, char *argv[])
 {
     STAT *batch, *batchMeans;
-    int batchSize = atoi(argv[1]), numBins=0;
-    double sample, precision=atof(argv[2]), confidence=atof(argv[3]), histMin=0, histMax=0;
-    Boolean geom = false;
+    Boolean geom=false, allData=false;
+    int batchSize, numBins=0;
+    double sample, confidence, interval, histMin=0, histMax=0;
+    if(argc <= 2) {
+	batchSize = 100; confidence = 0.99, interval = 0.01;
+    } else if(argc != 4)
+	Fatal(USAGE,argv[0]);
+    else {
+	batchSize = atoi(argv[1]); confidence=atof(argv[2]); interval=atof(argv[3]);
+    }
+    fprintf(stderr, "Using batchSize %d conf %g interval %g\n", batchSize, confidence, interval);
 
-    batch = StatAlloc(numBins, histMin, histMax, geom);
-    batchMeans = StatAlloc(numBins, histMin, histMax, geom);
+    batch = StatAlloc(numBins, histMin, histMax, geom, allData);
+    batchMeans = StatAlloc(numBins, histMin, histMax, geom, allData);
 
-    while(scanf("%lf", &sample) == 1 && (StatSampleSize(batchMeans)<3 || fabs(StatConfInterval(batchMeans, confidence)) > precision))
+    while(scanf("%lf", &sample) == 1 && (StatSampleSize(batchMeans)<3 || fabs(StatConfInterval(batchMeans, confidence)) > interval))
     {
 	StatAddSample(batch, sample);
 	if(StatSampleSize(batch) == batchSize)
