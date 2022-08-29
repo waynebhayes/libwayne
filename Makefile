@@ -6,7 +6,7 @@ ifndef CORES
     CORES := 2
 endif
 
-GCC_VER=$(shell echo $(ARCH) | awk '{if(/Darwin/){V="-6"}}END{if(V){print V;exit}else{printf "using default gcc: " > "/dev/null"; exit 1}}')
+GCC_VER=$(shell echo $(ARCH) | awk '/Darwin/{V="-6"}END{if(V)print V;else{printf "using default gcc: " > "/dev/null"; exit 1}}')
 GCC=gcc$(GCC_VER) # gcc gcc-4.2 gcc-6 gcc-7 gcc-8 gcc-9 # Possibilities on Darwin
 STACKSIZE=$(shell ($(GCC) -v 2>&1; uname -a) | awk '/CYGWIN/{print "-Wl,--stack,83886080"}/gcc-/{actualGCC=1}/Darwin/&&actualGCC{print "-Wl,-stack_size -Wl,0x5000000"}')
 CC=$(GCC) $(OPT) $(DEBUG) -Wall -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow $(PG) $(STACKSIZE)
