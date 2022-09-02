@@ -58,8 +58,8 @@ typedef unsigned char Boolean;
 #define both (Boolean)3
 
 typedef union _voidInt {
+    unsigned long ul; // list first so that 0xDEADBEEF is correctly assigned to first element in misc.c
     long int l;
-    unsigned long ul;
     void *v;
     char *s;
     char c[sizeof(long)];
