@@ -35,12 +35,12 @@ int main(int argc, char *argv[])
     while(!satisfied && scanf("%lf", &sample) == 1)
     {
 	StatAddSample(batch, sample);
-	if(StatSampleSize(batch) == batchSize)
+	if(StatNumSamples(batch) == batchSize)
 	{
 	    StatAddSample(batchMeans, StatMean(batch));
 	    StatReset(batch);
 	}
-	if(StatSampleSize(batchMeans)>=3){ 
+	if(StatNumSamples(batchMeans)>=3){ 
 	    double interval = fabs(precision);
 	    if(precision<0) interval *= StatMean(batchMeans);
 	    if(fabs(StatConfInterval(batchMeans, confidence)) < interval) satisfied = true;
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     StatFree(batch);
     printf("# %d mean %.16g min %.16g max %.16g stdDev %.16g var %.16g skew %.16g\n",
-	StatSampleSize(batchMeans), StatMean(batchMeans), StatMin(batchMeans), StatMax(batchMeans),
+	StatNumSamples(batchMeans), StatMean(batchMeans), StatMin(batchMeans), StatMax(batchMeans),
 	    StatStdDev(batchMeans), StatVariance(batchMeans), StatSkew(batchMeans));
     StatFree(batchMeans);
 

@@ -79,21 +79,21 @@ int main(int argc, char *argv[])
 
     if(gain)
 	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g gain %.6g\n",
-	    StatSampleSize(st), StatGeomMean(st), StatMin(st), StatMax(st),
+	    StatNumSamples(st), StatGeomMean(st), StatMin(st), StatMax(st),
 	    StatGeomStdDev(st), StatGeomVariance(st), exp(st->geomSum));
     else if(geom)
 	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g\n",
-	    StatSampleSize(st), StatGeomMean(st), StatMin(st), StatMax(st),
+	    StatNumSamples(st), StatGeomMean(st), StatMin(st), StatMax(st),
 	    StatGeomStdDev(st), StatGeomVariance(st));
     else
 	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g skew %.6g\n",
-	    StatSampleSize(st), StatMean(st), StatMin(st), StatMax(st),
+	    StatNumSamples(st), StatMean(st), StatMin(st), StatMax(st),
 	    StatStdDev(st), StatVariance(st), StatSkew(st));
 
     if(numBins)
     {
 	double binSize = st->histWidth/numBins;
-	/*double norm = histNormalize ? StatSampleSize(st)*binSize : 1;*/
+	/*double norm = histNormalize ? StatNumSamples(st)*binSize : 1;*/
 
 	if(histCumulative)
 	    StatCumulativeHistogram(st);
@@ -119,9 +119,9 @@ int main(int argc, char *argv[])
 		 * additionally divide by the binSize.
 		 */
 		if(histCumulative)
-		    value = ivalue/(double)StatSampleSize(st);
+		    value = ivalue/(double)StatNumSamples(st);
 		else
-		    value = ivalue/(double)StatSampleSize(st);
+		    value = ivalue/(double)StatNumSamples(st);
 	    }
 	    else
 		value = ivalue;
