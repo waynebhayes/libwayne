@@ -59,9 +59,9 @@ int GraphBFS(GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
 /* Uses DFS on G starting at node v to see if the current connected component has at least k nodes.
 ** More efficient than a full DFS. */
 Boolean GraphCCatLeastK(GRAPH *G, int v, int k);
-Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k);
 
 /* Full DFS on whatever connected component v is in.  On top-level call, you should set (*pn)=0.
+** All pointers (G, visited, *Varray) must be *allocated*.
 ** We will populate Varray with the elements and also set their visited state to true.
 ** The Varray will be nuked starting at position (*pn), and visited does *not* need to be clear,
 ** so you can call this function multiple times for each connected component and in the end all

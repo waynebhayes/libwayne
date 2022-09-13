@@ -749,6 +749,7 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
     return count;
 }
 
+static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k);
 Boolean GraphCCatLeastK(GRAPH *G, int v, int k) {
     SET* visited = SetAlloc(G->n);
     Boolean result = _GraphCCatLeastKHelper(G, visited, v, &k);
@@ -765,7 +766,7 @@ Boolean GraphCCatLeastK(GRAPH *G, int v, int k) {
 **          recursive call to dfs the node
 ** return false if the CC wasn't at least k
 */
-Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
+static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
     SetAdd(visited, v);
     *k -= 1;
     if (*k <= 0) return true;
@@ -780,7 +781,7 @@ Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
     return false;
 }
 
-/* At top-level call, set (*pn)=0. The visited array does *not* need to be clear.
+/* At top-level call, set (*pn)=0. The visited array does *not* need to be clear, but everything needs to be allocated.
 ** We return the number of elements in Varray.
 */
 int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, int *pn)

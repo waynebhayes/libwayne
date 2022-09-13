@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "misc.h"
 #include "graph.h"
+#include "sets.h"
 
 int main(int argc, char *argv[])
 {
@@ -40,7 +41,15 @@ int main(int argc, char *argv[])
 	    ++CC;
 	}
     }
-    printf("Graph has %d connected components\n", CC);
+    printf("Graph has %d connected components using BFS\n", CC);
+
+    SET *visited = SetAlloc(G->n);
+    BFSsize=CC=0;
+    for(i=0; i<G->n;i++) {
+	if(!SetIn(visited,i)) ++CC;
+	GraphVisitCC(G, i, visited, nodeArray, &BFSsize);
+    }
+    printf("Graph has %d connected components using GraphVisitCC\n", CC);
 
     return 0;
 }
