@@ -37,7 +37,7 @@ libwayne_all:
 	$(MAKE) -j$(CORES) opt
 
 tests: libwayne_all
-	for x in ebm covar stats hashtest htree-test bintree-test CI; do (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | wc); done
+	for x in ebm covar stats hashtest htree-test bintree-test CI graph-sanity; do (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi); done
 
 opt:
 	$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' libwayne
