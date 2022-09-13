@@ -792,8 +792,8 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 	SetAdd(visited, v);
 	Varray[(*pn)++] = v;
     	int i;
-	for(i=0; i < G->degree[v]; i++)
-	    GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
+	if(G->sparse) for(i=0; i < G->degree[v]; i++) GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
+	else for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) GraphVisitCC(G, i, visited, Varray, pn);
     }
     return *pn;
 }

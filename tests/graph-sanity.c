@@ -14,13 +14,13 @@ int main(int argc, char *argv[])
     assert(GG->n == G->n);
     for(i=0; i<G->n; i++)
     {
-	if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
 	assert(GG->degree[i] == G->degree[i]);
-	for(j=0;j<G->n; j++)
-	    assert(GG->neighbor[i][j] == GG->neighbor[i][j]);
+	if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
+	else for(j=0;j<G->n; j++)
+	    assert(GG->neighbor[i][j] == G->neighbor[i][j]);
     }
     puts("passed!");
-    printf("Now count connected components via BFS:\n");
+    printf("Now count connected components via BFS:");
 
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
     GG = GraphCopy(GG, G);
@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	if(!touched[root])
 	{
 	    BFSsize = GraphBFS(GG, root, GG->n, nodeArray, distArray);
-	    printf ("Connected Component %d: BFSsize = %d\n", CC, BFSsize);
+	    printf (" %d", BFSsize);
 	    for(i=0; i<BFSsize; i++)
 	    {
 		touched[nodeArray[i]] = true;
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 	    ++CC;
 	}
     }
-    printf("Graph has %d connected components using BFS\n", CC);
+    printf("\nGraph has %d connected components using BFS\n", CC);
 
     SET *visited = SetAlloc(G->n);
     BFSsize=CC=0;
