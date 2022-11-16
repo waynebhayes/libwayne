@@ -1,5 +1,12 @@
 BEGIN{PI=M_PI=3.14159265358979324;BIGNUM=1*1e30}
 
+function ASSERT(cond,str){if(!cond){s=sprintf("ASSERTION failure, line %d of input file %s: %s.\nInput line was:\n<%s>\n", FNR,FILENAME,str,$0); print s >"/dev/stderr"; exit 1}}
+function WARN(cond,str,verbose){if(!cond){s=sprintf("WARNING: line %d of input file %s: %s",FNR,FILENAME,str); if(verbose)s=s sprintf("\nInput line was:\n<%s>\n", $0); print s >"/dev/stderr"}}
+function ABS(x){return x<0?-x:x}
+function SIGN(x){return x==0?0:x/ABS(x)}
+function MAX(x,y){return x>y?x:y}
+function MIN(x,y){return x<y?x:y}
+
 function nul(s){} # do nothing; useful for holding temp strings in code on the command line.
 # The default srand() uses time-of-day, which only changes once per second. Not good enough for paraell runs.
 function Srand(){
@@ -9,6 +16,7 @@ function Srand(){
     srand(srand()+PROCINFO["pid"]) # add process ID
 }
 
+function ftos(f){f=sprintf("%.3g",f); gsub("e[+]0","e+",f); return f} # remove leading 0s from exponent
 function floor(x) {if(x>=0) return int(x); else return int(x)-1}
 function ceil(x) {if(x==int(x)) return x; else return floor(x)+1}
 function int2binary(i,l, _s){if(i<0)return "nan";_s="";while(i){_s=(i%2)""_s;i=int(i/2)};while(length(_s)<l)_s="0"_s;return _s}
@@ -88,8 +96,8 @@ function LogSumLogs(log_a,log_b,    truth, approx) {
     return approx
 }
 
-# Given the logarithm of an arbitrarily large or small number, return a string looking
-# like printf "%.Ng" where N is total number of significant digits (just like printf).
+# Given the logarithm log(p) of an arbitrarily large or small number p, return a string
+# looking like printf("%.Ng", p) printing p with N significant digits (just like printf).
 function logPrint(logp,digits,   l10_p,intLog,offset,mantissa,fmt) {
     if(!digits)digits=6; # same as the default for printf
     if(ABS(logp)<100) {
@@ -109,9 +117,9 @@ function logFact(k) { if(k in _memLogFact) return _memLogFact[k];
 }
 function fact2(k)    {if(k<=1)return 1; else return k*fact2(k-2)}
 function logFact2(k) {if(k<=1)return 0; else return log(k)+logFact2(k-2)}
-function choose(n,k,     r,i) {ASSERT(0<=k&&k<=n,"choose error"); r=1;for(i=1;i<=k;i++)r*=(n-(k-i))/i; return r}
+function choose(n,k,     r,i) {if(0<=k&&k<=n){r=1;for(i=1;i<=k;i++)r*=(n-(k-i))/i;} else {r=0; Warn("choose: ("n" choose "k") may not make sense; returning 0")}; return r}
 function logChoose(n,k) {if(n in _memLogChoose && k in _memLogChoose[n]) return _memLogChoose[n][k];
-    ASSERT(0<=k && k <=n); return (_memLogChoose[n][k] = logFact(n)-logFact(k)-logFact(n-k));
+    ASSERT(0<=k && k <=n,"invalid logChoose("n","k")"); return (_memLogChoose[n][k] = logFact(n)-logFact(k)-logFact(n-k));
 }
 function logChooseClever(n,k,     r,i) {
     ASSERT(0<=k&&k<=n,"impossible parameters to logChoose "n" "k)
@@ -171,6 +179,8 @@ function SetUnion(res2,T1,T2,
 # cumulative add set T to res3
 function SetCumulativeUnion(res3,T, g){for(g in T)res3[g]=1}
 
+function Jaccard(T1,T2,   i,u){SetIntersect(i,T1,T2); SetUnion(u,T1,T2); return length(i)/length(u);}
+
 # And now counting the info in an edge list. One way to view the info is simply the number of edges.
 # Another is to view each node's adjacency list as having log(n) bits for each of its neighbors.
 # This then says that the amount of info is as follows: the end of each edge is listed twice (ie is in two neighbor lists),
@@ -182,12 +192,6 @@ function logb(b,x){return log(x)/log(b)}
 function dtob(n,   s,sgn) {n=1*n;if(!n)return "0";s=sgn="";if(n<0){sgn="-";n=-n};while(n){s=sprintf("%d%s",(n%2),s); n=int(n/2)}; return sgn s}
 function btod(n) {}
 
-function ASSERT(cond,str){if(!cond){s=sprintf("ASSERTION failure, line %d of input file %s: %s.\nInput line was:\n<%s>\n", FNR,FILENAME,str,$0); print s >"/dev/stderr"; exit 1}}
-function WARN(cond,str){if(!cond){s=sprintf("WARNING: line %d of input file %s: %s.\nInput line was:\n<%s>\n", FNR,FILENAME,str,$0); print s >"/dev/stderr"}}
-function ABS(x){return x<0?-x:x}
-function SIGN(x){return x==0?0:x/ABS(x)}
-function MAX(x,y){return x>y?x:y}
-function MIN(x,y){return x<y?x:y}
 function LSPredict(n, x, y, xIn,      SUMx,SUMy,SUMxy,SUMxx,i,slope,y_intercept,x_intercept) {
     SUMx=SUMy=SUMxy=SUMxx=0;
     for(i=0;i<n;i++)
@@ -205,10 +209,13 @@ function LSPredict(n, x, y, xIn,      SUMx,SUMy,SUMxy,SUMxx,i,slope,y_intercept,
 	return slope*xIn + y_intercept;
     }
 }
-function StatReset(name) {
+
+# if quantiles is true (anything nonzero or nonempty string), remember everyting so we can retrieve quantiles later.
+function StatReset(name, quantiles) {
+    _statQuantiles[name]=quantiles;
     _statN[name] = _statSum[name] = _statSum2[name] = 0;
     _statMin[name]=BIGNUM;_statMax[name]=-BIGNUM;
-    _statmin[name]=BIGNUM
+    _statmin[name]=BIGNUM;
 }
 
 function StatHistAddSample(name, x) {
@@ -235,6 +242,19 @@ function StatHistMakeCDF(name,    x,prevX,PMF) {
     delete _statHistCDF[name][-BIGNUM]; # remove the array element that was created in the first loop above.
     _statHistCDF[name][prevX]=1;
 }
+function StatHistBinarySearch(name,z,    n,L,R,m) {
+    n=length(_statHistCDF[name]);
+#    L= 0; R=n−1
+#    while L ≤ R do
+#        m := floor((L + R) / 2)
+#        if A[m] < T then
+#            L := m + 1
+#        else if A[m] > T then
+#            R := m − 1
+#        else:
+#            return m
+#    return unsuccessful
+}
 function StatHistECDF(name,z,  x,prevX,frac,h1,h2) {
     z=1*z;
     ASSERT(name in _statHist, "StatHistECDF: no such histogram "name);
@@ -244,22 +264,40 @@ function StatHistECDF(name,z,  x,prevX,frac,h1,h2) {
     prevX=_statHistMin[name];
     for(x in _statHistCDF[name]){
 	if(1*x>z) {
-	    frac=(z-prevX)/(x-prevX); h2=_statHistCDF[name][x];h1=_statHistCDF[name][prevX];
+	    frac=(z-prevX)/(x-prevX); h1=_statHistCDF[name][prevX]; h2=_statHistCDF[name][x];
 	    return h1 + frac*(h2-h1);
 	}
 	prevX=x;
     }
     return 1;
 }
+function StatQuantile(name,q,   i,which,where,oldWhere) {
+    ASSERT(_statQuantiles[name], "StatQuantile called on name "name", but _statQuantiles[name] is <"_statQuantiles[name]">");
+    ASSERT(0<= q && q<=1, "StatQuantile called with quantile q="q" which is not in [0,1]");
+    where=0;
+    which=int(q*_statN[name]+0.5);
+    #print "StatQuantile called with q="q" on "_statN[name]" elements; which is set to "which
+    PROCINFO["sorted_in"]="@ind_num_asc"; # traverse history in numerical order of the indices.
+    for(x in _statValue[name]){
+	oldWhere=where;
+	where += _statValue[name][x];
+	if(oldWhere <= which && which <=where) return x;
+    }
+
+}
+function StatMedian(name) { return StatQuantile(name,0.5);}
+function StatLowerQuartile(name) { return StatQuantile(name,0.25);}
+function StatUpperQuartile(name) { return StatQuantile(name,0.75);}
 
 function StatAddSample(name, x) {
-    if(1*_statN[name]==0)StatReset(name);
+    if(1*_statN[name]==0 && !_statQuantiles[name])StatReset(name);
     _statN[name]++;
     _statSum[name]+=x;
     _statSum2[name]+=x*x;
     _statMin[name]=MIN(_statMin[name],x);
     if(x)_statmin[name]=MIN(_statmin[name],x);
     _statMax[name]=MAX(_statMax[name],x);
+    if(_statQuantiles[name]) ++_statValue[name][x];
 }
 function StatAddWeightedSample(name, x, w) {
     if(1*_statN[name]==0)StatReset(name);
@@ -461,65 +499,7 @@ function logHyperGeomTail(k,n,K,N, logSum,logTerm,i) {
     return logSum
 }
 
-# Exected number of aligned orthologs in a random alignment of G1 and G2 with n1,n2 nodes and h common ortholog pairs.
-function ExpectedPairedOrthologs(h,n1,n2, hg,k) {hg=0;for(k=0;k<h;k++)hg+=(h-k)/(n1*n2-k*(n1+n2-k));return hg}
-
-function logAlignSearchSpace(n1,n2, result){
-    if(n1 in _memLogAligSS && n2 in _memLogAligSS[n1]) return _memLogAligSS[n1][n2];
-    ASSERT(n1>=0&&n2>=0,"AligSearchSpace: (n1,n2)=("n1","n2") cannot be negative");
-    if(n1>n2) result=logAlignSearchSpace(n2,n1); else result = logFact(n2)-logFact(n2-n1);
-    return (_memLogAligSS[n1][n2] = result);
-}
-function AlignSearchSpace(n1,n2){return exp(logAlignSearchSpace(n1,n2))}
-
-function CountGOtermAlignments(n1,n2,l1,l2,k,      ll,M,U,mu,muMin,muMax) {
-    ASSERT(n1<=n2, "Sorry, shared probability of GO terms requires n1<=n2");
-    ASSERT(k>=0, k" must be greater than zero in CountGoTermAligs");
-    ll=MIN(l1,l2); # lower and upper lambdas
-    if(k>ll) return 0;
-    if(ll==0)return (k==0?AlignSearchSpace(n1,n2):0);
-    if(l2==n2)return (k==l1?AlignSearchSpace(n1,n2):0);
-    if(l1>n2-l2) # There are more annotated pegs than unannotated holes; at least l1-(n2-l2) anopegs *must* match
-	if (k < l1-(n2-l2)) return 0;
-    M=choose(l1,k) * choose(l2,k) * fact(k); # aligning the k matched pairs
-    U=0
-    muMin=MAX(0,(n1-k)-(n2-l2));
-    muMax=MIN(n1-l1,l2-k);
-    for(mu=muMin;mu<=muMax;mu++){ # sum over possible values for numAnnotatedPegs aligning to l2-k annotated holes.
-	AS1=AlignSearchSpace(mu,l2-k); # aligning annot. pegs to unannot. holes
-	AS2=AlignSearchSpace(n1-l1-mu,n2-l2-(l1-k)); # remaining unannot pegs aligned to unannot holes
-	choices = choose(n1-l1,mu) * choose(n2-l2,l1-k)
-	U += choices * AS1 * AS2
-    }
-    return M * fact(l1-k)*U;
-}
-
-# Below is just the logarithmic version of the above to handle much bigger numbers.
-function logCountGOtermAlignments(n1,n2,l1,l2,k,      ll,M,U,Utmp,mu,muMin,muMax) {
-    ASSERT(n1<=n2, "Sorry, shared probability of GO terms requires n1<=n2");
-    ASSERT(k>=0, k" must be greater than zero in logCountGoTermAligs");
-    ll=MIN(l1,l2); # lower and upper lambdas
-    if(k>ll) return log(0);
-    if(ll==0)return (k==0?logAlignSearchSpace(n1,n2):log(0));
-    if(l2==n2)return (k==l1?logAlignSearchSpace(n1,n2):log(0));
-    if(l1>n2-l2) # There are more annotated pegs than unannotated holes; at least l1-(n2-l2) anopegs *must* match
-	if (k < l1-(n2-l2)) return log(0);
-    M=logChoose(l1,k) + logChoose(l2,k) + logFact(k);
-    muMin=MAX(0,(n1-k)-(n2-l2));
-    muMax=MIN(n1-l1,l2-k);
-    U=0
-    for(mu=muMin;mu<=muMax;mu++){ # sum over possible values for numAnnotatedPegs aligning to l2-k annotated holes.
-	# do NOT try any memoization here; too many parameters means not enough repeats -> actually SLOWER
-	AS1=logAlignSearchSpace(mu,l2-k); # aligning annot. pegs to unannot. holes
-	AS2=logAlignSearchSpace(n1-l1-mu,n2-l2-(l1-k)); # remaining unannot pegs aligned to unannot holes
-	Utmp = AS1+AS2 + logChoose(n1-l1,mu)
-	U=LogSumLogs(U,Utmp);
-    }
-    U += logChoose(n2-l2,l1-k)
-    return  M + logFact(l1-k)+U;
-}
-
-function StdNormRV(){if(!_StatRV_which) { do { _StatRV_v1 = 2*rand()-1; _StatRV_v2 = 2*rand()-1; _StatRV_rsq = _StatRV_v1^2+_StatRV_v2^2; } while(_StatRV_rsq >= 1 || _StatRV_rsq == 0); _StatRV_fac=sqrt(-2*log(_StatRV_rsq)/_StatRV_rsq); _StatRV_next = _StatRV_v1*_StatRV_fac; _StatRV_which = 1; return _StatRV_v2*_StatRV_fac; } else { _StatRV_which = 0; return _StatRV_next; } }
+function StatRV_Normal(){if(!_StatRV_which) { do { _StatRV_v1 = 2*rand()-1; _StatRV_v2 = 2*rand()-1; _StatRV_rsq = _StatRV_v1^2+_StatRV_v2^2; } while(_StatRV_rsq >= 1 || _StatRV_rsq == 0); _StatRV_fac=sqrt(-2*log(_StatRV_rsq)/_StatRV_rsq); _StatRV_next = _StatRV_v1*_StatRV_fac; _StatRV_which = 1; return _StatRV_v2*_StatRV_fac; } else { _StatRV_which = 0; return _StatRV_next; } }
 function NormalRV(mu,sigma) { return mu+StdNormRV()*sigma }
 
 # The Spearman correlation is just the Pearson correlation of the rank. It measures monotonicity, not linearity.
@@ -564,7 +544,7 @@ function CovarAddSample(name,X,Y) {
 }
 
 function CovarCompute(name){
-    ASSERT(1*_Covar_N[name], "CovarCompute requires N>=1 but it is "_Covar_N[name]);
+    ASSERT(1*_Covar_N[name]>1, "CovarCompute requires N>=1 but it is "_Covar_N[name]);
     return (_Covar_sumXY[name]-_Covar_sumX[name]*_Covar_sumY[name]/_Covar_N[name])/(_Covar_N[name]-1);
 }
 
@@ -610,19 +590,19 @@ function PearsonCompute(name,     numer,DX,DY,denom,z,zse,F){
 }
 
 function PearsonPrint(name, logp){
-    #if(!_Pearson_N[name])return;
+    #if(!_Pearson_N[name]) return;
     PearsonCompute(name);
-    if(_Pearson_p[name]>1e-300)return sprintf("%d\t%.4g\t%.4g\t%.4g",
-	_Pearson_N[name], _Pearson_rho[name], _Pearson_p[name], _Pearson_t[name])
-    else { # p-value is getting too small to represent so use logarithm
-	logp = -logPhi(-_Pearson_t[name])/log(10)
-	logp = logp - 3.6 - (logp/150) # Empirical correction to get in line with Fisher for small p-values
-	return sprintf("%d\t%.4g\t%s\t%.4g (using log)", _Pearson_N[name], _Pearson_rho[name], logPrint(logp,4), _Pearson_t[name]);
+    TINY=1e-200; # using the fancy log algorithm if p-value is smaller than this
+    logp = -logPhi(-_Pearson_t[name]); # working with the negative log is easier (so log is positive)
+    if(logp < -log(TINY))
+	return sprintf("%d\t%.4g\t%.4g\t%.4f", _Pearson_N[name], _Pearson_rho[name], _Pearson_p[name], _Pearson_t[name])
+    else {
+	#printf "t %g p %g log10p %g logp %g", _Pearson_t[name], _Pearson_p[name], logp/log(10), logp > "/dev/stderr"
+	logp = (logp - 8.28931 - logp/65.1442)/0.992 # Empirical correction to get in line with Fisher for small p-values
+	#printf " (logp corrected %g %g)\n", logp/log(10), logp > "/dev/stderr"
+	return sprintf("%d\t%.4g\t%s\t%.4f (using log)", _Pearson_N[name], _Pearson_rho[name], logPrint(-logp,4), _Pearson_t[name]);
 	#p=10^-logp; print "log-over-Fisher", p/F # Sanity check
     }
-
-    # NR = number of samples, rho=Pearson correlation, p=p-value, t = number of standard deviations from random.
-    #return sprintf("%d %.3g %.3g %.3g", _Pearson_N[name], _Pearson_rho[name], _Pearson_p[name], _Pearson_t[name])
 }
 
 # Functions for computing the AUPR
@@ -682,4 +662,29 @@ function LeastSquaresMSR(  i) {
   }
   return (SUMres2)/_LS_n;
   variance = (SUMres2 - SUMres*SUMres/_LS_n)/(_LS_n-1);
+}
+
+#Input: a single node, u, to start the BFS, along with the edge list for a graph stored in edge[][]; ASSUMED SYMMETRIC
+#Output: array _BFSdist[] contains shortest paths from u to all nodes reachable from u; includes _BFSdist[u]=0.
+function BFS(u,  V,Q,m,M,x,y) {
+    ASSERT(isarray(edge), "2D edge array must exist");
+    delete V; # visited
+    delete Q; # queue
+    delete _BFSdist; # distance from u
+    _BFSdist[u]=0;
+    m=M=0;
+    Q[M++]=u; # the BFS queue runs from m [inclusive] to M-1, and we increment m as we dequeue elements
+    while(M>m) {
+	x = Q[m++];
+	ASSERT(x in _BFSdist, x" in Q but not in distance array");
+	if(!(x in V)) {
+	    V[x]=1;
+	    ASSERT(isarray(edge[x]), "edge["x"] is not an array");
+	    for(y in edge[x]) if(!(y in V)) {
+		if(y in _BFSdist) _BFSdist[y]=MIN(_BFSdist[y],_BFSdist[x]+1);
+		else _BFSdist[y]=_BFSdist[x]+1;
+		Q[M++]=y;
+	    }
+	}
+    }
 }
