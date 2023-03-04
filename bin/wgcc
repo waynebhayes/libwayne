@@ -44,9 +44,9 @@ LIBWAYNE_LINK="-L $LIBWAYNE_HOME -lwayne$LIB_OPT -lm"
 
 if $doLink; then
     FILES=`/bin/ls $LIBWAYNE_HOME/*.o 2>/dev/null`
-    set -x
+    #set -x
     exec $CC $LIBWAYNE_COPTS $OtherIncs $everythingElse $LIBWAYNE_LINK $OtherLibs $libList $FILES
 else
-    set -x
+    #set -x
     exec $CC -c $LIBWAYNE_COPTS $OtherIncs $everythingElse
 fi
