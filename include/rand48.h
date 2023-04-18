@@ -33,7 +33,7 @@ long irand48(unsigned short m);
  * multiplier m.  Return integer part as result.
  */
 
-long krand48(unsigned short *xsubi, unsigned short m);
+long krand48(unsigned short xsubi[3], unsigned short m);
 /* same as irand48, except user provides storage in xsubi[] */
 
 long mrand48(void);
