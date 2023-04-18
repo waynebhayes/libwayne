@@ -2,18 +2,30 @@
 #include "misc.h"
 #include "tinygraph.h"
 
+static int _testNum;
+
 int main(int argc, char *argv[])
 {
-    int BFSsize, i, j, n;
+    int BFSsize, i, j, n, testNum;
     TINY_GRAPH *G, *Gbar, *GG;
-    for(n=100000;n>=0;n--)
+    srand48(time(NULL));
+    for(testNum=0;testNum<10000;testNum++)
     {
-	G->n = 6 + lrand48() % 3; // ensure G->n is at least 2
-	G = TinyGraphAlloc(G->n);
+	n = 6 + lrand48() % 3; // ensure G->n is at least 2
+	if(drand48() < 0.5)
+	    G = TinyGraphAlloc(n);
+	else
+	    G = TinyGraphSelfAlloc(n);
+
+	assert(n==G->n);
+	assert(testNum == _testNum++);
+	printf("#%d n %d self %d\n", testNum, G->n, G->selfLoops); fflush(stdout);
+
 	for(int k=2*G->n; k>=0; k--)
 	{
-	    j = i = lrand48() % G->n;
-	    while(j==i) j = lrand48() % G->n;
+	    i = lrand48() % G->n;
+	    j = lrand48() % G->n;
+	    if(!G->selfLoops) while(j==i) j = lrand48() % G->n;
 	    TinyGraphConnect(G,i,j);
 	}
 	Gbar = TinyGraphComplement(NULL, G);
@@ -21,17 +33,18 @@ int main(int argc, char *argv[])
 	for(i=0; i<G->n; i++)
 	    assert(G->A[i] == GG->A[i]);
 	int perm[G->n];
-	if(TinyGraphsIsomorphic(perm, G, Gbar))
+	if(!TinyGraphsIsomorphic(perm, G, GG))
 	{
+	    printf("G(%d) returned %d when comparing:\n", G->n, TinyGraphsIsomorphic(perm, G, GG));
 	    TinyGraphPrintAdjMatrix(stdout, G);
-	    printf("G(%d) is isomorphic to Gbar, perm = [", G->n);
-	    for(i=0; i<G->n; i++) printf(" %d", perm[i]);
-	    puts(" ]");
+	    printf("is NOT isomorphic to GGbar(%d) [self=%d,%d]\n", GG->n, G->selfLoops,Gbar->selfLoops);
+	    TinyGraphPrintAdjMatrix(stdout, GG);
 	}
 	TinyGraphFree(G);
 	TinyGraphFree(GG);
 	TinyGraphFree(Gbar);
     }
+    printf("DONE!\n");
 
     while(false && !feof(stdin))
     {

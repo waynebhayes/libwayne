@@ -158,7 +158,7 @@ SSETDICT *SSetDictAdd(SSETDICT*, SSET);
 Boolean SSetDictIn(SSETDICT*, SSET);
 void SSetDictFree(SSETDICT*);
 
-#define TINY_SET_SIZE 16
+#define TINY_SET_SIZE 8
 
 #if TINY_SET_SIZE >= 64
     typedef SSET TSET;
@@ -199,10 +199,10 @@ void SSetDictFree(SSETDICT*);
     #define TSET_NULLSET ((TSET)0)
     #define MAX_TSET (8*sizeof(TSET))
 
-    #define TSetEmpty(s) s = 0
+    #define TSetEmpty(s) (s) = 0
     #define TSetReset TSetEmpty
-    #define TSetAdd(s,e) (s |= (TSET1 << (e)))
-    #define TSetDelete(s,e) (s &= ~(TSET1 <<(e)))
+    #define TSetAdd(s,e) ((s) |= (TSET1 << (e)))
+    #define TSetDelete(s,e) ((s) &= ~(TSET1 <<(e)))
     #define TSetIn(s,e) ((s) & (TSET1 << (e)))
     #define TSetEq(s1,s2) ((s1)==(s2))
     #define TSetSubsetEq(sub,super) (((super)&(sub))==(sub))

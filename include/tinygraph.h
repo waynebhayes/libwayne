@@ -15,10 +15,12 @@ extern "C" {
 typedef struct _tinyGraph {
     /* vertices numbered 0..n-1 inclusive; n must be <= MAX_TSET */
     char n, degree[MAX_TSET];   /* degree of each v[i] == cardinality of A[i] */
+    Boolean selfLoops;
     TSET A[MAX_TSET];   /* Adjacency Matrix */
 } TINY_GRAPH;
 
-TINY_GRAPH *TinyGraphAlloc(unsigned int n);
+TINY_GRAPH *TinyGraphAlloc(unsigned int n); // does not allow self-loops
+TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n); // allows self-loops
 #define TinyGraphFree free
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
@@ -54,7 +56,9 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp);
 
+#if NDEBUG
 #define TinyGraphAreConnected(G,i,j) TSetIn((G)->A[i],(j))
+#endif
 #ifndef TinyGraphAreConnected
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
 #endif
