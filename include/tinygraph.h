@@ -9,7 +9,7 @@ extern "C" {
 #include "combin.h"
 #include <stdio.h>
 
-/* Constructs for simple graphs, no self-loops: edge (i,i) never exists.
+/* Constructs for simple graphs; allows self-loops only if selfLoops is true.
 */
 
 typedef struct _tinyGraph {

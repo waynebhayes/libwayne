@@ -38,13 +38,13 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
 	return G;
-    if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
     ++G->degree[i];
-    if(j!=i) {
+    if(i==j) assert(G->selfLoops);
+    else {
 	TSetAdd(G->A[j], i);
 	++G->degree[j];
-    } else assert(G->selfLoops);
+    }
     return G;
 }
 
@@ -65,10 +65,11 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 	return G;
     TSetDelete(G->A[i], j);
     --G->degree[i];
-    if(j!=i) {
+    if(j==i) assert(G->selfLoops);
+    else {
 	TSetDelete(G->A[j], i);
 	--G->degree[j];
-    } else assert(G->selfLoops);
+    }
     return G;
 }
 
@@ -77,8 +78,8 @@ Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j)
 {
     if(TSetIn(G->A[i],j))
     {
-	assert(TSetIn(G->A[j],i));
 	if(i==j) assert(G->selfLoops);
+	else assert(TSetIn(G->A[j],i));
 	return true;
     }
     else
@@ -179,11 +180,13 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 
 int TinyGraphNumEdges(TINY_GRAPH *G)
 {
-    int total=0, i;
-    for(i=0; i<G->n; i++)
+    int total=0, i, selfLoops=0;
+    for(i=0; i<G->n; i++) {
 	total += G->degree[i];
-    assert(total % 2 == 0); // should be divisible by 2
-    return total/2;
+	if(G->selfLoops && TinyGraphAreConnected(G,i,i)) ++selfLoops;
+    }
+    assert((total-selfLoops) % 2 == 0); // should be divisible by 2
+    return (total-selfLoops)/2 + selfLoops;
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
