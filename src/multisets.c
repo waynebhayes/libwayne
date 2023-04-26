@@ -108,7 +108,7 @@ SET *MultisetToSet(SET *s, MULTISET *mset) {
 MULTISET *MultisetAddSet(MULTISET *mset, SET *s) {
     if(!s) return mset;
     unsigned element;
-    for(element = 0; element < s->n; element++)
+    for(element = 0; element < SetMaxSize(s); element++)
 	if(SetIn(s, element))
 	    MultisetAdd(mset, element);
     SetUnion(mset->set, mset->set, s);
@@ -134,7 +134,7 @@ MULTISET *MultisetDelete(MULTISET *mset, unsigned element) {
 MULTISET *MultisetDeleteSet(MULTISET *mset, SET *s) {
     if(!s) return mset;
     unsigned element;
-    for(element = 0; element < s->n; element++)
+    for(element = 0; element < SetMaxSize(s); element++)
 	if(SetIn(s, element))
 	    MultisetDelete(mset, element);
     return mset;

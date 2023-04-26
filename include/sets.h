@@ -3,12 +3,14 @@ extern "C" {
 #endif
 #ifndef _SETS_H
 #define _SETS_H
-/* Blame this on Wayne Hayes, wayne@csri.utoronto.ca.
+/* Blame this on Wayne Hayes, originally wayne@cs.toronto.edu, now wayne@ics.uci.edu
 **
-** simple implementation of sets.  You allocate a SET by specifying the max
+** A simple implementation of sets.  You allocate a SET by specifying the max
 ** number N of things that could be in the set; each possible element is
-** represented by an unsigned from 0..N-1, and it's presence in the set is
-** represented by that bit in the array being a 1, else 0.
+** represented by an unsigned from 0..N-1. Initually the SET is composed of
+** an unsorted list of its elements, but if it gets too large (so that searching
+** the list becomes expensive), then it's converted to a bit vector. Once a SET
+** is converted to use BITVEC, the list is removed and we never convert back.
 **
 ** You of course should not make your programs dependent on this implementation;
 ** you should act upon sets using *only* the defined functions.
@@ -18,33 +20,24 @@ extern "C" {
 ** large SET structure.
 **
 ** Any operations on more than one set *must* have both operands of the
-** exact same size and type of set (this restriction will be laxed in
+** exact same size and type of set (this restriction may be relaxed in
 ** later implementations).
 */
 
 #include <stdlib.h>
 #include <assert.h>
 #include "misc.h"
+#include "bitvec.h"
 
-typedef unsigned SETTYPE;
-extern unsigned setBits, setBits_1;
-//static unsigned SET_BIT(unsigned e) {assert((e%setBits) == (e&setBits_1)); return (1U<<((e)%setBits));}
-//#define SET_BIT(e) (1U<<((e)%setBits))
-#define SET_BIT(e) (1U<<((e)&setBits_1))
+typedef unsigned SET_ELEMENT_TYPE;
+
+// The maximum number of elements in our unsorted list before we switch to using BITVEC
+#define SET_MAX_LIST bitvecBits // this is likely 32, assuming sizeof(BITVEC_ELEMENT)==4
 
 typedef struct _setType {
-    unsigned n; /* in bits */
-    unsigned smallestElement;
-    SETTYPE* array;
+    SET_ELEMENT_TYPE smallestElement, cardinality, maxSize, *list; // initially make the set an unsorted array of integers...
+    BITVEC *bitvec; // and when it gets too large, make it a bit vector
 } SET;
-
-#define LOOKUP_NBITS 16
-#define LOOKUP_SIZE (1 << LOOKUP_NBITS)
-#define LOOKUP_MASK (LOOKUP_SIZE - 1)
-extern unsigned lookupBitCount[LOOKUP_SIZE];
-#define SetCountBits(i) \
-    (lookupBitCount[((SETTYPE)(i)) & LOOKUP_MASK] + \
-	lookupBitCount[(((SETTYPE)(i)) >> LOOKUP_NBITS) & LOOKUP_MASK])
 
 Boolean SetStartup(void); // always succeeds, but returns whether it did anything or not.
 
@@ -54,6 +47,7 @@ SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
 SET *SetEmpty(SET *set);    /* make the set empty (set must be allocated )*/
 #define SetReset SetEmpty
+#define SetMaxSize(s) ((s)->maxSize)
 SET *SetCopy(SET *dst, SET *src);  /* if dst is NULL, it will be alloc'd */
 SET *SetAdd(SET *set, unsigned element);    /* add single element to set */
 SET *SetAddList(SET *set, ...); /* end list with (-1); uses varargs/stdarg */
@@ -65,10 +59,9 @@ SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
 unsigned SetCardinality(SET *A);    /* returns non-negative integer */
 Boolean SetInSafe(SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
-#if 1 //NDEBUG || !PARANOID_ASSERTS
-// Note we do not check here if e is < set->n, which is dangerous
-#define SetIn(set,e) ((set)->array[(e)/setBits] & SET_BIT(e))
-//#define SetIn(set,e) ((e)>=0 && (e)<(set)->n && ((set)->array[(e)/setBits] & SET_BIT(e)))
+#if NDEBUG && !PARANOID_ASSERTS
+// Note we do not check here if e is < set->maxSize, which is dangerous
+#define SetIn(set,e) ( (set)->bitvec ? BetvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
 #else
 #define SetIn SetInSafe
 #endif
@@ -93,34 +86,12 @@ char *SetToString(int len, char s[], SET *set);
 SET *SetPrimes(long n); /* return the set of all primes between 0 and n */
 void SetPrint(SET *A); /* print elements of the set */
 
-/*
-*********  SPARSE_SET  ********
-*/
-typedef struct _sparseSetType {
-    unsigned long n;
-    unsigned sqrt_n;
-    SET **sets;
-} SPARSE_SET;
-SPARSE_SET *SparseSetAlloc(unsigned long n);
-void SparseSetFree(SPARSE_SET *set); /* free all memory used by a set */
-SPARSE_SET *SparseSetEmpty(SPARSE_SET *set);    /* make the set empty (set must be allocated )*/
-#define SetReset SetEmpty
-SPARSE_SET *SparseSetCopy(SPARSE_SET *dst, SPARSE_SET *src);  /* if dst is NULL, it will be alloc'd */
-SPARSE_SET *SparseSetAdd(SPARSE_SET *set, unsigned long element);    /* add single element to set */
-SPARSE_SET *SparseSetAddList(SPARSE_SET *set, ...); /* end list with (-1); uses varargs/stdarg */
-SPARSE_SET *SparseSetDelete(SPARSE_SET *set, unsigned long element); /* delete a single element */
-SPARSE_SET *SparseSetUnion(SPARSE_SET *C, SPARSE_SET *A, SPARSE_SET *B);  /* C = union of A and B */
-SPARSE_SET *SparseSetIntersect(SPARSE_SET *C, SPARSE_SET *A, SPARSE_SET *B);  /* C = intersection of A and B */
-SPARSE_SET *SparseSetXOR(SPARSE_SET *C, SPARSE_SET *A, SPARSE_SET *B);  /* C = XOR of A and B */
-SPARSE_SET *SparseSetComplement(SPARSE_SET *B, SPARSE_SET *A);  /* B = complement of A */
-unsigned long SparseSetCardinality(SPARSE_SET *A);    /* returns non-negative integer */
-Boolean SparseSetIn(SPARSE_SET *set, unsigned long element); /* boolean: 0 or 1 */
-Boolean SparseSetEq(SPARSE_SET *set1, SPARSE_SET *set2);
-Boolean SparseSetSubsetEq(SPARSE_SET *sub, SPARSE_SET *super); /* is sub <= super? */
-#define SparseSetSupersetEq(spr,sb) SparseSetSubsetEq((sb),(spr))
-Boolean SparseSetSubsetProper(SPARSE_SET *sub, SPARSE_SET *super);	/* proper subset */
-#define SparseSetSupersetProper(spr,sub) SetSubsetProper((sub),(spr))
 
+/* SMALL SETS: directly use a bit vector, without using BITVEC. Yes it
+** violates orthogonality, but SSET and TSET have been around for decades
+** and I don't want to mess with them when switching the basic SET to
+** use combined BITVEC and unsorted list. - Wayne Hayes, April 2023.
+*/
 
 #define SMALL_SET_SIZE 64
 
@@ -145,13 +116,13 @@ Boolean SparseSetSubsetProper(SPARSE_SET *sub, SPARSE_SET *super);	/* proper sub
 #define SSetSupersetProper(spr,sb) SSetSubsetProper(sb,spr)
 #define SSetUnion(a,b) ((a) | (b))
 #define SSetIntersect(a,b) ((a) & (b))
-#define SSetCountBits(s) (SetCountBits((s) & 0xffffffff) + SetCountBits((s) >> 32))
+#define SSetCountBits(s) (BitvecCountBits((s) & 0xffffffff) + BitvecCountBits((s) >> 32))
 #define SSetCardinality SSetCountBits
 SSET SSetFromArray(int n, unsigned *array);
 unsigned SSetToArray(unsigned *array, SSET set);
 char *SSetToString(int len, char s[], SSET set);
 
-/* SSET dictionary - a set of sets */
+/* SSET dictionary - a set of small sets */
 typedef struct _ssetDict SSETDICT;
 SSETDICT *SSetDictAlloc(int init_size);
 SSETDICT *SSetDictAdd(SSETDICT*, SSET);

@@ -23,25 +23,27 @@ extern "C" {
 #include <assert.h>
 #include "misc.h"
 
-typedef unsigned BITVEC_ELEMENT;
-extern unsigned bitvecBits, bitvecBits_1;
-//static unsigned BITVEC_BIT(unsigned e) {assert((e%bitvecBits) == (e&bitvecBits_1)); return (1U<<((e)%bitvecBits));}
+typedef unsigned BITVEC_SEGMENT;
+extern unsigned bitvecBits, bitvec_all; // basically (-1) as a bitvec
+//static unsigned BITVEC_BIT(unsigned e) {assert(((e)%bitvecBits) == ((e)&bitvec_all)); return (1U<<((e)%bitvecBits));}
 //#define BITVEC_BIT(e) (1U<<((e)%bitvecBits))
-#define BITVEC_BIT(e) (1U<<((e)&bitvecBits_1))
+#define BITVEC_BIT(e) (1U<<((e)&bitvec_all))
 
 typedef struct _bitvecType {
-    unsigned n; /* in bits */
+    unsigned maxSize; /* in bits */
     unsigned smallestElement;
-    BITVEC_ELEMENT* segment;
+    BITVEC_SEGMENT* segment;
 } BITVEC;
 
-#define LOOKUP_NBITS 16
-#define LOOKUP_SIZE (1 << LOOKUP_NBITS)
-#define LOOKUP_MASK (LOOKUP_SIZE - 1)
-extern unsigned lookupBitCount[LOOKUP_SIZE];
+int NUMSEGS(int n);  /* number of segments needed to store n bits */
+
+#define BITVEC_LOOKUP_NBITS 16
+#define BITVEC_LOOKUP_SIZE (1 << BITVEC_LOOKUP_NBITS)
+#define BITVEC_LOOKUP_MASK (BITVEC_LOOKUP_SIZE - 1)
+extern unsigned lookupBitCount[BITVEC_LOOKUP_SIZE];
 #define BitvecCountBits(i) \
-    (lookupBitCount[((BITVEC_ELEMENT)(i)) & LOOKUP_MASK] + \
-	lookupBitCount[(((BITVEC_ELEMENT)(i)) >> LOOKUP_NBITS) & LOOKUP_MASK])
+    (lookupBitCount[((BITVEC_SEGMENT)(i)) & BITVEC_LOOKUP_MASK] + \
+	lookupBitCount[(((BITVEC_SEGMENT)(i)) >> BITVEC_LOOKUP_NBITS) & BITVEC_LOOKUP_MASK])
 
 Boolean BitvecStartup(void); // always succeeds, but returns whether it did anything or not.
 
@@ -51,6 +53,7 @@ BITVEC *BitvecResize(BITVEC *s, unsigned new_n);
 void BitvecFree(BITVEC *vec); /* free all memory used by a bitvec */
 BITVEC *BitvecEmpty(BITVEC *vec);    /* make the vec empty (vec must be allocated )*/
 #define BitvecReset BitvecEmpty
+#define BitvecMaxSize(v) ((v)->maxSize)
 BITVEC *BitvecCopy(BITVEC *dst, BITVEC *src);  /* if dst is NULL, it will be alloc'd */
 BITVEC *BitvecAdd(BITVEC *vec, unsigned element);    /* add single element to vec */
 BITVEC *BitvecAddList(BITVEC *vec, ...); /* end list with (-1); uses varargs/stdarg */
@@ -63,9 +66,9 @@ unsigned BitvecCardinality(BITVEC *A);    /* returns non-negative integer */
 Boolean BitvecInSafe(BITVEC *vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
 #if 1 //NDEBUG || !PARANOID_ASSERTS
-// Note we do not check here if e is < vec->n, which is dangerous
+// Note we do not check here if e is < vec->maxSize, which is dangerous
 #define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e))
-//#define BitvecIn(vec,e) ((e)>=0 && (e)<(vec)->n && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
+//#define BitvecIn(vec,e) ((e)>=0 && (e)<(vec)->maxSize && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
 #else
 #define BitvecIn BitvecInSafe
 #endif
@@ -74,6 +77,8 @@ Boolean BitvecSubsetEq(BITVEC *sub, BITVEC *super); /* is sub <= super? */
 #define BitvecSupersetEq(spr,sb) BitvecSubsetEq((sb),(spr))
 Boolean BitvecSubsetProper(BITVEC *sub, BITVEC *super);	/* proper subset */
 #define BitvecSupersetProper(spr,sub) BitvecSubsetProper((sub),(spr))
+unsigned int BitvecAssignSmallestElement1(BITVEC *A);
+unsigned int BitvecAssignSmallestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
 
 /*
 ** You allocate an array big enough to hold the number of elements,
@@ -94,10 +99,11 @@ void BitvecPrint(BITVEC *A); /* print elements of the vec */
 *********  SPARSE_BITVEC  ********
 */
 typedef struct _sparseBitvecType {
-    unsigned long n;
+    unsigned long maxSize;
     unsigned sqrt_n;
     BITVEC **vecs;
 } SPARSE_BITVEC;
+
 SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n);
 void SparseBitvecFree(SPARSE_BITVEC *vec); /* free all memory used by a vec */
 SPARSE_BITVEC *SparseBitvecEmpty(SPARSE_BITVEC *vec);    /* make the vec empty (vec must be allocated )*/

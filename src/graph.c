@@ -786,7 +786,7 @@ static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
 */
 int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, int *pn)
 {
-    assert(v < visited->n);
+    assert(v < SetMaxSize(visited));
     if(!SetIn(visited,v))
     {
 	SetAdd(visited, v);

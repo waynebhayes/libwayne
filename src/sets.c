@@ -15,72 +15,60 @@ extern "C" {
 ** Wayne Hayes, wayne@cs.toronto.edu.
 */
 
-#include "sets.h"
 #include <stdio.h>
 #include <stdarg.h>
-#include <math.h> // for sqrt(n) in SPARSE_SETs
+#include "sets.h"
 
-unsigned setBits = sizeof(SETTYPE)*8, setBits_1;
-static int SIZE(int n) { return (n+setBits-1)/setBits; }   /* number of array elements needed to store n bits */
-
-unsigned int lookupBitCount[LOOKUP_SIZE];
-/* count the number of 1 bits in a long
+/*
+** BitvecStartup needs to set some stuff, and since we use it bitvecs...
 */
-static unsigned DumbCountBits(unsigned long i)
-{
-    unsigned n = 0;
-    while(i)
-    {
-	if(i&1) ++n;
-	i >>= 1;
-    }
-    return n;
-}
-
-
-/* Currently this just initializes lookupBitCount[].
-** SetStartup doesn't perform startup more than once, so it's safe
-** (and costs little) to call it again if you're not sure.  It returns
-** 1 if it did the initialization, else 0.
-*/
+static Boolean _doneInit;
 Boolean SetStartup(void)
 {
-    if(setBits_1)
-	return 0;
-    else
-    {
-	assert(sizeof(SETTYPE) == 4);	// we assume 32-bit ints
-	setBits_1 = setBits-1;
-	unsigned long i;
-	for(i=0; i<LOOKUP_SIZE; i++)
-	    lookupBitCount[i] = DumbCountBits(i);
-	return 1;
-    }
+    if(_doneInit) return false;
+    _doneInit = true;
+    return BitvecStartup();
 }
 
 
 /*
-** SetAlloc: create a new empty set of max size n elements,
-** and return its handle.
+** SetAlloc: create a new empty set of max size n elements. Return its handle.
 */
-SET *SetAlloc(unsigned n)
+SET *SetAlloc(SET_ELEMENT_TYPE n)
 {
-    if(!setBits_1) SetStartup();
+    if(!_doneInit) SetStartup();
     SET *set = (SET*) Calloc(1,sizeof(SET));
-    set->n = n;
+    assert(set->cardinality == 0);
+    set->maxSize = n;
     set->smallestElement = n; // ie., invalid
-    set->array = (SETTYPE*) Calloc(sizeof(SETTYPE), SIZE(n));
+    set->bitvec = NULL;
+    set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), SET_MAX_LIST);
     return set;
 }
 
-
-SPARSE_SET *SparseSetAlloc(unsigned long n)
+/* query if an element is in a set; return 0 or non-zero.
+*/
+Boolean SetInSafe(SET *set, unsigned element)
 {
-    SPARSE_SET *set = (SPARSE_SET*) Calloc(1,sizeof(SPARSE_SET));
-    set->n = n;
-    set->sqrt_n = ceil(sqrt(n));
-    set->sets = (SET**) Calloc(set->sqrt_n,sizeof(SET*));
-    return set;
+    assert(element < set->maxSize);
+    if(set->bitvec) return BitvecIn(set->bitvec, element);
+    assert(set->list && set->cardinality <= SET_MAX_LIST);
+    int i;
+    for(i=0; i<set->cardinality; i++) if(element == set->list[i]) return true;
+    return false;
+}
+
+// "Upgrade" a set from using an unsorted list to BITVEC
+static SET *SetMakeBitvec(SET *s)
+{
+    if(s->bitvec) {assert(!s->list); return s;}
+    assert(s->list && s->cardinality <= SET_MAX_LIST);
+    s->bitvec = BitvecAlloc(s->maxSize);
+    int i;
+    for(i=0; i<s->cardinality; i++) BitvecAdd(s->bitvec, s->list[i]);
+    Free(s->list);
+    s->list = NULL;
+    return s;
 }
 
 
@@ -89,11 +77,10 @@ SPARSE_SET *SparseSetAlloc(unsigned long n)
 */
 SET *SetResize(SET *set, unsigned new_n)
 {
-    int i, old_n = set->n;
-    set->array = (SETTYPE*) Realloc(set->array, sizeof(SETTYPE) * SIZE(new_n));
-    set->n = new_n;
-    for(i=old_n; i < new_n; i++)
-	SetDelete(set, i);
+    // int i, old_n = set->maxSize;
+    if(set->bitvec) set->bitvec = BitvecResize(set->bitvec, new_n); // don't bother going back to list if new_n is small
+    else assert(set->list && set->cardinality <= SET_MAX_LIST); // nothing to do if it's still a list
+    set->maxSize = new_n;
     return set;
 }
 
@@ -103,25 +90,9 @@ SET *SetResize(SET *set, unsigned new_n)
 */
 SET *SetEmpty(SET *set)
 {
-    int arrayElem=SIZE(set->n);
-    set->smallestElement = set->n;
-    memset(set->array, 0, arrayElem * sizeof(set->array[0]));
-    return set;
-}
-
-
-/*
-** erase all members from a set, but don't free it's memory.
-*/
-SPARSE_SET *SparseSetEmpty(SPARSE_SET *set)
-{
-    int i;
-    for(i=0; i < set->sqrt_n; i++)
-	if(set->sets[i])
-	{
-	    SetFree(set->sets[i]);
-	    set->sets[i] = NULL;
-	}
+    if(set->bitvec) BitvecEmpty(set->bitvec);
+    set->smallestElement = set->maxSize;
+    set->cardinality = 0; // in the spirit of C, don't bother zapping the list elements to zero
     return set;
 }
 
@@ -132,25 +103,37 @@ void SetFree(SET *set)
 {
     if(set)
     {
-	if(set->array)
-	    free(set->array);
-	free(set);
+	if(set->bitvec) BitvecFree(set->bitvec);
+	if(set->list) Free(set->list);
+	Free(set);
     }
 }
 
 
-/* free all space occupied by a set
+/* Add an element to a set.  Returns the same set handle.
 */
-void SparseSetFree(SPARSE_SET *set)
+SET *SetAdd(SET *s, unsigned element)
 {
-    int i;
-    for(i=0; i < set->sqrt_n; i++)
-	if(set->sets[i])
-	{
-	    SetFree(set->sets[i]);
-	    set->sets[i] = NULL;
+    assert(element < s->maxSize);
+    if(SetIn(s, element)) return s;
+    if(s->bitvec) BitvecAdd(s->bitvec, element);
+    else {
+	assert(s->list);
+	if(s->cardinality < SET_MAX_LIST) {
+	    s->list[s->cardinality] = element;
+	} else {
+	    SetMakeBitvec(s);
+	    assert(!s->list);
+	    BitvecAdd(s->bitvec, element);
 	}
-    free(set);
+    }
+    ++s->cardinality;
+    if(element < s->smallestElement) s->smallestElement = element;
+#if PARANOID_ASSERTS
+    if(s->bitvec) assert(s->cardinality == BitvecCardinality(s->bitvec));
+    else assert(s->list && s->cardinality <= SET_MAX_LIST);
+#endif
+    return s;
 }
 
 
@@ -158,53 +141,21 @@ void SparseSetFree(SPARSE_SET *set)
 */
 SET *SetCopy(SET *dst, SET *src)
 {
-    int i, numSrc = SIZE(src->n);
-
-    if(!dst)
-	dst = SetAlloc(src->n);
-    assert(dst->n == src->n);
+    if(!dst) dst = SetAlloc(src->maxSize);
+    else SetEmpty(dst);
+    if(src->bitvec) {
+	SetMakeBitvec(dst);
+	BitvecCopy(dst->bitvec, src->bitvec);
+    } else {
+	assert(dst-> list && src->list && src->cardinality <= SET_MAX_LIST);
+	int i;
+	for(i=0;i<src->cardinality;i++) dst->list[i] = src->list[i];
+    }
+    assert(dst->maxSize == src->maxSize);
     dst->smallestElement = src->smallestElement;
-
-    for(i=0; i < numSrc; i++)
-	dst->array[i] = src->array[i];
+    dst->cardinality = src->cardinality;
     return dst;
 }
-
-SPARSE_SET *SparseSetCopy(SPARSE_SET *dst, SPARSE_SET *src)
-{
-    int i;
-
-    if(!dst)
-	dst = SparseSetAlloc(src->n);
-    assert(dst->n == src->n);
-
-    for(i=0; i < dst->sqrt_n; i++)
-	SetCopy(dst->sets[i], src->sets[i]);
-    return dst;
-}
-
-
-/* Add an element to a set.  Returns the same set handle.
-*/
-SET *SetAdd(SET *set, unsigned element)
-{
-    assert(element < set->n);
-    set->array[element/setBits] |= SET_BIT(element);
-    if(element < set->smallestElement) set->smallestElement = element;
-    return set;
-}
-
-SPARSE_SET *SparseSetAdd(SPARSE_SET *set, unsigned long element)
-{
-    assert(element < set->n);
-    int which = element / set->sqrt_n;
-    if(!set->sets[which])
-	set->sets[which] = SetAlloc(set->sqrt_n);
-    SetAdd(set->sets[which], element - which*set->sqrt_n);
-    return set;
-}
-
-
 
 /* Add a bunch of elements to a set.  End the list with (-1).
 */
@@ -227,134 +178,21 @@ SET *SetAddList(SET *set, ...)
 }
 
 
-unsigned int SetAssignSmallestElement1(SET *set)
+static unsigned int SetAssignSmallestElement1(SET *set)
 {
-    int i, old=set->smallestElement;
-    assert(old == set->n || !SetIn(set, old)); // it should not be in there!
-
-    for(i=0; i<set->n; i++)
-        if(SetIn(set, i)) // the next smallest element is here
-	       break;
-    set->smallestElement = i; // note this works even if there was no new smallest element, so it's now set->n
-    if(i == set->n)
-	assert(SetCardinality(set) == 0);
-    return i;
-}
-
-/* Delete an element from a set.  Returns the same set handle.
-*/
-SET *SetDelete(SET *set, unsigned element)
-{
-    assert(element < set->n);
-    set->array[element/setBits] &= ~SET_BIT(element);
-    if(element == set->smallestElement)
-    {
-	SetAssignSmallestElement1(set);
-	assert(set->smallestElement > element);
+    SET_ELEMENT_TYPE old = set->smallestElement;
+    assert((set->cardinality == 0 && set->smallestElement >= set->maxSize) || !SetIn(set, old));
+    if(set->bitvec) {
+	set->smallestElement = BitvecAssignSmallestElement1(set->bitvec);
+    } else { assert(set->list && set->cardinality <= SET_MAX_LIST);
+	int i;
+	for(i=0; i<set->cardinality; i++) if(set->list[i] < set->smallestElement) set->smallestElement = set->list[i];
     }
-    return set;
+    assert(set->smallestElement < old);
+    return set->smallestElement;
 }
 
-
-SPARSE_SET *SparseSetDelete(SPARSE_SET *set, unsigned long element)
-{
-    assert(element < set->n);
-    int which = element / set->sqrt_n;
-    if(set->sets[which])
-    {
-	SetDelete(set->sets[which], element - which*set->sqrt_n);
-	if(SetCardinality(set->sets[which]) == 0)
-	{
-	    SetFree(set->sets[which]);
-	    set->sets[which] = NULL;
-	}
-    }
-    return set;
-}
-
-
-/* query if an element is in a set; return 0 or non-zero.
-*/
-#define SET_BIT_SAFE(e) (1UL<<((e)%setBits))
-Boolean SetInSafe(SET *set, unsigned element)
-{
-    assert(element < set->n);
-    unsigned array_loc = element/setBits, e_bit = SET_BIT_SAFE(element);
-    return (set->array[array_loc] & e_bit);
-}
-
-Boolean SparseSetIn(SPARSE_SET *set, unsigned long element)
-{
-    assert(element < set->n);
-    int which = element / set->sqrt_n;
-    return set->sets[which] && SetIn(set->sets[which], element - which*set->sqrt_n);
-}
-
-/* See if A and B are the same set.
-*/
-Boolean SetEq(SET *A, SET *B)
-{
-    int i;
-    int loop = SIZE(A->n);
-    assert(A->n == B->n);
-    for(i=0; i < loop; i++)
-	if(A->array[i] != B->array[i])
-	    return false;
-    return true;
-}
-Boolean SparseSetEq(SPARSE_SET *A, SPARSE_SET *B)
-{
-    int i;
-    assert(A->n == B->n);
-    for(i=0; i < A->sqrt_n; i++)
-	if(!SetEq(A->sets[i], B->sets[i]))
-	    return false;
-    return true;
-}
-
-
-/* See if A is a (non-proper) subset of B.
-*/
-Boolean SetSubsetEq(SET *A, SET *B)
-{
-    int i;
-    int loop = SIZE(A->n);
-    assert(A->n == B->n);
-    for(i=0; i < loop; i++)
-	if((A->array[i] & B->array[i]) != A->array[i])
-	    return false;
-    return true;
-}
-
-Boolean SetSubsetProper(SET *A, SET *B)
-{
-    return SetSubsetEq(A,B) && !SetEq(A,B);
-}
-
-
-/* Union A and B into C.  Any or all may be the same pointer.
-*/
-SET *SetUnion(SET *C, SET *A, SET *B)
-{
-    int i;
-    int loop = SIZE(C->n);
-    assert(A->n == B->n && B->n == C->n);
-    for(i=0; i < loop; i++)
-	C->array[i] = A->array[i] | B->array[i];
-    C->smallestElement = MIN(A->smallestElement, B->smallestElement);
-    return C;
-}
-SPARSE_SET *SparseSetUnion(SPARSE_SET *C, SPARSE_SET *A, SPARSE_SET *B)
-{
-    int i;
-    assert(A->n == B->n && B->n == C->n);
-    for(i=0; i < A->sqrt_n; i++)
-	SetUnion(C->sets[i], A->sets[i], B->sets[i]);
-    return C;
-}
-
-
-unsigned int SetAssignSmallestElement3(SET *C,SET *A,SET *B)
+static unsigned int SetAssignSmallestElement3(SET *C, SET *A, SET *B)
 {
     if(A->smallestElement == B->smallestElement)
 	C->smallestElement = A->smallestElement;
@@ -379,40 +217,129 @@ unsigned int SetAssignSmallestElement3(SET *C,SET *A,SET *B)
     return C->smallestElement;
 }
 
+/* Delete an element from a set.  Returns the same set handle.
+*/
+SET *SetDelete(SET *set, unsigned element)
+{
+    assert(element < set->maxSize);
+    if(!SetIn(set, element)) return set;
+    if(set->bitvec) BitvecDelete(set->bitvec, element);
+    else {
+	int i;
+	for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
+	assert(i<set->cardinality); // it SHOULD be there!
+	set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
+    }
+    set->cardinality--;
+#if PARANOID_ASSERTS
+    if(set->bitvec) assert(BitvecCardinality(set->bitvec) == set->cardinality);
+#endif
+    if(element == set->smallestElement)
+    {
+	SetAssignSmallestElement1(set);
+	assert(set->smallestElement > element);
+    }
+    return set;
+}
+
+
+
+/* See if A and B are the same set.
+*/
+Boolean SetEq(SET *A, SET *B)
+{
+    if(A->cardinality != B->cardinality) return false;
+    if(A->bitvec && B->bitvec) return BitvecEq(A->bitvec, B->bitvec);
+
+    // At least one of them is a list, so just loop
+    SET_ELEMENT_TYPE *list = A->list;
+    SET *set = B;
+    if(B->list) {
+	list = B->list; set = A; // note this works even if both are lists
+    }
+    int i;
+    for(i=0; i<set->cardinality; i++) if(!SetIn(set, list[i])) return false;
+    return true;
+}
+
+
+/* See if A is a subset of B (including ==)
+*/
+Boolean SetSubsetEq(SET *A, SET *B)
+{
+    if(A->cardinality > B->cardinality) return false;
+    if(A->bitvec && B->bitvec) return BitvecSubsetEq(A->bitvec, B->bitvec);
+    int i;
+    if(A->list) { for(i=0; i<A->cardinality; i++) if(!SetIn(B, A->list[i])) return false; }
+    else for(i=0; i<A->maxSize; i++) if(SetIn(A,i) && !SetIn(B, i)) return false;
+    return true;
+}
+
+Boolean SetSubsetProper(SET *A, SET *B)
+{
+    return !SetEq(A,B) && SetSubsetEq(A,B);
+}
+
+
+/* Union A and B into C.  Any or all may be the same pointer.
+*/
+SET *SetUnion(SET *C, SET *A, SET *B)
+{
+    int i;
+    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    if(A->bitvec && B->bitvec) BitvecUnion(C->bitvec, A->bitvec, B->bitvec);
+    else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
+	SetMakeBitvec(C);
+	SET *vec = A, *list = B; // default
+	if(B->bitvec) { // swap the above
+	    vec=B; list=A;
+	}
+	assert(vec->bitvec && list->list);
+	SetCopy(C, vec);
+	for(i=0;i<list->cardinality;i++) SetAdd(C, list->list[i]);
+    } else {
+	assert(A->list && B->list && !A->bitvec && !B->bitvec);
+	SetCopy(C, A);
+	for(i=0;i<B->cardinality;i++) SetAdd(C, B->list[i]);
+    }
+    C->smallestElement = MIN(A->smallestElement, B->smallestElement);
+    return C;
+}
+
+
 /* Intersection A and B into C.  Any or all may be the same pointer.
 */
 SET *SetIntersect(SET *C, SET *A, SET *B)
 {
     int i;
-    int loop = SIZE(C->n);
-    assert(A->n == B->n && B->n == C->n);
-    for(i=0; i < loop; i++)
-	C->array[i] = A->array[i] & B->array[i];
-    SetAssignSmallestElement3(C,A,B);
+    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    if(A->bitvec && B->bitvec) BitvecIntersect(C->bitvec, A->bitvec, B->bitvec);
+    else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
+	SetEmpty(C);
+	SetMakeBitvec(C);
+	SET *vec = A, *list = B; // default
+	if(B->bitvec) { // swap the above
+	    vec=B; list=A;
+	}
+	assert(vec->bitvec && list->list);
+	for(i=0;i<list->cardinality;i++) if(SetIn(vec, list->list[i])) SetAdd(C, list->list[i]);
+    } else {
+	assert(A->list && B->list && !A->bitvec && !B->bitvec);
+	for(i=0;i<B->cardinality;i++) if(SetIn(A, B->list[i])) SetAdd(C, B->list[i]);
+    }
+    C->smallestElement = C->maxSize;
+    if(SetIn(C, A->smallestElement)) C->smallestElement = A->smallestElement;
+    if(SetIn(C, B->smallestElement) && B->smallestElement < C->smallestElement) C->smallestElement = B->smallestElement;
+    if(C->smallestElement == C->maxSize) C->smallestElement = SetAssignSmallestElement1(C);
     return C;
 }
-
-SPARSE_SET *SparseSetIntersect(SPARSE_SET *C, SPARSE_SET *A, SPARSE_SET *B)
-{
-    int i;
-    assert(A->n == B->n && B->n == C->n);
-    for(i=0; i < C->sqrt_n; i++)
-	SetIntersect(C->sets[i], A->sets[i], B->sets[i]);
-    return C;
-}
-
 
 /* XOR A and B into C.  Any or all may be the same pointer.
 */
 SET *SetXOR(SET *C, SET *A, SET *B)
 {
-    int i;
-    int loop = SIZE(C->n);
-    if(!A) return SetCopy(C, B);
-    if(!B) return SetCopy(C, A);
-    assert(A->n == B->n && B->n == C->n);
-    for(i=0; i < loop; i++)
-	C->array[i] = A->array[i] ^ B->array[i];
+    if(A->bitvec && B->bitvec) C->bitvec = BitvecXOR(C->bitvec, A->bitvec, B->bitvec);
+    else Apology("Sorry, haven't yet implemented SetXOR for lists");
     SetAssignSmallestElement3(C,A,B);
     return C;
 }
@@ -422,11 +349,8 @@ SET *SetXOR(SET *C, SET *A, SET *B)
 */
 SET *SetComplement(SET *B, SET *A)
 {
-    int i;
-    int loop = SIZE(B->n);
-    assert(A->n == B->n);
-    for(i=0; i < loop; i++)
-	B->array[i] = ~A->array[i];
+    if(A->bitvec && B->bitvec) B->bitvec = BitvecComplement(A->bitvec, B->bitvec);
+    else Apology("Sorry, haven't yet implemented SetComplement for lists");
     SetAssignSmallestElement1(B);
     return B;
 }
@@ -434,20 +358,8 @@ SET *SetComplement(SET *B, SET *A)
 
 unsigned SetCardinality(SET *A)
 {
-    unsigned n = 0, i, loop = SIZE(A->n);
-    for(i=0; i < loop; i++)
-	if(A->array[i]) n += SetCountBits(A->array[i]);
-    return n;
-}
-
-unsigned long SparseSetCardinality(SPARSE_SET *set)
-{
-    unsigned int i;
-    unsigned long sum=0;
-    for(i=0; i < set->sqrt_n; i++)
-	if(set->sets[i])
-	    sum += SetCardinality(set->sets[i]);
-    return sum;
+    if(A->bitvec) A->cardinality = BitvecCardinality(A->bitvec);
+    return A->cardinality;
 }
 
 /* populate the given array with the list of members currently present
@@ -457,7 +369,7 @@ unsigned SetToArray(unsigned int *array, SET *set)
 {
     int pos = 0;
     int i;
-    for(i=0; i < set->n; i++)
+    for(i=0; i < set->maxSize; i++)
 	if(SetIn(set,i))
 	    array[pos++] = i;
 
@@ -510,8 +422,8 @@ char *SSetToString(int len, char s[], SSET set)
 char *SetToString(int len, char s[], SET *set)
 {
     int i;
-    assert(len > set->n); /* need space for trailing '\0' */
-    for(i=0; i<MIN(len, set->n); i++)
+    assert(len > set->maxSize); /* need space for trailing '\0' */
+    for(i=0; i<MIN(len, set->maxSize); i++)
 	s[i] = '0' + !!SetIn(set, i);
     s[i] = '\0';
     return s;
@@ -521,10 +433,11 @@ char *SetToString(int len, char s[], SET *set)
 SET *SetPrimes(long n)
 {
     SET *primes = SetAlloc(n+1);
-    int i, loop=SIZE(n+1), p;
+    int i, p;
+    SetMakeBitvec(primes);
 
-    for(i=0; i<loop; i++)
-	--primes->array[i];     /* turn on all the bits */
+    for(i=0; i<NUMSEGS(n+1); i++)
+	primes->bitvec->segment[i] = bitvec_all;     /* turn on all the bits */
     SetDelete(primes, 0);
     SetDelete(primes, 1);
 
@@ -543,7 +456,7 @@ SET *SetPrimes(long n)
 void SetPrint(SET *A)
 {
     int i;
-    for(i=0;i<A->n;i++) if(SetIn(A,i)) printf("%d ", i);
+    for(i=0;i<A->maxSize;i++) if(SetIn(A,i)) printf("%d ", i);
     printf("\n");
 }
 
