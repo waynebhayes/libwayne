@@ -200,7 +200,7 @@ int SmallGraphBFS(SMALL_GRAPH *G, int root, int distance, int *nodeArray, int *d
 SMALL_GRAPH *SmallGraphInduced(SMALL_GRAPH *Gv, SMALL_GRAPH *G, SSET V)
 {
     unsigned array[MAX_SSET], nV = SSetToArray(array, V), i, j;
-    SMALL_GRAPH GGv;
+    static SMALL_GRAPH GGv;
     if(Gv)
     {
 	if(Gv == G) /* be careful, destination is same as source */
@@ -224,7 +224,7 @@ SMALL_GRAPH *SmallGraphInduced(SMALL_GRAPH *Gv, SMALL_GRAPH *G, SSET V)
 SMALL_GRAPH *SmallGraphInduced_NoVertexDelete(SMALL_GRAPH *Gv, SMALL_GRAPH *G, SSET V)
 {
     unsigned array[MAX_SSET], nV = SSetToArray(array, V), i, j;
-    SMALL_GRAPH GGv;
+    static SMALL_GRAPH GGv;
     if(Gv)
     {
 	if(Gv == G) /* be careful, destination is same as source */

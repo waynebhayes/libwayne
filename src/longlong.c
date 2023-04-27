@@ -20,7 +20,7 @@ extern "C" {
 
 char *lltoa(char *foo, long long n)
 {
-    char buf[MAX_LLTOA_BUFS][MAX_ASCII_LONG_LONG];
+    static char buf[MAX_LLTOA_BUFS][MAX_ASCII_LONG_LONG];
     static int whichBuf;
     int d = 0, i;
     int sign;

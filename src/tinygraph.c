@@ -270,7 +270,7 @@ void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
 TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
-    TINY_GRAPH GGv;
+    static TINY_GRAPH GGv;
     if(Gv)
     {
 	if(Gv == G) /* be careful, destination is same as source */
@@ -298,7 +298,7 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
-    TINY_GRAPH GGv;
+    static TINY_GRAPH GGv;
     if(Gv)
     {
 	if(Gv == G) /* be careful, destination is same as source */

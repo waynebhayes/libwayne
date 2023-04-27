@@ -24,16 +24,20 @@ extern "C" {
 #include "misc.h"
 
 typedef unsigned BITVEC_SEGMENT;
-extern unsigned bitvecBits, bitvec_all; // basically (-1) as a bitvec
-//static unsigned BITVEC_BIT(unsigned e) {assert(((e)%bitvecBits) == ((e)&bitvec_all)); return (1U<<((e)%bitvecBits));}
+extern unsigned bitvecBits, bitvecBits_1;
+//static unsigned BITVEC_BIT(unsigned e) {assert(((e)%bitvecBits) == ((e)&bitvecBits_1)); return (1U<<((e)%bitvecBits));}
 //#define BITVEC_BIT(e) (1U<<((e)%bitvecBits))
-#define BITVEC_BIT(e) (1U<<((e)&bitvec_all))
+#define BITVEC_BIT(e) (1U<<((e)&bitvecBits_1))
+
 
 typedef struct _bitvecType {
     unsigned maxSize; /* in bits */
     unsigned smallestElement;
     BITVEC_SEGMENT* segment;
 } BITVEC;
+
+extern Boolean _smallestGood; // when false, smallestElement may be inconsistent
+
 
 int NUMSEGS(int n);  /* number of segments needed to store n bits */
 
@@ -65,9 +69,9 @@ BITVEC *BitvecComplement(BITVEC *B, BITVEC *A);  /* B = complement of A */
 unsigned BitvecCardinality(BITVEC *A);    /* returns non-negative integer */
 Boolean BitvecInSafe(BITVEC *vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
-#if 1 //NDEBUG || !PARANOID_ASSERTS
+#if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < vec->maxSize, which is dangerous
-#define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e))
+#define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e) ? true:false)
 //#define BitvecIn(vec,e) ((e)>=0 && (e)<(vec)->maxSize && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
 #else
 #define BitvecIn BitvecInSafe

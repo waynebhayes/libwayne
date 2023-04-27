@@ -51,7 +51,12 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
 Boolean SetInSafe(SET *set, unsigned element)
 {
     assert(element < set->maxSize);
-    if(set->bitvec) return BitvecIn(set->bitvec, element);
+    if(set->bitvec) {
+#if PARANOID_ASSERTS
+	assert(!_smallestGood || set->smallestElement == set->bitvec->smallestElement);
+#endif
+	return BitvecInSafe(set->bitvec, element);
+    }
     assert(set->list && set->cardinality <= SET_MAX_LIST);
     int i;
     for(i=0; i<set->cardinality; i++) if(element == set->list[i]) return true;
@@ -114,6 +119,9 @@ void SetFree(SET *set)
 */
 SET *SetAdd(SET *s, unsigned element)
 {
+#if PARANOID_ASSERTS
+    if(s->bitvec && _smallestGood) assert(s->smallestElement == s->bitvec->smallestElement);
+#endif
     assert(element < s->maxSize);
     if(SetIn(s, element)) return s;
     if(s->bitvec) BitvecAdd(s->bitvec, element);
@@ -130,7 +138,10 @@ SET *SetAdd(SET *s, unsigned element)
     ++s->cardinality;
     if(element < s->smallestElement) s->smallestElement = element;
 #if PARANOID_ASSERTS
-    if(s->bitvec) assert(s->cardinality == BitvecCardinality(s->bitvec));
+    if(s->bitvec) {
+	assert(!_smallestGood || s->smallestElement == s->bitvec->smallestElement);
+	assert(s->cardinality == BitvecCardinality(s->bitvec));
+    }
     else assert(s->list && s->cardinality <= SET_MAX_LIST);
 #endif
     return s;
@@ -180,20 +191,21 @@ SET *SetAddList(SET *set, ...)
 
 static unsigned int SetAssignSmallestElement1(SET *set)
 {
-    SET_ELEMENT_TYPE old = set->smallestElement;
-    assert((set->cardinality == 0 && set->smallestElement >= set->maxSize) || !SetIn(set, old));
+    _smallestGood = false;
+    SET_ELEMENT_TYPE new=set->maxSize;
     if(set->bitvec) {
-	set->smallestElement = BitvecAssignSmallestElement1(set->bitvec);
+	new = BitvecAssignSmallestElement1(set->bitvec);
     } else { assert(set->list && set->cardinality <= SET_MAX_LIST);
 	int i;
-	for(i=0; i<set->cardinality; i++) if(set->list[i] < set->smallestElement) set->smallestElement = set->list[i];
+	for(i=0; i<set->cardinality; i++) if(set->list[i] < new) new = set->list[i];
     }
-    assert(set->smallestElement < old);
-    return set->smallestElement;
+    _smallestGood = true;
+    return (set->smallestElement = new);
 }
 
 static unsigned int SetAssignSmallestElement3(SET *C, SET *A, SET *B)
 {
+    _smallestGood = false;
     if(A->smallestElement == B->smallestElement)
 	C->smallestElement = A->smallestElement;
     else if(SetIn(A, B->smallestElement))
@@ -214,6 +226,7 @@ static unsigned int SetAssignSmallestElement3(SET *C, SET *A, SET *B)
 	assert(C->smallestElement > A->smallestElement);
 	assert(C->smallestElement > B->smallestElement);
     }
+    _smallestGood = true;
     return C->smallestElement;
 }
 
@@ -222,6 +235,7 @@ static unsigned int SetAssignSmallestElement3(SET *C, SET *A, SET *B)
 SET *SetDelete(SET *set, unsigned element)
 {
     assert(element < set->maxSize);
+    if(set->bitvec && _smallestGood) assert(set->smallestElement == set->bitvec->smallestElement);
     if(!SetIn(set, element)) return set;
     if(set->bitvec) BitvecDelete(set->bitvec, element);
     else {
@@ -231,14 +245,17 @@ SET *SetDelete(SET *set, unsigned element)
 	set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
     }
     set->cardinality--;
-#if PARANOID_ASSERTS
-    if(set->bitvec) assert(BitvecCardinality(set->bitvec) == set->cardinality);
-#endif
     if(element == set->smallestElement)
     {
 	SetAssignSmallestElement1(set);
 	assert(set->smallestElement > element);
     }
+#if PARANOID_ASSERTS
+    if(set->bitvec) {
+	if(_smallestGood) assert(set->smallestElement == set->bitvec->smallestElement);
+	assert(BitvecCardinality(set->bitvec) == set->cardinality);
+    }
+#endif
     return set;
 }
 
@@ -286,17 +303,23 @@ Boolean SetSubsetProper(SET *A, SET *B)
 SET *SetUnion(SET *C, SET *A, SET *B)
 {
     int i;
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
-    if(A->bitvec && B->bitvec) BitvecUnion(C->bitvec, A->bitvec, B->bitvec);
-    else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
+    assert(C && A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    if(A->bitvec || B->bitvec) { // at least one uses bitvec
 	SetMakeBitvec(C);
-	SET *vec = A, *list = B; // default
-	if(B->bitvec) { // swap the above
-	    vec=B; list=A;
+	if(A->bitvec && B->bitvec) // both use bitvecs
+	    BitvecUnion(C->bitvec, A->bitvec, B->bitvec);
+	else {
+	    assert(!A->bitvec || !B->bitvec); // at MOST one uses bitvec
+	    SET *vec = A, *list = B; // default
+	    if(A->bitvec) assert(!A->list && !B->bitvec && B->list);
+	    else { // swap the above
+		assert(B->bitvec && !B->list && A->list);
+		vec=B; list=A;
+	    }
+	    assert(vec->bitvec && list->list && !vec->list && !list->bitvec);
+	    SetCopy(C, vec);
+	    for(i=0;i<list->cardinality;i++) SetAdd(C, list->list[i]);
 	}
-	assert(vec->bitvec && list->list);
-	SetCopy(C, vec);
-	for(i=0;i<list->cardinality;i++) SetAdd(C, list->list[i]);
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
 	SetCopy(C, A);
@@ -313,6 +336,7 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
 {
     int i;
     assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    _smallestGood = false;
     if(A->bitvec && B->bitvec) BitvecIntersect(C->bitvec, A->bitvec, B->bitvec);
     else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
 	SetEmpty(C);
@@ -331,6 +355,7 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
     if(SetIn(C, A->smallestElement)) C->smallestElement = A->smallestElement;
     if(SetIn(C, B->smallestElement) && B->smallestElement < C->smallestElement) C->smallestElement = B->smallestElement;
     if(C->smallestElement == C->maxSize) C->smallestElement = SetAssignSmallestElement1(C);
+    _smallestGood = true;
     return C;
 }
 
@@ -437,7 +462,7 @@ SET *SetPrimes(long n)
     SetMakeBitvec(primes);
 
     for(i=0; i<NUMSEGS(n+1); i++)
-	primes->bitvec->segment[i] = bitvec_all;     /* turn on all the bits */
+	primes->bitvec->segment[i] = bitvecBits_1;     /* turn on all the bits */
     SetDelete(primes, 0);
     SetDelete(primes, 1);
 

@@ -20,8 +20,10 @@ extern "C" {
 #include <stdarg.h>
 #include <math.h> // for sqrt(n) in SPARSE_BITVEC
 
-unsigned bitvec_all, bitvecBits = sizeof(BITVEC_SEGMENT)*8;
+unsigned bitvecBits = sizeof(BITVEC_SEGMENT)*8, bitvecBits_1;
 int NUMSEGS(int n) { return (n+bitvecBits-1)/bitvecBits; }   /* number of segments needed to store n bits */
+
+Boolean _smallestGood=true;
 
 unsigned int lookupBitCount[BITVEC_LOOKUP_SIZE];
 /* count the number of 1 bits in a long
@@ -45,10 +47,10 @@ static unsigned DumbCountBits(unsigned long i)
 */
 Boolean BitvecStartup(void)
 {
-    if(bitvec_all)
+    if(bitvecBits_1)
 	return 0;
     assert(sizeof(BITVEC_SEGMENT) == 4);	// we assume 32-bit ints
-    bitvec_all = (-1);
+    bitvecBits_1 = bitvecBits-1;
     unsigned long i;
     for(i=0; i<BITVEC_LOOKUP_SIZE; i++)
 	lookupBitCount[i] = DumbCountBits(i);
@@ -62,7 +64,7 @@ Boolean BitvecStartup(void)
 */
 BITVEC *BitvecAlloc(unsigned n)
 {
-    if(!bitvec_all) BitvecStartup();
+    if(!bitvecBits_1) BitvecStartup();
     BITVEC *vec = (BITVEC*) Calloc(1,sizeof(BITVEC));
     vec->maxSize = n;
     vec->smallestElement = n; // ie., invalid
@@ -227,16 +229,18 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 {
-    int i=0, seg, old=vec->smallestElement, numSegs = NUMSEGS(vec->maxSize);;
-    assert((old == vec->maxSize && BitvecCardinality(vec)==0) || !BitvecIn(vec, old)); // it should not be in there!
+    _smallestGood = false;
+    int i=vec->maxSize, seg, numSegs = NUMSEGS(vec->maxSize);
 
     for(seg=0; seg<numSegs; seg++) if(vec->segment[seg]) { // first find the lowest non-zero segment
 	for(i=0; i<bitvecBits; i++) if(BitvecIn(vec, seg*bitvecBits + i)) break;
+	assert(i<bitvecBits);
 	break;
     }
-    // note the following works even if there's no new smallest element
+    // note the following works even if there's no new smallest element or when numSegs==0
     vec->smallestElement = MIN(seg*bitvecBits + i, vec->maxSize);
     if(vec->smallestElement == vec->maxSize) assert(BitvecCardinality(vec) == 0);
+    _smallestGood = true;
     return vec->smallestElement;
 }
 
@@ -263,7 +267,8 @@ Boolean BitvecInSafe(BITVEC *vec, unsigned element)
 {
     assert(element < vec->maxSize);
     unsigned segment = element/bitvecBits, e_bit = BITVEC_BIT_SAFE(element);
-    return (vec->segment[segment] & e_bit);
+    if(vec->segment[segment] & e_bit) return true;
+    else return false;
 }
 
 Boolean SparseBitvecIn(SPARSE_BITVEC *vec, unsigned long element)
@@ -346,6 +351,7 @@ SPARSE_BITVEC *SparseBitvecUnion(SPARSE_BITVEC *C, SPARSE_BITVEC *A, SPARSE_BITV
 
 unsigned int BitvecAssignSmallestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
 {
+    _smallestGood = false;
     if(A->smallestElement == B->smallestElement)
 	C->smallestElement = A->smallestElement;
     else if(BitvecIn(A, B->smallestElement))
@@ -366,6 +372,7 @@ unsigned int BitvecAssignSmallestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
 	assert(C->smallestElement > A->smallestElement);
 	assert(C->smallestElement > B->smallestElement);
     }
+    _smallestGood = true;
     return C->smallestElement;
 }
 
