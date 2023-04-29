@@ -26,6 +26,7 @@ extern "C" {
 
 #include <stdlib.h>
 #include <assert.h>
+#include "mem-debug.h"
 #include "misc.h"
 #include "bitvec.h"
 

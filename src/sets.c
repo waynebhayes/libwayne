@@ -55,13 +55,13 @@ int SetComputeCrossover(unsigned n)
 SET *SetAlloc(SET_ELEMENT_TYPE n)
 {
     if(!_doneInit) SetStartup();
-    SET *set = (SET*) Calloc(1,sizeof(SET));
+    SET *set = (SET*) CALLOC(1,sizeof(SET));
     assert(set->cardinality == 0);
     set->maxElem = n;
     set->smallestElement = n; // ie., invalid
     set->bitvec = NULL;
     set->listSize = SET_MIN_LIST;
-    set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), set->listSize);
+    set->list = (SET_ELEMENT_TYPE*) CALLOC(sizeof(SET_ELEMENT_TYPE), set->listSize);
     set->crossover = SetComputeCrossover(n);
     return set;
 }
@@ -331,10 +331,12 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 {
     int i;
     assert(C && A->maxElem == B->maxElem && B->maxElem == C->maxElem);
+    SET *tmp = SetAlloc(A->maxElem);
     if(A->bitvec || B->bitvec) { // at least one uses bitvec
-	SetMakeBitvec(C);
-	if(A->bitvec && B->bitvec) // both use bitvecs
-	    BitvecUnion(C->bitvec, A->bitvec, B->bitvec);
+	SetMakeBitvec(tmp);
+	if(A->bitvec && B->bitvec) { // both use bitvecs
+	    BitvecUnion(tmp->bitvec, A->bitvec, B->bitvec);
+	}
 	else {
 	    assert(!A->bitvec || !B->bitvec); // at MOST one uses bitvec
 	    SET *vec = A, *list = B; // default
@@ -344,16 +346,18 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 		vec=B; list=A;
 	    }
 	    assert(vec->bitvec && list->list && !vec->list && !list->bitvec);
-	    SetCopy(C, vec);
-	    for(i=0;i<list->cardinality;i++) SetAdd(C, list->list[i]);
+	    SetCopy(tmp, vec);
+	    for(i=0;i<list->cardinality;i++) SetAdd(tmp, list->list[i]);
 	}
-	C->cardinality = BitvecCardinality(C->bitvec);
+	tmp->cardinality = BitvecCardinality(tmp->bitvec);
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
-	SetCopy(C, A);
-	for(i=0;i<B->cardinality;i++) SetAdd(C, B->list[i]);
+	SetCopy(tmp, A);
+	for(i=0;i<B->cardinality;i++) SetAdd(tmp, B->list[i]);
     }
-    C->smallestElement = MIN(A->smallestElement, B->smallestElement);
+    tmp->smallestElement = MIN(A->smallestElement, B->smallestElement);
+    SetCopy(C,tmp);
+    SetFree(tmp);
     return C;
 }
 
@@ -547,12 +551,12 @@ struct _ssetDict {
 SSETDICT *SSetDictAlloc(int n)
 {
     int i;
-    SSETDICT *ssd = Calloc(sizeof(SSETDICT), 1);
+    SSETDICT *ssd = CALLOC(sizeof(SSETDICT), 1);
     assert(n>=1);
     ssd->nCols = n;
     ssd->nElem = 0;
     for(i=0; i< NUM_HASHES; i++)
-	ssd->array[i] = Calloc(sizeof(SSET), ssd->nCols);
+	ssd->array[i] = CALLOC(sizeof(SSET), ssd->nCols);
     return ssd;
 }
 
