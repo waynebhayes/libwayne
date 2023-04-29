@@ -15,6 +15,7 @@ extern "C" {
 ** Wayne Hayes, wayne@cs.toronto.edu.
 */
 
+#include "mem-debug.h"
 #include "bitvec.h"
 #include <stdio.h>
 #include <stdarg.h>
@@ -66,20 +67,20 @@ Boolean BitvecStartup(void)
 BITVEC *BitvecAlloc(unsigned n)
 {
     if(!bitvecBits_1) BitvecStartup();
-    BITVEC *vec = (BITVEC*) Calloc(1,sizeof(BITVEC));
+    BITVEC *vec = (BITVEC*) CALLOC(1,sizeof(BITVEC));
     vec->maxElem = n;
     vec->smallestElement = n; // ie., invalid
-    vec->segment = (BITVEC_SEGMENT*) Calloc(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
+    vec->segment = (BITVEC_SEGMENT*) CALLOC(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
     return vec;
 }
 
 
 SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n)
 {
-    SPARSE_BITVEC *vec = (SPARSE_BITVEC*) Calloc(1,sizeof(SPARSE_BITVEC));
+    SPARSE_BITVEC *vec = (SPARSE_BITVEC*) CALLOC(1,sizeof(SPARSE_BITVEC));
     vec->maxElem = n;
     vec->sqrt_n = ceil(sqrt(n));
-    vec->vecs = (BITVEC**) Calloc(vec->sqrt_n,sizeof(BITVEC*));
+    vec->vecs = (BITVEC**) CALLOC(vec->sqrt_n,sizeof(BITVEC*));
     return vec;
 }
 
@@ -263,7 +264,7 @@ BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 
 /* query if an element is in a vec; return 0 or non-zero.
 */
-#define BITVEC_BIT_SAFE(e) (1UL<<((e)%bitvecBits))
+#define BITVEC_BIT_SAFE(e) (1U<<((e)&bitvecBits_1))
 Boolean BitvecInSafe(BITVEC *vec, unsigned element)
 {
     assert(element < vec->maxElem);
