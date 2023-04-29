@@ -134,6 +134,13 @@ void *Malloc_fl( const int size, const char *file, const int line )
     return memoryBlock;
 }
 
+void *Calloc_fl( const int num, const int size, const char *file, const int line )
+{
+    void *mem = Malloc_fl(num*size, file, line);
+    return memset(mem, 0, num*size);
+}
+
+
 
 void Free_fl( void *memoryBlock, const char *file, const int line )
 {

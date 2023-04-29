@@ -47,11 +47,11 @@ void Fatal_fl( const char *message, const char *file, const int line );
 **    this function ONCE and ONLY ONCE at the beginning of your program
 **    BEFORE any memory is allocated.
 */
-#ifndef NDEBUG
+#ifdef NDEBUG
+#define ENABLE_MEMORY_TRACKING() /* nothing */
+#else
 void EnableMemoryTracking( const char *file, const int line );
 #define ENABLE_MEMORY_TRACKING() EnableMemoryTracking( __FILE__, __LINE__)
-#else
-#define ENABLE_MEMORY_TRACKING() /* nothing */
 #endif
 
 /*
@@ -76,11 +76,14 @@ void EnableMemoryTracking( const char *file, const int line );
 ** 3. DO NOT mix calls to Malloc and Free with calls to the standard C library
 **    functions malloc and free.
 */
-#ifndef NDEBUG
-void *Malloc_fl( const int size, const char *file, const int line );  /* Do not call this function directly.  Use MALLOC instead. */
-#define MALLOC(size) Malloc_fl( (size), __FILE__, __LINE__ )
+#ifdef NDEBUG
+#define MALLOC(size) Malloc(size)
+#define CALLOC(num,size) Calloc((num),(size))
 #else
-#define MALLOC(size) malloc(size)
+void *Malloc_fl( const int size, const char *file, const int line );  /* Do not call this function directly.  Use MALLOC instead. */
+void *Calloc_fl( const int size, const int num, const char *file, const int line );  /* Do not call this function directly.  Use MALLOC instead. */
+#define MALLOC(size) Malloc_fl( (size), __FILE__, __LINE__ )
+#define CALLOC(num,size) Calloc_fl( (num),(size), __FILE__, __LINE__ )
 #endif
 
 
@@ -94,11 +97,11 @@ void *Malloc_fl( const int size, const char *file, const int line );  /* Do not 
 ** 3. DO NOT mix calls to Malloc and Free with calls to the standard C
 **    library functions malloc and free.
 */
-#ifndef NDEBUG
+#ifdef NDEBUG
+#define FREE(p) Free(p)
+#else
 void Free_fl( void *memoryBlock, const char *file, const int line );
 #define FREE(pointer) Free_fl( (pointer), __FILE__, __LINE__ )
-#else
-#define FREE(p) free(p)
 #endif
 
 
@@ -119,11 +122,11 @@ void Free_fl( void *memoryBlock, const char *file, const int line );
 **    reporting (i.e., by calling EnableMemoryTracking), then the function
 **    will not display any output.
 */
-#ifndef NDEBUG
+#ifdef NDEBUG
+#define MEMORY_ALLOCATION_REPORT() /* nothing */
+#else
 void MemoryAllocationReport( const char *file, const int line );
 #define MEMORY_ALLOCATION_REPORT() MemoryAllocationReport(__FILE__,__LINE__)
-#else
-#define MEMORY_ALLOCATION_REPORT() /* nothing */
 #endif
 
 
