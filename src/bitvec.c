@@ -22,6 +22,7 @@ extern "C" {
 
 unsigned bitvecBits = sizeof(BITVEC_SEGMENT)*8, bitvecBits_1;
 int NUMSEGS(int n) { return (n+bitvecBits-1)/bitvecBits; }   /* number of segments needed to store n bits */
+int BitvecBytes(unsigned n) { return (sizeof(BITVEC)+NUMSEGS(n)*sizeof(BITVEC_SEGMENT));}
 
 Boolean _smallestGood=true;
 
@@ -66,7 +67,7 @@ BITVEC *BitvecAlloc(unsigned n)
 {
     if(!bitvecBits_1) BitvecStartup();
     BITVEC *vec = (BITVEC*) Calloc(1,sizeof(BITVEC));
-    vec->maxSize = n;
+    vec->maxElem = n;
     vec->smallestElement = n; // ie., invalid
     vec->segment = (BITVEC_SEGMENT*) Calloc(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
     return vec;
@@ -76,7 +77,7 @@ BITVEC *BitvecAlloc(unsigned n)
 SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n)
 {
     SPARSE_BITVEC *vec = (SPARSE_BITVEC*) Calloc(1,sizeof(SPARSE_BITVEC));
-    vec->maxSize = n;
+    vec->maxElem = n;
     vec->sqrt_n = ceil(sqrt(n));
     vec->vecs = (BITVEC**) Calloc(vec->sqrt_n,sizeof(BITVEC*));
     return vec;
@@ -88,9 +89,9 @@ SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n)
 */
 BITVEC *BitvecResize(BITVEC *vec, unsigned new_n)
 {
-    int i, old_n = vec->maxSize;
+    int i, old_n = vec->maxElem;
     vec->segment = (BITVEC_SEGMENT*) Realloc(vec->segment, sizeof(BITVEC_SEGMENT) * NUMSEGS(new_n));
-    vec->maxSize = new_n;
+    vec->maxElem = new_n;
     for(i=old_n; i < new_n; i++) // Realloc doesn't guarantee new space is zero'd, so we must do it ourselves
 	BitvecDelete(vec, i);
     return vec;
@@ -102,8 +103,8 @@ BITVEC *BitvecResize(BITVEC *vec, unsigned new_n)
 */
 BITVEC *BitvecEmpty(BITVEC *vec)
 {
-    int segment=NUMSEGS(vec->maxSize);
-    vec->smallestElement = vec->maxSize;
+    int segment=NUMSEGS(vec->maxElem);
+    vec->smallestElement = vec->maxElem;
     memset(vec->segment, 0, segment * sizeof(vec->segment[0]));
     return vec;
 }
@@ -157,12 +158,12 @@ void SparseBitvecFree(SPARSE_BITVEC *vec)
 */
 BITVEC *BitvecCopy(BITVEC *dst, BITVEC *src)
 {
-    int i, numSrc = NUMSEGS(src->maxSize);
+    int i, numSrc = NUMSEGS(src->maxElem);
 
     if(!dst)
-	dst = BitvecAlloc(src->maxSize);
+	dst = BitvecAlloc(src->maxElem);
     else
-	dst = BitvecResize(dst, src->maxSize);
+	dst = BitvecResize(dst, src->maxElem);
     dst->smallestElement = src->smallestElement;
 
     for(i=0; i < numSrc; i++)
@@ -175,8 +176,8 @@ SPARSE_BITVEC *SparseBitvecCopy(SPARSE_BITVEC *dst, SPARSE_BITVEC *src)
     int i;
 
     if(!dst)
-	dst = SparseBitvecAlloc(src->maxSize);
-    assert(dst->maxSize == src->maxSize);
+	dst = SparseBitvecAlloc(src->maxElem);
+    assert(dst->maxElem == src->maxElem);
 
     for(i=0; i < dst->sqrt_n; i++)
 	BitvecCopy(dst->vecs[i], src->vecs[i]);
@@ -188,7 +189,7 @@ SPARSE_BITVEC *SparseBitvecCopy(SPARSE_BITVEC *dst, SPARSE_BITVEC *src)
 */
 BITVEC *BitvecAdd(BITVEC *vec, unsigned element)
 {
-    assert(element < vec->maxSize);
+    assert(element < vec->maxElem);
     vec->segment[element/bitvecBits] |= BITVEC_BIT(element);
     if(element < vec->smallestElement) vec->smallestElement = element;
     return vec;
@@ -196,7 +197,7 @@ BITVEC *BitvecAdd(BITVEC *vec, unsigned element)
 
 SPARSE_BITVEC *SparseBitvecAdd(SPARSE_BITVEC *vec, unsigned long element)
 {
-    assert(element < vec->maxSize);
+    assert(element < vec->maxElem);
     int which = element / vec->sqrt_n;
     if(!vec->vecs[which])
 	vec->vecs[which] = BitvecAlloc(vec->sqrt_n);
@@ -230,7 +231,7 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 {
     _smallestGood = false;
-    int i=vec->maxSize, seg, numSegs = NUMSEGS(vec->maxSize);
+    int i=vec->maxElem, seg, numSegs = NUMSEGS(vec->maxElem);
 
     for(seg=0; seg<numSegs; seg++) if(vec->segment[seg]) { // first find the lowest non-zero segment
 	for(i=0; i<bitvecBits; i++) if(BitvecIn(vec, seg*bitvecBits + i)) break;
@@ -238,8 +239,8 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 	break;
     }
     // note the following works even if there's no new smallest element or when numSegs==0
-    vec->smallestElement = MIN(seg*bitvecBits + i, vec->maxSize);
-    if(vec->smallestElement == vec->maxSize) assert(BitvecCardinality(vec) == 0);
+    vec->smallestElement = MIN(seg*bitvecBits + i, vec->maxElem);
+    if(vec->smallestElement == vec->maxElem) assert(BitvecCardinality(vec) == 0);
     _smallestGood = true;
     return vec->smallestElement;
 }
@@ -248,7 +249,7 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 */
 BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 {
-    assert(element < vec->maxSize);
+    assert(element < vec->maxElem);
     vec->segment[element/bitvecBits] &= ~BITVEC_BIT(element);
     if(element == vec->smallestElement)
     {
@@ -265,7 +266,7 @@ BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 #define BITVEC_BIT_SAFE(e) (1UL<<((e)%bitvecBits))
 Boolean BitvecInSafe(BITVEC *vec, unsigned element)
 {
-    assert(element < vec->maxSize);
+    assert(element < vec->maxElem);
     unsigned segment = element/bitvecBits, e_bit = BITVEC_BIT_SAFE(element);
     if(vec->segment[segment] & e_bit) return true;
     else return false;
@@ -273,7 +274,7 @@ Boolean BitvecInSafe(BITVEC *vec, unsigned element)
 
 Boolean SparseBitvecIn(SPARSE_BITVEC *vec, unsigned long element)
 {
-    assert(element < vec->maxSize);
+    assert(element < vec->maxElem);
     int which = element / vec->sqrt_n;
     return vec->vecs[which] && BitvecIn(vec->vecs[which], element - which*vec->sqrt_n);
 }
@@ -282,14 +283,14 @@ Boolean SparseBitvecIn(SPARSE_BITVEC *vec, unsigned long element)
 */
 Boolean BitvecEq(BITVEC *A, BITVEC *B)
 {
-    int i, minSize = MIN(A->maxSize, B->maxSize), maxSize = MAX(A->maxSize, B->maxSize);
+    int i, minSize = MIN(A->maxElem, B->maxElem), maxElem = MAX(A->maxElem, B->maxElem);
     int loop1 = NUMSEGS(minSize);
-    int loop2 = NUMSEGS(maxSize);
+    int loop2 = NUMSEGS(maxElem);
     for(i=0; i < loop1; i++)
 	if(A->segment[i] != B->segment[i])
 	    return false;
     BITVEC *whoBigger = A; // check if the bigger one's remaining elements are all zero
-    if(B->maxSize > A->maxSize) whoBigger  = B;
+    if(B->maxElem > A->maxElem) whoBigger  = B;
     for(i=loop1; i < loop2; i++) if(whoBigger->segment[i]) return false;
 #if PARANOID_ASSERTS
     assert(BitvecCardinality(A) == BitvecCardinality(B));
@@ -300,7 +301,7 @@ Boolean BitvecEq(BITVEC *A, BITVEC *B)
 Boolean SparseBitvecEq(SPARSE_BITVEC *A, SPARSE_BITVEC *B)
 {
     int i;
-    assert(A->maxSize == B->maxSize);
+    assert(A->maxElem == B->maxElem);
     for(i=0; i < A->sqrt_n; i++)
 	if(!BitvecEq(A->vecs[i], B->vecs[i]))
 	    return false;
@@ -313,8 +314,8 @@ Boolean SparseBitvecEq(SPARSE_BITVEC *A, SPARSE_BITVEC *B)
 Boolean BitvecSubsetEq(BITVEC *A, BITVEC *B)
 {
     int i;
-    int loop = NUMSEGS(A->maxSize);
-    assert(A->maxSize == B->maxSize);
+    int loop = NUMSEGS(A->maxElem);
+    assert(A->maxElem == B->maxElem);
     for(i=0; i < loop; i++)
 	if((A->segment[i] & B->segment[i]) != A->segment[i])
 	    return false;
@@ -332,8 +333,9 @@ Boolean BitvecSubsetProper(BITVEC *A, BITVEC *B)
 BITVEC *BitvecUnion(BITVEC *C, BITVEC *A, BITVEC *B)
 {
     int i;
-    int loop = NUMSEGS(C->maxSize);
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(C && A && B);
+    int loop = NUMSEGS(C->maxElem);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     for(i=0; i < loop; i++)
 	C->segment[i] = A->segment[i] | B->segment[i];
     C->smallestElement = MIN(A->smallestElement, B->smallestElement);
@@ -342,7 +344,7 @@ BITVEC *BitvecUnion(BITVEC *C, BITVEC *A, BITVEC *B)
 SPARSE_BITVEC *SparseBitvecUnion(SPARSE_BITVEC *C, SPARSE_BITVEC *A, SPARSE_BITVEC *B)
 {
     int i;
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     for(i=0; i < A->sqrt_n; i++)
 	BitvecUnion(C->vecs[i], A->vecs[i], B->vecs[i]);
     return C;
@@ -381,8 +383,8 @@ unsigned int BitvecAssignSmallestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
 BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B)
 {
     int i;
-    int loop = NUMSEGS(C->maxSize);
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    int loop = NUMSEGS(C->maxElem);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     for(i=0; i < loop; i++)
 	C->segment[i] = A->segment[i] & B->segment[i];
     BitvecAssignSmallestElement3(C,A,B);
@@ -392,7 +394,7 @@ BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B)
 SPARSE_BITVEC *SparseBitvecIntersect(SPARSE_BITVEC *C, SPARSE_BITVEC *A, SPARSE_BITVEC *B)
 {
     int i;
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     for(i=0; i < C->sqrt_n; i++)
 	BitvecIntersect(C->vecs[i], A->vecs[i], B->vecs[i]);
     return C;
@@ -404,10 +406,10 @@ SPARSE_BITVEC *SparseBitvecIntersect(SPARSE_BITVEC *C, SPARSE_BITVEC *A, SPARSE_
 BITVEC *BitvecXOR(BITVEC *C, BITVEC *A, BITVEC *B)
 {
     int i;
-    int loop = NUMSEGS(C->maxSize);
+    int loop = NUMSEGS(C->maxElem);
     if(!A) return BitvecCopy(C, B);
     if(!B) return BitvecCopy(C, A);
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     for(i=0; i < loop; i++)
 	C->segment[i] = A->segment[i] ^ B->segment[i];
     BitvecAssignSmallestElement3(C,A,B);
@@ -420,8 +422,8 @@ BITVEC *BitvecXOR(BITVEC *C, BITVEC *A, BITVEC *B)
 BITVEC *BitvecComplement(BITVEC *B, BITVEC *A)
 {
     int i;
-    int loop = NUMSEGS(B->maxSize);
-    assert(A->maxSize == B->maxSize);
+    int loop = NUMSEGS(B->maxElem);
+    assert(A->maxElem == B->maxElem);
     for(i=0; i < loop; i++)
 	B->segment[i] = ~A->segment[i];
     BitvecAssignSmallestElement1(B);
@@ -431,7 +433,7 @@ BITVEC *BitvecComplement(BITVEC *B, BITVEC *A)
 
 unsigned BitvecCardinality(BITVEC *A)
 {
-    unsigned n = 0, i, loop = NUMSEGS(A->maxSize);
+    unsigned n = 0, i, loop = NUMSEGS(A->maxElem);
     for(i=0; i < loop; i++)
 	if(A->segment[i]) n += BitvecCountBits(A->segment[i]);
     return n;
@@ -454,7 +456,7 @@ unsigned BitvecToArray(unsigned int *array, BITVEC *vec)
 {
     int pos = 0;
     int i;
-    for(i=0; i < vec->maxSize; i++)
+    for(i=0; i < vec->maxElem; i++)
 	if(BitvecIn(vec,i))
 	    array[pos++] = i;
 
@@ -474,8 +476,8 @@ BITVEC *BitvecFromArray(BITVEC *vec, int n, unsigned int *array)
 char *BitvecToString(int len, char s[], BITVEC *vec)
 {
     int i;
-    assert(len > vec->maxSize); /* need space for trailing '\0' */
-    for(i=0; i<MIN(len, vec->maxSize); i++)
+    assert(len > vec->maxElem); /* need space for trailing '\0' */
+    for(i=0; i<MIN(len, vec->maxElem); i++)
 	s[i] = '0' + !!BitvecIn(vec, i);
     s[i] = '\0';
     return s;
@@ -507,7 +509,7 @@ BITVEC *BitvecPrimes(long n)
 void BitvecPrint(BITVEC *A)
 {
     int i;
-    for(i=0;i<A->maxSize;i++) if(BitvecIn(A,i)) printf("%d ", i);
+    for(i=0;i<A->maxElem;i++) if(BitvecIn(A,i)) printf("%d ", i);
     printf("\n");
 }
 

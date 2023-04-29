@@ -32,11 +32,16 @@ extern "C" {
 typedef unsigned SET_ELEMENT_TYPE;
 
 // The maximum number of elements in our unsorted list before we switch to using BITVEC
-#define SET_MAX_LIST bitvecBits // this is likely 32, assuming sizeof(BITVEC_ELEMENT)==4
+#define SET_MIN_LIST 2 // minimum number of elements in the list
 
 typedef struct _setType {
-    SET_ELEMENT_TYPE smallestElement, cardinality, maxSize, *list; // initially make the set an unsorted array of integers...
-    BITVEC *bitvec; // and when it gets too large, make it a bit vector
+    SET_ELEMENT_TYPE smallestElement, *list; // initially make the set an unsorted array of integers... NULL if we use BITVEC
+    int cardinality, // logical number of elements in the set (whether list or BITVEC)
+	listSize, // physical list size, starts at SET_MIN_LIST and increases until crossover, then it's reset to zero
+	crossover, // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
+	maxElem; // maximum number of elements the set can store (change only using SetResize).
+    BITVEC *bitvec; // NULL when using list, otherwise a pointer to the BITVEC being used
+    // NOTE: the set may be upgraded at ANY time from list to BITVEC, even if below the crossover; use pointers to decide
 } SET;
 
 Boolean SetStartup(void); // always succeeds, but returns whether it did anything or not.
@@ -47,7 +52,7 @@ SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
 SET *SetEmpty(SET *set);    /* make the set empty (set must be allocated )*/
 #define SetReset SetEmpty
-#define SetMaxSize(s) ((s)->maxSize)
+#define SetMaxSize(s) ((s)->maxElem)
 SET *SetCopy(SET *dst, SET *src);  /* if dst is NULL, it will be alloc'd */
 SET *SetAdd(SET *set, unsigned element);    /* add single element to set */
 SET *SetAddList(SET *set, ...); /* end list with (-1); uses varargs/stdarg */
@@ -60,7 +65,7 @@ unsigned SetCardinality(SET *A);    /* returns non-negative integer */
 Boolean SetInSafe(SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
-// Note we do not check here if e is < set->maxSize, which is dangerous
+// Note we do not check here if e is < set->maxElem, which is dangerous
 #define SetIn(set,e) ( (set)->bitvec ? BetvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
 #else
 #define SetIn SetInSafe

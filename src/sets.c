@@ -31,6 +31,24 @@ Boolean SetStartup(void)
 }
 
 
+int SetComputeCrossover(unsigned n)
+{
+    static unsigned prevN, prevResult;
+    if(n==prevN) return prevResult;
+    prevN=n;
+
+    // binary search
+    int low=0, high=n-1, mid=0; // inclusive
+    while(low<high) {
+	mid = low + (high-low)/2;
+	assert(low <= mid && mid <= high);
+	int B=BitvecBytes(mid), L=mid*sizeof(SET_ELEMENT_TYPE);
+	if(L>B) high=mid-1; // if the list takes more space, the crossover must be BELOW mid
+	else low=mid+1;
+    }
+    return prevResult = mid;
+}
+
 /*
 ** SetAlloc: create a new empty set of max size n elements. Return its handle.
 */
@@ -39,10 +57,12 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
     if(!_doneInit) SetStartup();
     SET *set = (SET*) Calloc(1,sizeof(SET));
     assert(set->cardinality == 0);
-    set->maxSize = n;
+    set->maxElem = n;
     set->smallestElement = n; // ie., invalid
     set->bitvec = NULL;
-    set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), SET_MAX_LIST);
+    set->listSize = SET_MIN_LIST;
+    set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), set->listSize);
+    set->crossover = SetComputeCrossover(n);
     return set;
 }
 
@@ -50,14 +70,14 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
 */
 Boolean SetInSafe(SET *set, unsigned element)
 {
-    assert(element < set->maxSize);
+    assert(element < set->maxElem);
     if(set->bitvec) {
 #if PARANOID_ASSERTS
 	assert(!_smallestGood || set->smallestElement == set->bitvec->smallestElement);
 #endif
 	return BitvecInSafe(set->bitvec, element);
     }
-    assert(set->list && set->cardinality <= SET_MAX_LIST);
+    assert(set->list && set->cardinality <= set->crossover);
     int i;
     for(i=0; i<set->cardinality; i++) if(element == set->list[i]) return true;
     return false;
@@ -66,13 +86,14 @@ Boolean SetInSafe(SET *set, unsigned element)
 // "Upgrade" a set from using an unsorted list to BITVEC
 static SET *SetMakeBitvec(SET *s)
 {
-    if(s->bitvec) {assert(!s->list); return s;}
-    assert(s->list && s->cardinality <= SET_MAX_LIST);
-    s->bitvec = BitvecAlloc(s->maxSize);
+    if(s->bitvec) {assert(!s->list && !s->listSize); return s;}
+    assert(s->list && s->cardinality <= s->crossover);
+    s->bitvec = BitvecAlloc(s->maxElem);
     int i;
     for(i=0; i<s->cardinality; i++) BitvecAdd(s->bitvec, s->list[i]);
     Free(s->list);
     s->list = NULL;
+    s->listSize = 0;
     return s;
 }
 
@@ -82,10 +103,10 @@ static SET *SetMakeBitvec(SET *s)
 */
 SET *SetResize(SET *set, unsigned new_n)
 {
-    // int i, old_n = set->maxSize;
+    // int i, old_n = set->maxElem;
     if(set->bitvec) set->bitvec = BitvecResize(set->bitvec, new_n); // don't bother going back to list if new_n is small
-    else assert(set->list && set->cardinality <= SET_MAX_LIST); // nothing to do if it's still a list
-    set->maxSize = new_n;
+    else assert(set->list && set->cardinality <= set->crossover); // nothing to do if it's still a list
+    set->maxElem = new_n;
     return set;
 }
 
@@ -96,7 +117,7 @@ SET *SetResize(SET *set, unsigned new_n)
 SET *SetEmpty(SET *set)
 {
     if(set->bitvec) BitvecEmpty(set->bitvec);
-    set->smallestElement = set->maxSize;
+    set->smallestElement = set->maxElem;
     set->cardinality = 0; // in the spirit of C, don't bother zapping the list elements to zero
     return set;
 }
@@ -122,12 +143,17 @@ SET *SetAdd(SET *s, unsigned element)
 #if PARANOID_ASSERTS
     if(s->bitvec && _smallestGood) assert(s->smallestElement == s->bitvec->smallestElement);
 #endif
-    assert(element < s->maxSize);
+    assert(element < s->maxElem);
     if(SetIn(s, element)) return s;
     if(s->bitvec) BitvecAdd(s->bitvec, element);
     else {
 	assert(s->list);
-	if(s->cardinality < SET_MAX_LIST) {
+	if(s->cardinality < s->crossover) { // divide by sqrt(2) to split the difference [listSize, 2*listSize]
+	    assert(s->cardinality <= s->listSize);
+	    if(s->cardinality == s->listSize) {
+		s->listSize *= 2;
+		s->list = (SET_ELEMENT_TYPE*) Realloc(s->list, sizeof(SET_ELEMENT_TYPE) * s->listSize);
+	    }
 	    s->list[s->cardinality] = element;
 	} else {
 	    SetMakeBitvec(s);
@@ -142,7 +168,7 @@ SET *SetAdd(SET *s, unsigned element)
 	assert(!_smallestGood || s->smallestElement == s->bitvec->smallestElement);
 	assert(s->cardinality == BitvecCardinality(s->bitvec));
     }
-    else assert(s->list && s->cardinality <= SET_MAX_LIST);
+    else assert(s->list && s->cardinality <= s->crossover);
 #endif
     return s;
 }
@@ -152,19 +178,20 @@ SET *SetAdd(SET *s, unsigned element)
 */
 SET *SetCopy(SET *dst, SET *src)
 {
-    if(!dst) dst = SetAlloc(src->maxSize);
+    if(!dst) dst = SetAlloc(src->maxElem);
     else SetEmpty(dst);
     if(src->bitvec) {
 	SetMakeBitvec(dst);
 	BitvecCopy(dst->bitvec, src->bitvec);
     } else {
-	assert(dst-> list && src->list && src->cardinality <= SET_MAX_LIST);
+	assert(dst-> list && src->list && src->cardinality <= src->crossover);
 	int i;
 	for(i=0;i<src->cardinality;i++) dst->list[i] = src->list[i];
     }
-    assert(dst->maxSize == src->maxSize);
+    assert(dst->maxElem == src->maxElem);
     dst->smallestElement = src->smallestElement;
     dst->cardinality = src->cardinality;
+    dst->crossover = src->crossover;
     return dst;
 }
 
@@ -192,10 +219,10 @@ SET *SetAddList(SET *set, ...)
 static unsigned int SetAssignSmallestElement1(SET *set)
 {
     _smallestGood = false;
-    SET_ELEMENT_TYPE new=set->maxSize;
+    SET_ELEMENT_TYPE new=set->maxElem;
     if(set->bitvec) {
 	new = BitvecAssignSmallestElement1(set->bitvec);
-    } else { assert(set->list && set->cardinality <= SET_MAX_LIST);
+    } else { assert(set->list && set->cardinality <= set->crossover);
 	int i;
 	for(i=0; i<set->cardinality; i++) if(set->list[i] < new) new = set->list[i];
     }
@@ -234,7 +261,7 @@ static unsigned int SetAssignSmallestElement3(SET *C, SET *A, SET *B)
 */
 SET *SetDelete(SET *set, unsigned element)
 {
-    assert(element < set->maxSize);
+    assert(element < set->maxElem);
     if(set->bitvec && _smallestGood) assert(set->smallestElement == set->bitvec->smallestElement);
     if(!SetIn(set, element)) return set;
     if(set->bitvec) BitvecDelete(set->bitvec, element);
@@ -288,7 +315,7 @@ Boolean SetSubsetEq(SET *A, SET *B)
     if(A->bitvec && B->bitvec) return BitvecSubsetEq(A->bitvec, B->bitvec);
     int i;
     if(A->list) { for(i=0; i<A->cardinality; i++) if(!SetIn(B, A->list[i])) return false; }
-    else for(i=0; i<A->maxSize; i++) if(SetIn(A,i) && !SetIn(B, i)) return false;
+    else for(i=0; i<A->maxElem; i++) if(SetIn(A,i) && !SetIn(B, i)) return false;
     return true;
 }
 
@@ -303,7 +330,7 @@ Boolean SetSubsetProper(SET *A, SET *B)
 SET *SetUnion(SET *C, SET *A, SET *B)
 {
     int i;
-    assert(C && A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(C && A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     if(A->bitvec || B->bitvec) { // at least one uses bitvec
 	SetMakeBitvec(C);
 	if(A->bitvec && B->bitvec) // both use bitvecs
@@ -320,6 +347,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 	    SetCopy(C, vec);
 	    for(i=0;i<list->cardinality;i++) SetAdd(C, list->list[i]);
 	}
+	C->cardinality = BitvecCardinality(C->bitvec);
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
 	SetCopy(C, A);
@@ -335,7 +363,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 SET *SetIntersect(SET *C, SET *A, SET *B)
 {
     int i;
-    assert(A->maxSize == B->maxSize && B->maxSize == C->maxSize);
+    assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
     _smallestGood = false;
     if(A->bitvec && B->bitvec) BitvecIntersect(C->bitvec, A->bitvec, B->bitvec);
     else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
@@ -347,14 +375,15 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
 	}
 	assert(vec->bitvec && list->list);
 	for(i=0;i<list->cardinality;i++) if(SetIn(vec, list->list[i])) SetAdd(C, list->list[i]);
+	C->cardinality = BitvecCardinality(C->bitvec);
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
 	for(i=0;i<B->cardinality;i++) if(SetIn(A, B->list[i])) SetAdd(C, B->list[i]);
     }
-    C->smallestElement = C->maxSize;
+    C->smallestElement = C->maxElem;
     if(SetIn(C, A->smallestElement)) C->smallestElement = A->smallestElement;
     if(SetIn(C, B->smallestElement) && B->smallestElement < C->smallestElement) C->smallestElement = B->smallestElement;
-    if(C->smallestElement == C->maxSize) C->smallestElement = SetAssignSmallestElement1(C);
+    if(C->smallestElement == C->maxElem) C->smallestElement = SetAssignSmallestElement1(C);
     _smallestGood = true;
     return C;
 }
@@ -394,7 +423,7 @@ unsigned SetToArray(unsigned int *array, SET *set)
 {
     int pos = 0;
     int i;
-    for(i=0; i < set->maxSize; i++)
+    for(i=0; i < set->maxElem; i++)
 	if(SetIn(set,i))
 	    array[pos++] = i;
 
@@ -447,8 +476,8 @@ char *SSetToString(int len, char s[], SSET set)
 char *SetToString(int len, char s[], SET *set)
 {
     int i;
-    assert(len > set->maxSize); /* need space for trailing '\0' */
-    for(i=0; i<MIN(len, set->maxSize); i++)
+    assert(len > set->maxElem); /* need space for trailing '\0' */
+    for(i=0; i<MIN(len, set->maxElem); i++)
 	s[i] = '0' + !!SetIn(set, i);
     s[i] = '\0';
     return s;
@@ -481,7 +510,7 @@ SET *SetPrimes(long n)
 void SetPrint(SET *A)
 {
     int i;
-    for(i=0;i<A->maxSize;i++) if(SetIn(A,i)) printf("%d ", i);
+    for(i=0;i<A->maxElem;i++) if(SetIn(A,i)) printf("%d ", i);
     printf("\n");
 }
 

@@ -31,15 +31,15 @@ extern unsigned bitvecBits, bitvecBits_1;
 
 
 typedef struct _bitvecType {
-    unsigned maxSize; /* in bits */
+    unsigned maxElem; /* in bits */
     unsigned smallestElement;
     BITVEC_SEGMENT* segment;
 } BITVEC;
 
 extern Boolean _smallestGood; // when false, smallestElement may be inconsistent
 
-
 int NUMSEGS(int n);  /* number of segments needed to store n bits */
+int BitvecBytes(unsigned n); // returns the memory footprint (in bytes) of a BITVEC with maxElem=n
 
 #define BITVEC_LOOKUP_NBITS 16
 #define BITVEC_LOOKUP_SIZE (1 << BITVEC_LOOKUP_NBITS)
@@ -57,7 +57,7 @@ BITVEC *BitvecResize(BITVEC *s, unsigned new_n);
 void BitvecFree(BITVEC *vec); /* free all memory used by a bitvec */
 BITVEC *BitvecEmpty(BITVEC *vec);    /* make the vec empty (vec must be allocated )*/
 #define BitvecReset BitvecEmpty
-#define BitvecMaxSize(v) ((v)->maxSize)
+#define BitvecMaxSize(v) ((v)->maxElem)
 BITVEC *BitvecCopy(BITVEC *dst, BITVEC *src);  /* if dst is NULL, it will be alloc'd */
 BITVEC *BitvecAdd(BITVEC *vec, unsigned element);    /* add single element to vec */
 BITVEC *BitvecAddList(BITVEC *vec, ...); /* end list with (-1); uses varargs/stdarg */
@@ -70,9 +70,9 @@ unsigned BitvecCardinality(BITVEC *A);    /* returns non-negative integer */
 Boolean BitvecInSafe(BITVEC *vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
-// Note we do not check here if e is < vec->maxSize, which is dangerous
+// Note we do not check here if e is < vec->maxElem, which is dangerous
 #define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e) ? true:false)
-//#define BitvecIn(vec,e) ((e)>=0 && (e)<(vec)->maxSize && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
+//#define BitvecIn(vec,e) ((e)>=0 && (e)<(vec)->maxElem && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
 #else
 #define BitvecIn BitvecInSafe
 #endif
@@ -103,7 +103,7 @@ void BitvecPrint(BITVEC *A); /* print elements of the vec */
 *********  SPARSE_BITVEC  ********
 */
 typedef struct _sparseBitvecType {
-    unsigned long maxSize;
+    unsigned long maxElem;
     unsigned sqrt_n;
     BITVEC **vecs;
 } SPARSE_BITVEC;
