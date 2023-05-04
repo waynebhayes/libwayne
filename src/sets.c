@@ -49,9 +49,27 @@ int SetComputeCrossover(unsigned n)
     return prevResult = mid;
 }
 
+static SET *_allocaSet;
+#define SetAllocA(n) (_allocaSet=alloca(sizeof(SET)),_allocaSet->cardinality=0,_allocaSet->maxElem=_allocaSet->smallestElement=(n),_allocaSet->bitvec=NULL,_allocaSet->listSize=SET_MIN_LIST,_allocaSet->list=(SET_ELEMENT_TYPE*)alloca(sizeof(SET_ELEMENT_TYPE)*SET_MIN_LIST),_allocaSet->crossover=SetComputeCrossover(n),_allocaSet)
+
 /*
 ** SetAlloc: create a new empty set of max size n elements. Return its handle.
 */
+#ifdef SetAlloc // we're using mem-debug
+SET *SetAlloc_fl(SET_ELEMENT_TYPE n, const char *file, const int line)
+{
+    if(!_doneInit) SetStartup();
+    SET *set = (SET*) Calloc_fl(1,sizeof(SET),file,line);
+    assert(set->cardinality == 0);
+    set->maxElem = n;
+    set->smallestElement = n; // ie., invalid
+    set->bitvec = NULL;
+    set->listSize = SET_MIN_LIST;
+    set->list = (SET_ELEMENT_TYPE*) Calloc_fl(sizeof(SET_ELEMENT_TYPE), set->listSize,file,line);
+    set->crossover = SetComputeCrossover(n);
+    return set;
+}
+#else
 SET *SetAlloc(SET_ELEMENT_TYPE n)
 {
     if(!_doneInit) SetStartup();
@@ -65,6 +83,7 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
     set->crossover = SetComputeCrossover(n);
     return set;
 }
+#endif
 
 /* query if an element is in a set; return 0 or non-zero.
 */
@@ -91,7 +110,7 @@ static SET *SetMakeBitvec(SET *s)
     s->bitvec = BitvecAlloc(s->maxElem);
     int i;
     for(i=0; i<s->cardinality; i++) BitvecAdd(s->bitvec, s->list[i]);
-    Free(s->list);
+    if(s!=_allocaSet) Free(s->list);
     s->list = NULL;
     s->listSize = 0;
     return s;
@@ -145,15 +164,19 @@ SET *SetAdd(SET *s, unsigned element)
 #endif
     assert(element < s->maxElem);
     if(SetIn(s, element)) return s;
-    if(s->bitvec) BitvecAdd(s->bitvec, element);
-    else {
+    if(s->bitvec) BitvecAdd(s->bitvec, element); // set is aready a BITVEC
+    else { // set is still currently a LIST
 	assert(s->list);
-	if(s->cardinality < s->crossover) { // divide by sqrt(2) to split the difference [listSize, 2*listSize]
-	    assert(s->cardinality <= s->listSize);
-	    if(s->cardinality == s->listSize) {
-		s->listSize *= 2;
+	assert(s->cardinality <= s->listSize && s->listSize <= s->crossover);
+	if(s->cardinality < s->crossover) { // don't switch yet to BITVEC
+	    if(s->cardinality == s->listSize) { // time to expand the list
+		assert(s->cardinality < s->crossover);
+		int oldSize = s->listSize;
+		s->listSize = MIN(2*s->listSize, s->crossover);
+		assert(s->listSize > oldSize);
 		s->list = (SET_ELEMENT_TYPE*) Realloc(s->list, sizeof(SET_ELEMENT_TYPE) * s->listSize);
 	    }
+	    assert(s->cardinality < s->listSize && s->listSize <= s->crossover);
 	    s->list[s->cardinality] = element;
 	} else {
 	    SetMakeBitvec(s);
@@ -168,7 +191,8 @@ SET *SetAdd(SET *s, unsigned element)
 	assert(!_smallestGood || s->smallestElement == s->bitvec->smallestElement);
 	assert(s->cardinality == BitvecCardinality(s->bitvec));
     }
-    else assert(s->list && s->cardinality <= s->crossover);
+    else
+	assert(s->cardinality <= s->listSize && s->listSize <= s->crossover);
 #endif
     return s;
 }
@@ -331,7 +355,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 {
     int i;
     assert(C && A->maxElem == B->maxElem && B->maxElem == C->maxElem);
-    SET *tmp = SetAlloc(A->maxElem);
+    SET *tmp = SetAllocA(A->maxElem);
     if(A->bitvec || B->bitvec) { // at least one uses bitvec
 	SetMakeBitvec(tmp);
 	if(A->bitvec && B->bitvec) { // both use bitvecs
@@ -361,7 +385,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
     }
     tmp->smallestElement = MIN(A->smallestElement, B->smallestElement);
     SetCopy(C,tmp);
-    SetFree(tmp);
+    //SetFree(tmp); // no need to free since it's on the stack
     return C;
 }
 
@@ -371,28 +395,41 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 SET *SetIntersect(SET *C, SET *A, SET *B)
 {
     int i;
+    assert(C);
     assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
-    _smallestGood = false;
-    if(A->bitvec && B->bitvec) BitvecIntersect(C->bitvec, A->bitvec, B->bitvec);
-    else if(A->bitvec || B->bitvec) { // at least one is a bitvec, with the other a list
-	SetEmpty(C);
-	SetMakeBitvec(C);
-	SET *vec = A, *list = B; // default
-	if(B->bitvec) { // swap the above
-	    vec=B; list=A;
+    SET *tmp = SetAllocA(A->maxElem);
+    if(A->bitvec || B->bitvec) { // at least one uses bitvec
+	SetMakeBitvec(tmp);
+	if(A->bitvec && B->bitvec) { // both use bitvecs
+	    BitvecIntersect(tmp->bitvec, A->bitvec, B->bitvec);
+	    tmp->cardinality = BitvecCardinality(tmp->bitvec);
+	    tmp->smallestElement = tmp->bitvec->smallestElement;
 	}
-	assert(vec->bitvec && list->list);
-	for(i=0;i<list->cardinality;i++) if(SetIn(vec, list->list[i])) SetAdd(C, list->list[i]);
-	C->cardinality = BitvecCardinality(C->bitvec);
+	else {
+	    assert(!A->bitvec || !B->bitvec); // at MOST one uses bitvec
+	    SET *vec = A, *list = B; // default
+	    if(A->bitvec) assert(!A->list && !B->bitvec && B->list);
+	    else { // swap the above
+		assert(B->bitvec && !B->list && A->list);
+		vec=B; list=A;
+	    }
+	    assert(tmp->bitvec && vec->bitvec && list->list && !vec->list && !list->bitvec);
+#if PARANOID_ASSERTS
+	    assert(vec->cardinality == BitvecCardinality(vec->bitvec));
+	    assert(BitvecCardinality(tmp->bitvec)==0);
+#endif
+	    for(i=0;i<list->cardinality;i++) if(SetIn(vec, list->list[i])) SetAdd(tmp, list->list[i]);
+	    assert(tmp->cardinality == BitvecCardinality(tmp->bitvec));
+	    assert(tmp->smallestElement == tmp->bitvec->smallestElement);
+	}
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
-	for(i=0;i<B->cardinality;i++) if(SetIn(A, B->list[i])) SetAdd(C, B->list[i]);
+	SET *shorter, *longer;
+	if(A->cardinality < B->cardinality) {shorter=A; longer=B;} else {shorter=B; longer=A;}
+	for(i=0;i<shorter->cardinality;i++) if(SetIn(longer, shorter->list[i])) SetAdd(tmp, shorter->list[i]);
     }
-    C->smallestElement = C->maxElem;
-    if(SetIn(C, A->smallestElement)) C->smallestElement = A->smallestElement;
-    if(SetIn(C, B->smallestElement) && B->smallestElement < C->smallestElement) C->smallestElement = B->smallestElement;
-    if(C->smallestElement == C->maxElem) C->smallestElement = SetAssignSmallestElement1(C);
-    _smallestGood = true;
+    SetCopy(C,tmp);
+    // SetFree(tmp); no need to free since it's on the stack
     return C;
 }
 

@@ -366,7 +366,7 @@ void MemoryAllocationReport( const char *file, const int line )
 **
 ** IMPORTANT NOTE:
 ** Under no circumstances should you call this function directly!  It is
-** "registered" by EnableMemoryTracking and is called automatically when
+** "registered" by EnableMemDebug and is called automatically when
 ** the program terminates.
 */
 static void MemoryLeakDetect( void )
@@ -390,7 +390,7 @@ static void MemoryLeakDetect( void )
 }
 
 
-void EnableMemoryTracking( const char *file, const int line )
+void EnableMemDebug( const char *file, const int line )
 {
     memoryTrackingEnabled = true;
     if( atexit( MemoryLeakDetect  ) != 0 )

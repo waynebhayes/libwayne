@@ -5,7 +5,7 @@
 
 int main(int argc, char *argv[])
 {
-    ENABLE_MEMORY_TRACKING();
+    ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
     GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames);

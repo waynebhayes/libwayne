@@ -48,7 +48,12 @@ typedef struct _setType {
 Boolean SetStartup(void); // always succeeds, but returns whether it did anything or not.
 
 /* allocate & return empty set capable of storing integers 0..n-1 inclusive */
+#if 0 // use this in you want to use mem-debug to track where a set was allocated
+SET *SetAlloc_fl(unsigned n, const char *file, const int line);
+#define SetAlloc(n) SetAlloc_fl((n),__FILE__,__LINE__)
+#else
 SET *SetAlloc(unsigned n);
+#endif
 SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
 SET *SetEmpty(SET *set);    /* make the set empty (set must be allocated )*/
@@ -71,6 +76,7 @@ Boolean SetInSafe(SET *set, unsigned element); /* boolean: 0 or 1 */
 #else
 #define SetIn SetInSafe
 #endif
+int SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
 Boolean SetEq(SET *set1, SET *set2);
 Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */
 #define SetSupersetEq(spr,sb) SetSubsetEq((sb),(spr))

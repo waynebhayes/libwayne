@@ -49,10 +49,10 @@ void Fatal_fl( const char *message, const char *file, const int line );
 **    BEFORE any memory is allocated.
 */
 #ifdef NDEBUG
-#define ENABLE_MEMORY_TRACKING() /* nothing */
+#define ENABLE_MEM_DEBUG() /* nothing */
 #else
-void EnableMemoryTracking( const char *file, const int line );
-#define ENABLE_MEMORY_TRACKING() EnableMemoryTracking( __FILE__, __LINE__)
+void EnableMemDebug( const char *file, const int line );
+#define ENABLE_MEM_DEBUG() EnableMemDebug( __FILE__, __LINE__)
 #endif
 
 /*
