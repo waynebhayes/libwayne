@@ -15,11 +15,11 @@ extern "C" {
 ** Wayne Hayes, wayne@cs.toronto.edu.
 */
 
-#include "mem-debug.h"
 #include "bitvec.h"
 #include <stdio.h>
 #include <stdarg.h>
 #include <math.h> // for sqrt(n) in SPARSE_BITVEC
+#include "mem-debug.h"
 
 unsigned bitvecBits = sizeof(BITVEC_SEGMENT)*8, bitvecBits_1;
 int NUMSEGS(int n) { return (n+bitvecBits-1)/bitvecBits; }   /* number of segments needed to store n bits */
@@ -67,20 +67,20 @@ Boolean BitvecStartup(void)
 BITVEC *BitvecAlloc(unsigned n)
 {
     if(!bitvecBits_1) BitvecStartup();
-    BITVEC *vec = (BITVEC*) CALLOC(1,sizeof(BITVEC));
+    BITVEC *vec = (BITVEC*) Calloc(1,sizeof(BITVEC));
     vec->maxElem = n;
     vec->smallestElement = n; // ie., invalid
-    vec->segment = (BITVEC_SEGMENT*) CALLOC(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
+    vec->segment = (BITVEC_SEGMENT*) Calloc(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
     return vec;
 }
 
 
 SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n)
 {
-    SPARSE_BITVEC *vec = (SPARSE_BITVEC*) CALLOC(1,sizeof(SPARSE_BITVEC));
+    SPARSE_BITVEC *vec = (SPARSE_BITVEC*) Calloc(1,sizeof(SPARSE_BITVEC));
     vec->maxElem = n;
     vec->sqrt_n = ceil(sqrt(n));
-    vec->vecs = (BITVEC**) CALLOC(vec->sqrt_n,sizeof(BITVEC*));
+    vec->vecs = (BITVEC**) Calloc(vec->sqrt_n,sizeof(BITVEC*));
     return vec;
 }
 
@@ -91,10 +91,12 @@ SPARSE_BITVEC *SparseBitvecAlloc(unsigned long n)
 BITVEC *BitvecResize(BITVEC *vec, unsigned new_n)
 {
     int i, old_n = vec->maxElem;
-    vec->segment = (BITVEC_SEGMENT*) Realloc(vec->segment, sizeof(BITVEC_SEGMENT) * NUMSEGS(new_n));
-    vec->maxElem = new_n;
-    for(i=old_n; i < new_n; i++) // Realloc doesn't guarantee new space is zero'd, so we must do it ourselves
-	BitvecDelete(vec, i);
+    if(old_n != new_n) {
+	vec->segment = (BITVEC_SEGMENT*) Realloc(vec->segment, sizeof(BITVEC_SEGMENT) * NUMSEGS(new_n));
+	vec->maxElem = new_n;
+	for(i=old_n; i < new_n; i++) // Realloc doesn't guarantee new space is zero'd, so we must do it ourselves
+	    BitvecDelete(vec, i);
+    }
     return vec;
 }
 
@@ -134,8 +136,8 @@ void BitvecFree(BITVEC *vec)
     if(vec)
     {
 	if(vec->segment)
-	    free(vec->segment);
-	free(vec);
+	    Free(vec->segment);
+	Free(vec);
     }
 }
 
@@ -151,7 +153,7 @@ void SparseBitvecFree(SPARSE_BITVEC *vec)
 	    BitvecFree(vec->vecs[i]);
 	    vec->vecs[i] = NULL;
 	}
-    free(vec);
+    Free(vec);
 }
 
 

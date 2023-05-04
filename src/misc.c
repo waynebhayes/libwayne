@@ -110,6 +110,8 @@ void *Realloc(void *ptr, size_t newSize)
     return p;
 }
 
+void Free(void *ptr) { free(ptr);}
+
 void *Memdup(void *v, size_t n)
 {
     void *r = Malloc(n);

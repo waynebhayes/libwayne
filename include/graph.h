@@ -39,10 +39,10 @@ GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, int i, int j);
 GRAPH *GraphDisconnect(GRAPH *G, int i, int j);
 int GraphNumCommonNeighbors(GRAPH *G, int i, int j);
-GRAPH *GraphComplement(GRAPH *Gbar, GRAPH *G);
-GRAPH *GraphUnion(GRAPH *destination, GRAPH *G1, GRAPH *G2);
+GRAPH *GraphComplement(GRAPH *G);
+GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2);
 #define GraphDegree(G,v) ((G)->degree[v])
-GRAPH *GraphCopy(GRAPH *Gc, GRAPH *G); // If Gc == NULL, create duplicate.  Otherwise just copy G's info into Gc.
+GRAPH *GraphCopy(GRAPH *G); // (deep) copy a graph
 
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
@@ -77,8 +77,8 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 ** new graph in which also the vertices not in V are deleted; vertices
 ** are renumbered but ordering is conserved.
 */
-GRAPH *GraphInduced_NoVertexDelete(GRAPH *Gi, GRAPH *G, SET *V);
-GRAPH *GraphInduced(GRAPH *Gi, GRAPH *G, SET *V);
+GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V);
+GRAPH *GraphInduced(GRAPH *G, SET *V);
 
 void GraphPrintAdjMatrix(FILE *fp, GRAPH *G);
 GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse);

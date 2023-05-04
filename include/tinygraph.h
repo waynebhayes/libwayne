@@ -4,10 +4,12 @@ extern "C" {
 #ifndef _TINYGRAPH_H
 #define _TINYGRAPH_H
 
+#include <stdio.h>
 #include "misc.h"
 #include "sets.h"
 #include "combin.h"
-#include <stdio.h>
+#include "queue.h"
+#include "mem-debug.h"
 
 /* Constructs for simple graphs; allows self-loops only if selfLoops is true.
 */
@@ -21,7 +23,7 @@ typedef struct _tinyGraph {
 
 TINY_GRAPH *TinyGraphAlloc(unsigned int n); // does not allow self-loops
 TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n); // allows self-loops
-#define TinyGraphFree free
+#define TinyGraphFree Free
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
 TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j);

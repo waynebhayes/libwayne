@@ -134,11 +134,142 @@ void *Malloc_fl( const int size, const char *file, const int line )
     return memoryBlock;
 }
 
+char *Strdup_fl(char *s, const char *file, const int line ) {
+    int len = 1+strlen(s);
+    char *t = (char*)Malloc_fl(len, file, line);
+    strcpy(t,s);
+    return t;
+}
+
 void *Calloc_fl( const int num, const int size, const char *file, const int line )
 {
     void *mem = Malloc_fl(num*size, file, line);
     return memset(mem, 0, num*size);
 }
+
+
+void *Realloc_fl( void *memoryBlock, const int newSize, const char *file, const int line )
+{
+    MEMORY_BLOCK_HEADER *memoryBlockHeader;
+
+    assert( newSize >= 0 );
+
+    if( memoryTrackingEnabled )
+    {
+	if( memoryBlock == NULL ) // apparently calling realloc(NULL) is fine
+	    return Malloc_fl(newSize, file, line);
+
+	int *align;
+	memoryBlockHeader = (MEMORY_BLOCK_HEADER*)
+	    ((void*)
+		((unsigned char*)memoryBlock - sizeof(MEMORY_BLOCK_HEADER)));
+
+	/* verify that this was actually malloc'd */
+	align = (int*)memoryBlockHeader->align;
+	if(align[0] == 0xBEEF && align[1] == 0xDEAD)
+	{
+	    fprintf(stderr, "invalid realloc at %s:%d (originally allocated at %s:%d) was freed at %s:%d\n",
+		file, line, memoryBlockHeader->file, memoryBlockHeader->line,
+		memoryBlockHeader->fileFree, memoryBlockHeader->lineFree);
+	    Fatal_fl("Realloc failure at %s line %d", file, line);
+	}
+	if(align[0] != 0xDEAD || align[1] != 0xBEEF)
+	    Fatal_fl("call to realloc on memory which is either non-MALLOC'd, already freed and re-used, or corrupt", file, line);
+
+	// if realloc moves our memory, we need to mark it as freed BEFORE realloc does it's thing.... we're not allowed
+	// to mess with it after it's moved. But if it doesn't get moved, we need to restore the header. So we store it
+	// temporarily, and restore later if it didn't move.
+	    // prepare for deletion...
+	    align[0] = 0xBEEF;
+	    align[1] = 0xDEAD;
+	    memoryBlockHeader->fileFree = file;
+	    memoryBlockHeader->lineFree = line;
+	    memoryBlockHeader->prev->next = memoryBlockHeader->next;
+	    if( memoryBlockHeader->next != NULL )
+		memoryBlockHeader->next->prev = memoryBlockHeader->prev;
+	    memoryBlockCount--;
+	    assert( memoryBlockCount >= 0 );
+	    memoryTotalUsage -= memoryBlockHeader->size;
+	    assert( memoryTotalUsage >= 0 );
+
+	/* call true realloc here and check if it has moved or not */
+	int totalSize = sizeof(MEMORY_BLOCK_HEADER) + newSize;
+	memoryBlockHeader = realloc( memoryBlockHeader, totalSize ); // this way we cannot touch old one of it moved
+
+	    align = (int*)memoryBlockHeader->align;
+	    align[0] = 0xDEAD;
+	    align[1] = 0xBEEF;
+	    memoryBlockHeader->size = newSize;
+	    memoryBlockHeader->file = file;
+	    memoryBlockHeader->line = line;
+	    memoryBlockHeader->fileFree = "(realloc'd, not yet freed)";
+	    memoryBlockHeader->lineFree = 0;
+
+	    memoryBlockHeader->prev->next = memoryBlockHeader;
+	    if( memoryBlockHeader->next != NULL )
+		memoryBlockHeader->next->prev = memoryBlockHeader;
+	    memoryBlockCount++;
+	    assert( memoryBlockCount >= 0 );
+	    memoryTotalUsage += newSize;
+	    assert( memoryTotalUsage >= 0 );
+
+	return memoryBlock = (void *)( (unsigned char *)memoryBlockHeader + sizeof(MEMORY_BLOCK_HEADER) );
+    }
+    else
+	return realloc(memoryBlock, newSize);
+}
+
+#if 0
+void *Realloc_fl2( void *ptr, const int newSize, const char *file, const int line )
+{
+    MEMORY_BLOCK_HEADER *memoryBlockHeader;
+    void *memoryBlock;
+    int totalSize, oldSize;
+
+    assert( newSize >= 0 );
+    totalSize=newSize + (memoryTrackingEnabled ? sizeof(MEMORY_BLOCK_HEADER) : 0);
+
+    memoryBlock = realloc( ptr, totalSize );
+    if( memoryBlock == NULL )
+	Fatal_fl( "out of memory", file, line );
+
+    if( memoryTrackingEnabled )
+    {
+	int *align;
+	memoryBlockHeader = (MEMORY_BLOCK_HEADER *)memoryBlock;
+	memoryBlock = (void *)( (unsigned char *)memoryBlockHeader + sizeof(MEMORY_BLOCK_HEADER) );
+
+	memoryBlockHeader->file = file;
+	memoryBlockHeader->line = line;
+	oldSize = memoryBlockHeader->size;
+	memoryBlockHeader->size = newSize;
+	memoryBlockHeader->fileFree = "(not freed yet)";
+	memoryBlockHeader->lineFree = 0;
+
+	/* use DEADBEEF as a flag that this is actually malloc'd memory */
+	assert(sizeof(double) == 2*sizeof(int));
+	align = (int*)memoryBlockHeader->align;
+	align[0] = 0xDEAD;
+	align[1] = 0xBEEF;
+
+	memoryBlockHeader->prev = &memoryBlockList;
+	memoryBlockHeader->next = memoryBlockList.next;
+	if( memoryBlockHeader->next != NULL )
+		memoryBlockHeader->next->prev = memoryBlockHeader;
+	memoryBlockList.next = memoryBlockHeader;
+
+	assert( memoryTotalUsage >= 0 );
+	memoryTotalUsage -= oldSize;
+	memoryTotalUsage += newSize;
+
+	assert( memoryBlockCount >= 0 );
+	memoryBlockCount++;
+    }
+
+    return memoryBlock;
+}
+#endif
+
 
 
 

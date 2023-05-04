@@ -10,7 +10,7 @@ endif
 GCC_VER=$(shell echo $(ARCH) $(HOME) | awk '/Darwin/&&/Users.wayne/{V="-6"}END{if(V)print V;else{printf "using default gcc: " > "/dev/null"; exit 1}}')
 GCC=gcc$(GCC_VER) # gcc gcc-4.2 gcc-6 gcc-7 gcc-8 gcc-9 # Possibilities on Darwin
 STACKSIZE=$(shell ($(GCC) -v 2>&1; uname -a) | awk '/CYGWIN/{print "-Wl,--stack,83886080"}/gcc-/{actualGCC=1}/Darwin/&&actualGCC{print "-Wl,-stack_size -Wl,0x5000000"}')
-CC=$(GCC) $(OPT) $(DEBUG) -Wall -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow $(PG) $(STACKSIZE)
+CC=$(GCC) $(OPT) $(GDB) $(DEBUG) -Wall -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow $(PG) $(STACKSIZE)
 
 default: gcc-ver
 	# Make the same thing we made most recently
@@ -44,14 +44,14 @@ opt:
 	$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' libwayne
 
 debug:
-	$(MAKE) 'DEBUG=-ggdb' 'LIBOUT=libwayne-g.a' libwayne
+	$(MAKE) 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' libwayne
 
 libwayne:
 	$(MAKE) $(LIBOUT)
 	[ "$(ARCH)" = Darwin ] || ar r $(LIBOUT)
 
 debug_clean:
-	@$(MAKE) 'DEBUG=-ggdb' 'LIBOUT=libwayne-g.a' raw_clean
+	@$(MAKE) 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' raw_clean
 
 opt_clean:
 	@$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' raw_clean
@@ -73,4 +73,4 @@ $(LIBOUT): src/$(LIBOUT)
 	mv src/$(LIBOUT) .
 
 src/$(LIBOUT):
-	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'DEBUG=$(DEBUG)'
+	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'GDB=$(GDB)'

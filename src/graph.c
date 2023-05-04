@@ -10,6 +10,7 @@ extern "C" {
 #include <ctype.h>
 #include <assert.h>
 #include <string.h>
+#include "mem-debug.h"
 
 #define MIN_EDGELIST 1024
 
@@ -50,7 +51,6 @@ GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 	    G->A[i] = SetAlloc(n);
     }
     G->supportNodeNames = supportNodeNames;
-    G->nameDict = NULL;
     return G;
 }
 
@@ -80,58 +80,34 @@ void GraphFree(GRAPH *G)
 }
 
 /* If Gc == NULL, create duplicate.  Otherwise just copy G's info into Gc. */
-GRAPH *GraphCopy(GRAPH *Gc, GRAPH *G)
+GRAPH *GraphCopy(GRAPH *G)
 {
     int i;
-    if(Gc == G) return G;
-    if(!Gc)
-	Gc = GraphAlloc(G->n, G->sparse, G->supportNodeNames);
+    if(G->supportNodeNames) Warning("GraphCopy called on graph with names; not copying names");
+    GRAPH *Gc = GraphAlloc(G->n, G->sparse, false);
+    Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
+    for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
 
     Gc->sparse = G->sparse;
-    if(true || G->n > Gc->n)
+    if(G->sparse >= true)
     {
-	if(G->sparse >= true)
-	{
-	    Gc->A = NULL;
-	    Gc->neighbor = Realloc(Gc->neighbor, G->n * sizeof(Gc->neighbor[0]));
-	    for(i=0;i<G->n;i++)
-		Gc->neighbor[i] = Realloc(NULL, G->degree[i] * sizeof(Gc->neighbor[i][0]));
-	    Gc->numEdges = G->numEdges;
-	    Gc->maxEdges = G->maxEdges;
-	    Gc->edgeList = Realloc(Gc->edgeList, 2*G->maxEdges*sizeof(int));
-	    for(i=0;i < G->numEdges; i++)
-	    {
-		Gc->edgeList[2*i] = G->edgeList[2*i];
-		Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
-	    }
+	Gc->A = NULL;
+	for(i=0;i<G->n;i++) { int j;
+	    Gc->neighbor[i] = Calloc(G->degree[i] , sizeof(Gc->neighbor[i][0]));
+	    for(j=0; j<G->degree[i];j++) Gc->neighbor[i][j]=G->neighbor[i][j];
 	}
-	if(!G->sparse || G->sparse==both) {
-	    Gc->A = Realloc(Gc->A, G->n * sizeof(Gc->A[0]));
-	    for(i=0;i<G->n;i++) Gc->A[i] = SetCopy(NULL, G->A[i]);
-	}
-	Gc->degree = Realloc(Gc->degree, G->n * sizeof(Gc->degree[0]));
-	/* reallaoc doesn't zero out new entries, damn it */
-	for(i=Gc->n; i < G->n; i++)
+	Gc->numEdges = G->numEdges;
+	Gc->maxEdges = G->maxEdges;
+	Gc->edgeList = Calloc(2,G->maxEdges*sizeof(int));
+	for(i=0;i < G->numEdges; i++)
 	{
-	    if(Gc->sparse >= true)
-		Gc->neighbor[i] = Realloc(NULL, G->degree[i] * sizeof(Gc->neighbor[i][0]));
-	    if(!Gc->sparse || Gc->sparse==both)
-		Gc->A[i] = NULL;
+	    Gc->edgeList[2*i] = G->edgeList[2*i];
+	    Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
 	}
     }
-
-    for(i=0; i < G->n; i++)
-    {
-	if((!Gc->sparse || Gc->sparse==both) && Gc->A[i] && Gc->n != G->n)
-	{
-	    SetFree(Gc->A[i]);
-	    Gc->A[i] = NULL;
-	}
-	if(!Gc->sparse||Gc->sparse==both) Gc->A[i] = SetCopy(Gc->A[i], G->A[i]);
-	else if(G->degree[i] > Gc->degree[i])
-	    Gc->neighbor[i] = Realloc(Gc->neighbor[i], G->degree[i] * sizeof(Gc->neighbor[i][0]));
-	if(Gc->sparse>=true) memmove(Gc->neighbor[i], G->neighbor[i], G->degree[i] * sizeof(G->neighbor[i][0]));
-	Gc->degree[i] = G->degree[i];
+    if(!G->sparse || G->sparse==both) {
+	Gc->A = Calloc(G->n , sizeof(Gc->A[0]));
+	for(i=0;i<G->n;i++) Gc->A[i] = SetCopy(NULL, G->A[i]);
     }
 
     Gc->n = G->n;
@@ -530,17 +506,17 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	    if(sscanf(line, "%s%s ", name1, name2) != 2)
 		Fatal("GraphReadEdgeList: line %d does not contain 2 strings\n", numEdges);
 	    if(strcmp(name1,name2)==0)
-		Fatal("GraphReadEdgeList: line %d has self-loop (%s to itself)\n", numEdges,name1);
+		Fatal("GraphReadEdgeList: line %d has self-loop (%s to itself)\n", numEdges, name1);
 	    foint f1, f2;
 	    if(!BinTreeLookup(nameDict, (foint)name1, &f1))
 	    {
-		names[numNodes] = strdup(name1);
+		names[numNodes] = Strdup(name1);
 		f1.i = numNodes++;
 		BinTreeInsert(nameDict, (foint)name1, f1);
 	    }
 	    if(!BinTreeLookup(nameDict, (foint)name2, &f2))
 	    {
-		names[numNodes] = strdup(name2);
+		names[numNodes] = Strdup(name2);
 		f2.i = numNodes++;
 		BinTreeInsert(nameDict, (foint)name2, f2);
 	    }
@@ -645,12 +621,11 @@ GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
 }
 
 
-GRAPH *GraphComplement(GRAPH *Gbar, GRAPH *G)
+GRAPH *GraphComplement(GRAPH *G)
 {
     int i, j;
-    assert(Gbar != G);
-    if(!Gbar)
-	Gbar = GraphAlloc(G->n, G->sparse, G->supportNodeNames);
+    if(G->supportNodeNames) Warning("GraphComplement called on graph with names; not copying names");
+    GRAPH *Gbar = GraphAlloc(G->n, G->sparse, false);
 
     assert(Gbar->n == G->n);
 
@@ -662,7 +637,7 @@ GRAPH *GraphComplement(GRAPH *Gbar, GRAPH *G)
 }
 
 
-GRAPH *GraphUnion(GRAPH *dest, GRAPH *G1, GRAPH *G2)
+GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
 {
     int i, j, n = G1->n;
 
@@ -671,10 +646,8 @@ GRAPH *GraphUnion(GRAPH *dest, GRAPH *G1, GRAPH *G2)
 
     assert(G1->sparse == G2->sparse);
 
-    if(dest)
-	dest->n = n;
-    else
-	dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
+    if(G1->supportNodeNames || G2->supportNodeNames) Warning("GraphUnion called on graph(s) with names; not copying names");
+    GRAPH *dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
 
     for(i=0; i < n; i++) for(j=i+1; j < n; j++)
 	if(GraphAreConnected(G1, i, j) || GraphAreConnected(G2, i, j))
@@ -799,17 +772,11 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 }
 
 /* doesn't allow Gv == G */
-GRAPH *GraphInduced(GRAPH *Gv, GRAPH *G, SET *V)
+GRAPH *GraphInduced(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    assert(Gv != G);
-    if(Gv)
-    {
-	assert(Gv->n == nV);
-	GraphEdgesAllDelete(Gv);
-    }
-    else
-	Gv = GraphAlloc(nV, G->sparse, G->supportNodeNames);
+    if(G->supportNodeNames) Warning("GraphInduced called on graph(s) with names; not copying names");
+    GRAPH *Gv = GraphAlloc(nV, G->sparse, false);
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, i, j);
@@ -818,16 +785,15 @@ GRAPH *GraphInduced(GRAPH *Gv, GRAPH *G, SET *V)
 }
 
 /* allows Gv == G */
-GRAPH *GraphInduced_NoVertexDelete(GRAPH *Gv, GRAPH *G, SET *V)
+GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    GRAPH *GGv = GraphAlloc(G->n, G->sparse, G->supportNodeNames);
+    if(G->supportNodeNames) Warning("GraphInduced_NoVertexDelete called on graph with names; not copying names");
+    GRAPH *Gv = GraphAlloc(G->n, G->sparse, false);
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
-	    GraphConnect(GGv, array[i], array[j]);
-    GraphCopy(Gv, GGv);
-    GraphFree(GGv);
+	    GraphConnect(Gv, array[i], array[j]);
     GraphSort(Gv);
     return Gv;
 }
@@ -929,7 +895,7 @@ CLIQUE *GraphKnFirst(GRAPH *G, int k)
 
     setDegk = SetAlloc(G->n);
     c = (CLIQUE*)Calloc(1,sizeof(CLIQUE));
-    c->G = GraphCopy(NULL, G);
+    c->G = GraphCopy(G);
     c->cliqueSize = k;
     c->inducedArray = Calloc(G->n, sizeof(c->inducedArray[0]));
 
@@ -953,7 +919,9 @@ CLIQUE *GraphKnFirst(GRAPH *G, int k)
 	    }
 	if(nDegk == prevNDegk)  /* nobody eliminated */
 	    break;
-	GraphInduced_NoVertexDelete(c->G, c->G, setDegk);
+	GRAPH *tmp = GraphInduced_NoVertexDelete(c->G, setDegk);
+	GraphFree(c->G);
+	c->G = tmp;
     }
 
     if(nDegk < k)
@@ -994,9 +962,10 @@ void GraphCliqueFree(CLIQUE *c)
 
 CLIQUE *GraphInFirst(GRAPH *G, int n)
 {
-    static GRAPH Gbar;  /* non re-entrant */
-    GraphComplement(&Gbar, G);
-    return GraphKnFirst(&Gbar, n);
+    GRAPH *Gbar = GraphComplement(G);
+    CLIQUE *c = GraphKnFirst(Gbar, n);
+    GraphFree(Gbar);
+    return c;
 }
 
 
@@ -1016,9 +985,10 @@ Boolean GraphKnContains(GRAPH *G, int n)
 
 Boolean GraphInContains(GRAPH *G, int n)
 {
-    static GRAPH Gbar;  /* non re-entrant */
-    GraphComplement(&Gbar, G);
-    return GraphKnContains(&Gbar, n);
+    GRAPH *Gbar = GraphComplement(G);
+    Boolean b = GraphKnContains(Gbar, n);
+    GraphFree(Gbar);
+    return b;
 }
 
 /**************************************************************************
@@ -1097,8 +1067,8 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
 	    assert(j < n);
 
 	    assert((!G1->sparse||G1->sparse==both) && (!G2->sparse||G2->sparse==both));
-	    neighG1i = GraphInduced(NULL, G1, G1->A[i]);
-	    neighG2j = GraphInduced(NULL, G2, G2->A[j]);
+	    neighG1i = GraphInduced(G1, G1->A[i]);
+	    neighG2j = GraphInduced(G2, G2->A[j]);
 
 	    /*
 	    ** Note: this recursion works only as long as

@@ -9,8 +9,9 @@ int main(int argc, char *argv[])
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
     GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames);
-    GRAPH *Gbar = GraphComplement(NULL, G);
-    GRAPH *GG = GraphComplement(NULL, Gbar);
+    GRAPH *Gbar = GraphComplement(G);
+    GRAPH *GG = GraphComplement(Gbar);
+    GraphFree(Gbar);
     printf("Checking sanity of Complement(Complement(G))...");
     assert(GG->n == G->n);
     for(i=0; i<G->n; i++)
@@ -24,7 +25,6 @@ int main(int argc, char *argv[])
     printf("Now count connected components via BFS:");
 
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
-    GG = GraphCopy(GG, G);
     Boolean touched[GG->n];
     for(i=0; i<GG->n; i++) touched[i] = false;
 
@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
 	}
     }
     printf("\nGraph has %d connected components using BFS\n", CC);
+    GraphFree(GG);
 
     SET *visited = SetAlloc(G->n);
     BFSsize=CC=0;
@@ -51,6 +52,8 @@ int main(int argc, char *argv[])
 	GraphVisitCC(G, i, visited, nodeArray, &BFSsize);
     }
     printf("Graph has %d connected components using GraphVisitCC\n", CC);
+    GraphFree(G);
+    SetFree(visited);
 
     return 0;
 }

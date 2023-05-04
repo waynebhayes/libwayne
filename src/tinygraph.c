@@ -1,11 +1,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "misc.h"
-#include "sets.h"
-#include "tinygraph.h"
-#include "queue.h"
 #include <assert.h>
+#include "tinygraph.h"
 
 /*************************************************************************
 **

@@ -1,6 +1,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "misc.h"
 /**
  ** LLFILE: files whose length can be as long as the maximum "long long" int,
  ** which currently under gcc is 64 bits.

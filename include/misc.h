@@ -118,8 +118,8 @@ extern void *Mmap(void *p, size_t n, int fd);
 extern void *Malloc(size_t);
 extern void *Calloc(size_t, size_t);
 extern void *Realloc(void *ptr, size_t newSize);
+extern void Free(void *ptr);
 void *Memdup(void *v, size_t n);
-#define Free(s) free((void*)(s))
 
 
 /* return current user time used in seconds.  Returns -1 if error. */

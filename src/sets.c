@@ -55,13 +55,13 @@ int SetComputeCrossover(unsigned n)
 SET *SetAlloc(SET_ELEMENT_TYPE n)
 {
     if(!_doneInit) SetStartup();
-    SET *set = (SET*) CALLOC(1,sizeof(SET));
+    SET *set = (SET*) Calloc(1,sizeof(SET));
     assert(set->cardinality == 0);
     set->maxElem = n;
     set->smallestElement = n; // ie., invalid
     set->bitvec = NULL;
     set->listSize = SET_MIN_LIST;
-    set->list = (SET_ELEMENT_TYPE*) CALLOC(sizeof(SET_ELEMENT_TYPE), set->listSize);
+    set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), set->listSize);
     set->crossover = SetComputeCrossover(n);
     return set;
 }
@@ -551,12 +551,12 @@ struct _ssetDict {
 SSETDICT *SSetDictAlloc(int n)
 {
     int i;
-    SSETDICT *ssd = CALLOC(sizeof(SSETDICT), 1);
+    SSETDICT *ssd = Calloc(sizeof(SSETDICT), 1);
     assert(n>=1);
     ssd->nCols = n;
     ssd->nElem = 0;
     for(i=0; i< NUM_HASHES; i++)
-	ssd->array[i] = CALLOC(sizeof(SSET), ssd->nCols);
+	ssd->array[i] = Calloc(sizeof(SSET), ssd->nCols);
     return ssd;
 }
 

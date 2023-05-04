@@ -10,8 +10,8 @@ extern "C" {
 #include <assert.h>
 
 #include "misc.h"
-#include "mem-debug.h"
 #include "linked-list.h"
+#include "mem-debug.h"
 
 typedef struct _linkedListNode
 {
@@ -33,7 +33,7 @@ struct _linkedListType
 LINKED_LIST *LinkedListAlloc( pCmpFcn comparisonFunction,
     Boolean dynamicData )
 {
-    LINKED_LIST *ll = MALLOC( sizeof(LINKED_LIST) );
+    LINKED_LIST *ll = Malloc( sizeof(LINKED_LIST) );
 
     ll->first = ll->last = ll->traverse = NULL;
     ll->n = 0;
@@ -53,8 +53,8 @@ void LinkedListReset( LINKED_LIST *ll )
         LINKED_LIST_NODE *prev = node;
         node = node->next;
         if( ll->dynamicData && prev->data.v != NULL )
-            FREE( prev->data.v );
-        FREE( prev );
+            Free( prev->data.v );
+        Free( prev );
     }
 
     ll->first = ll->last = NULL;
@@ -71,13 +71,13 @@ int LinkedListSize( LINKED_LIST *ll )
 void LinkedListFree( LINKED_LIST *ll )
 {
     LinkedListReset( ll );
-    FREE( ll );
+    Free( ll );
 }
 
 
 foint LinkedListPrepend( LINKED_LIST *ll, foint newEntry )
 {
-    LINKED_LIST_NODE *newNode = MALLOC( sizeof(LINKED_LIST_NODE) );
+    LINKED_LIST_NODE *newNode = Malloc( sizeof(LINKED_LIST_NODE) );
 
     newNode->data = newEntry;
 
@@ -94,7 +94,7 @@ foint LinkedListPrepend( LINKED_LIST *ll, foint newEntry )
 
 foint LinkedListAppend( LINKED_LIST *ll, foint newEntry )
 {
-    LINKED_LIST_NODE *newNode = MALLOC( sizeof(LINKED_LIST_NODE) );
+    LINKED_LIST_NODE *newNode = Malloc( sizeof(LINKED_LIST_NODE) );
 
     newNode->data = newEntry;
     newNode->next = NULL;
@@ -141,7 +141,7 @@ foint LinkedListInsert( LINKED_LIST *ll, foint newEntry )
     assert( curr != NULL ); /* if we're last, it should've been done above! */
     assert( prev->next == curr );
 
-    prev->next = MALLOC( sizeof(LINKED_LIST_NODE) );
+    prev->next = Malloc( sizeof(LINKED_LIST_NODE) );
     prev->next->data = newEntry;
     prev->next->next = curr;
 
@@ -236,7 +236,7 @@ foint LinkedListPop( LINKED_LIST *ll )
     data = ll->first->data;
 
     newFirst = ll->first->next;
-    FREE( ll->first );
+    Free( ll->first );
     ll->first = newFirst;
     if( ll->first == NULL )
 	ll->last = NULL;
