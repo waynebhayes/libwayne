@@ -184,9 +184,9 @@ SET *SetCopy(SET *dst, SET *src)
 	SetMakeBitvec(dst);
 	BitvecCopy(dst->bitvec, src->bitvec);
     } else {
-	assert(dst-> list && src->list && src->cardinality <= src->crossover);
+	assert(dst->list && src->list && src->cardinality <= src->crossover);
 	int i;
-	for(i=0;i<src->cardinality;i++) dst->list[i] = src->list[i];
+	for(i=0;i<src->cardinality;i++) SetAdd(dst, src->list[i]);
     }
     assert(dst->maxElem == src->maxElem);
     dst->smallestElement = src->smallestElement;
@@ -345,11 +345,13 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 		assert(B->bitvec && !B->list && A->list);
 		vec=B; list=A;
 	    }
-	    assert(vec->bitvec && list->list && !vec->list && !list->bitvec);
-	    SetCopy(tmp, vec);
+	    assert(tmp->bitvec && vec->bitvec && list->list && !vec->list && !list->bitvec);
+	    BitvecCopy(tmp->bitvec, vec->bitvec);
+	    tmp->cardinality = vec->cardinality;
+	    tmp->smallestElement = vec->smallestElement;
 	    for(i=0;i<list->cardinality;i++) SetAdd(tmp, list->list[i]);
 	}
-	tmp->cardinality = BitvecCardinality(tmp->bitvec);
+	assert(tmp->cardinality == BitvecCardinality(tmp->bitvec));
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
 	SetCopy(tmp, A);

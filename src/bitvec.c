@@ -337,8 +337,8 @@ BITVEC *BitvecUnion(BITVEC *C, BITVEC *A, BITVEC *B)
 {
     int i;
     assert(C && A && B);
-    int loop = NUMSEGS(C->maxElem);
     assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
+    int loop = NUMSEGS(C->maxElem);
     for(i=0; i < loop; i++)
 	C->segment[i] = A->segment[i] | B->segment[i];
     C->smallestElement = MIN(A->smallestElement, B->smallestElement);
@@ -386,8 +386,8 @@ unsigned int BitvecAssignSmallestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
 BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B)
 {
     int i;
-    int loop = NUMSEGS(C->maxElem);
     assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
+    int loop = NUMSEGS(C->maxElem);
     for(i=0; i < loop; i++)
 	C->segment[i] = A->segment[i] & B->segment[i];
     BitvecAssignSmallestElement3(C,A,B);
