@@ -336,6 +336,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 	SetMakeBitvec(tmp);
 	if(A->bitvec && B->bitvec) { // both use bitvecs
 	    BitvecUnion(tmp->bitvec, A->bitvec, B->bitvec);
+	    tmp->cardinality = BitvecCardinality(tmp->bitvec);
 	}
 	else {
 	    assert(!A->bitvec || !B->bitvec); // at MOST one uses bitvec
@@ -346,12 +347,13 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 		vec=B; list=A;
 	    }
 	    assert(tmp->bitvec && vec->bitvec && list->list && !vec->list && !list->bitvec);
+	    assert(vec->cardinality == BitvecCardinality(vec->bitvec));
 	    BitvecCopy(tmp->bitvec, vec->bitvec);
 	    tmp->cardinality = vec->cardinality;
 	    tmp->smallestElement = vec->smallestElement;
 	    for(i=0;i<list->cardinality;i++) SetAdd(tmp, list->list[i]);
+	    assert(tmp->cardinality == BitvecCardinality(tmp->bitvec));
 	}
-	assert(tmp->cardinality == BitvecCardinality(tmp->bitvec));
     } else {
 	assert(A->list && B->list && !A->bitvec && !B->bitvec);
 	SetCopy(tmp, A);
