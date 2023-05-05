@@ -32,9 +32,20 @@ extern "C" {
 
 typedef unsigned SET_ELEMENT_TYPE;
 
-// The maximum number of elements in our unsorted list before we switch to using BITVEC
+// The minimum number of elements in our unsorted list
 #define SET_MIN_LIST 2 // minimum number of elements in the list
 
+/*
+** IDEAS: OK, now with "crossover", the memory footprint is about as good as it can get... except for HUGE networks
+** (eg 1.7M nodes in topcat), the crossover is ~60,000 and there are enough "hubs" with degree >10,000 that searching
+** that unsorted list takes too long... so maybe we can sort it... but we don't want to sort it EVERY time something
+** is inserted... so I think we'll need to add a new member called "sorted_up_to", which is a previously sorted list
+** on which we can use bseach, and from there until cardinality we'd append new elements and search them linearly,
+** and have some criterion for when to resort the whole list. (Waiting for it to double is probably too long... maybe
+** whenever it grows by... 128 members or 16%, whichever is greater?). Then use bsearch... or probably even better
+** is to use interpolation search... though binary search is GUARANTEED to be log2(n), but interpolation can degrade
+** to linear in the worst case... so maybe even dynamically decide which is better?
+*/
 typedef struct _setType {
     SET_ELEMENT_TYPE smallestElement,
 	*list, // initially make the set an unsorted array of integers... NULL if we use BITVEC
