@@ -31,22 +31,30 @@ Boolean SetStartup(void)
 }
 
 
-int SetComputeCrossover(unsigned n)
+unsigned short SetComputeCrossover(unsigned n)
 {
-    static unsigned prevN, prevResult;
+    static unsigned prevN;
+    static unsigned prevResult;
     if(n==prevN) return prevResult;
     prevN=n;
 
     // binary search
-    int low=0, high=n-1, mid=0; // inclusive
+    int tries=0;
+    unsigned low=0, high=n-1, mid=n/2; // inclusive
+    unsigned B=BitvecBytes(n);
     while(low<high) {
-	mid = low + (high-low)/2;
+	assert(++tries < 1000);
+	mid = (high+low)/2;
 	assert(low <= mid && mid <= high);
-	int B=BitvecBytes(mid), L=mid*sizeof(SET_ELEMENT_TYPE);
-	if(L>B) high=mid-1; // if the list takes more space, the crossover must be BELOW mid
-	else low=mid+1;
+	unsigned L=mid*sizeof(SET_ELEMENT_TYPE);
+	//fprintf(stderr, "n=%u BinSearch iter %d mid=%u L=%u B=%u\n", n,tries,mid,L,B);
+	if(L<B) low=mid+1; // if the list takes less space, stay with it and crossover is HIGHER than mid
+	else high=mid-1;
     }
-    return prevResult = MAX(mid,SET_MIN_LIST);
+    prevResult = MAX((unsigned)mid,SET_MIN_LIST);
+    //fprintf(stderr, "n=%u CROSSOVER %u\n", n,prevResult);
+    if(prevResult > 65535) Apology("SET datatype can't handle sets of %u elements; change code to allow n as unsigned long so crossover can be larger than 65535",n);
+    return (unsigned short)prevResult;
 }
 
 static SET *_allocaSet;

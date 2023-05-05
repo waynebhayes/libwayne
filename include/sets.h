@@ -36,11 +36,13 @@ typedef unsigned SET_ELEMENT_TYPE;
 #define SET_MIN_LIST 2 // minimum number of elements in the list
 
 typedef struct _setType {
-    SET_ELEMENT_TYPE smallestElement, *list; // initially make the set an unsorted array of integers... NULL if we use BITVEC
-    int cardinality, // logical number of elements in the set (whether list or BITVEC)
-	listSize, // physical list size, starts at SET_MIN_LIST and increases until crossover, then it's reset to zero
-	crossover, // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
+    SET_ELEMENT_TYPE smallestElement,
+	*list, // initially make the set an unsorted array of integers... NULL if we use BITVEC
+	cardinality, // logical number of elements in the set (whether list or BITVEC)
 	maxElem; // maximum number of elements the set can store (change only using SetResize).
+    unsigned short
+	listSize, // physical list size, starts at SET_MIN_LIST and increases until crossover, then it's reset to zero
+	crossover; // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
     BITVEC *bitvec; // NULL when using list, otherwise a pointer to the BITVEC being used
     // NOTE: the set may be upgraded at ANY time from list to BITVEC, even if below the crossover; use pointers to decide
 } SET;
@@ -76,7 +78,7 @@ Boolean SetInSafe(SET *set, unsigned element); /* boolean: 0 or 1 */
 #else
 #define SetIn SetInSafe
 #endif
-int SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
+unsigned short SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
 Boolean SetEq(SET *set1, SET *set2);
 Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */
 #define SetSupersetEq(spr,sb) SetSubsetEq((sb),(spr))
