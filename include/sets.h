@@ -39,7 +39,7 @@ typedef unsigned SET_ELEMENT_TYPE;
 ** IDEAS: OK, now with "crossover", the memory footprint is about as good as it can get... except for HUGE networks
 ** (eg 1.7M nodes in topcat), the crossover is ~60,000 and there are enough "hubs" with degree >10,000 that searching
 ** that unsorted list takes too long... so maybe we can sort it... but we don't want to sort it EVERY time something
-** is inserted... so I think we'll need to add a new member called "sorted_up_to", which is a previously sorted list
+** is inserted... so I think we'll need to add a new member called "numSorted", which is a previously sorted list
 ** on which we can use bseach, and from there until cardinality we'd append new elements and search them linearly,
 ** and have some criterion for when to resort the whole list. (Waiting for it to double is probably too long... maybe
 ** whenever it grows by... 128 members or 16%, whichever is greater?). Then use bsearch... or probably even better
@@ -53,7 +53,8 @@ typedef struct _setType {
 	maxElem; // maximum number of elements the set can store (change only using SetResize).
     unsigned short
 	listSize, // physical list size, starts at SET_MIN_LIST and increases until crossover, then it's reset to zero
-	crossover; // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
+	crossover, // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
+	numSorted; // the number of elements of the list that are sorted, ie., sorted from 0 to (numSorted-1) inclusive.
     BITVEC *bitvec; // NULL when using list, otherwise a pointer to the BITVEC being used
     // NOTE: the set may be upgraded at ANY time from list to BITVEC, even if below the crossover; use pointers to decide
 } SET;

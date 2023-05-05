@@ -71,7 +71,6 @@ SET *SetAlloc_fl(SET_ELEMENT_TYPE n, const char *file, const int line)
     assert(set->cardinality == 0);
     set->maxElem = n;
     set->smallestElement = n; // ie., invalid
-    set->bitvec = NULL;
     set->listSize = SET_MIN_LIST;
     set->list = (SET_ELEMENT_TYPE*) Calloc_fl(sizeof(SET_ELEMENT_TYPE), set->listSize,file,line);
     set->crossover = SetComputeCrossover(n);
@@ -85,13 +84,27 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
     assert(set->cardinality == 0);
     set->maxElem = n;
     set->smallestElement = n; // ie., invalid
-    set->bitvec = NULL;
     set->listSize = SET_MIN_LIST;
     set->list = (SET_ELEMENT_TYPE*) Calloc(sizeof(SET_ELEMENT_TYPE), set->listSize);
     set->crossover = SetComputeCrossover(n);
     return set;
 }
 #endif
+
+// Used when qsort'ing the neighbors when graph is sparse.
+static int IntCmp(const void *a, const void *b)
+{
+    const int *i = (const int*)a, *j = (const int*)b;
+    return (*i)-(*j);
+}
+
+static void SetListSort(SET *s)
+{
+    if(!s->list) {assert(s->listSize==0); return;}
+    if(s->numSorted == s->cardinality) return;
+    qsort(s->list, s->cardinality, sizeof(s->list[0]), IntCmp);
+    s->numSorted = s->cardinality;
+}
 
 /* query if an element is in a set; return 0 or non-zero.
 */
@@ -106,7 +119,8 @@ Boolean SetInSafe(SET *set, unsigned element)
     }
     assert(set->list && set->cardinality <= set->crossover);
     int i;
-    for(i=0; i<set->cardinality; i++) if(element == set->list[i]) return true;
+    if(bsearch(&element, set->list, set->numSorted, sizeof(set->list[0]), IntCmp)) return true;
+    for(i=set->numSorted; i<set->cardinality; i++) if(element == set->list[i]) return true;
     return false;
 }
 
@@ -175,7 +189,7 @@ SET *SetAdd(SET *s, unsigned element)
     if(s->bitvec) BitvecAdd(s->bitvec, element); // set is aready a BITVEC
     else { // set is still currently a LIST
 	assert(s->list);
-	assert(s->cardinality <= s->listSize && s->listSize <= s->crossover);
+	assert(s->numSorted <= s->cardinality && s->cardinality <= s->listSize && s->listSize <= s->crossover);
 	if(s->cardinality < s->crossover) { // don't switch yet to BITVEC
 	    if(s->cardinality == s->listSize) { // time to expand the list
 		assert(s->cardinality < s->crossover);
@@ -193,6 +207,7 @@ SET *SetAdd(SET *s, unsigned element)
 	}
     }
     ++s->cardinality;
+    if(s->list && s->cardinality > 2*(s->numSorted+64)) SetListSort(s); // 32 is arbitrary to avoid sorting too frequently
     if(element < s->smallestElement) s->smallestElement = element;
 #if PARANOID_ASSERTS
     if(s->bitvec) {
@@ -302,6 +317,7 @@ SET *SetDelete(SET *set, unsigned element)
 	for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
 	assert(i<set->cardinality); // it SHOULD be there!
 	set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
+	if(set->numSorted > i+1) set->numSorted = i+1; // sort is OK up to and including new location of last element
     }
     set->cardinality--;
     if(element == set->smallestElement)
