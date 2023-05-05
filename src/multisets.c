@@ -29,7 +29,7 @@ MULTISET *MultisetResize(MULTISET *mset, unsigned int new_n) {
     }
     FREQTYPE* temp = mset->array;
     mset->array = newArray;
-    free(temp);
+    Free(temp);
     mset->set = SetResize(mset->set, new_n);
     return mset;
 }
@@ -39,8 +39,8 @@ void MultisetFree(MULTISET *mset) {
     {
 	SetFree(mset->set);
 	if(mset->array)
-	    free(mset->array);
-	free(mset);
+	    Free(mset->array);
+	Free(mset);
     }
 }
 

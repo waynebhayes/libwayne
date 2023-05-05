@@ -46,7 +46,7 @@ int SetComputeCrossover(unsigned n)
 	if(L>B) high=mid-1; // if the list takes more space, the crossover must be BELOW mid
 	else low=mid+1;
     }
-    return prevResult = mid;
+    return prevResult = MAX(mid,SET_MIN_LIST);
 }
 
 static SET *_allocaSet;
@@ -355,7 +355,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
 {
     int i;
     assert(C && A->maxElem == B->maxElem && B->maxElem == C->maxElem);
-    SET *tmp = SetAllocA(A->maxElem);
+    SET *tmp = SetAlloc(A->maxElem);
     if(A->bitvec || B->bitvec) { // at least one uses bitvec
 	SetMakeBitvec(tmp);
 	if(A->bitvec && B->bitvec) { // both use bitvecs
@@ -385,7 +385,7 @@ SET *SetUnion(SET *C, SET *A, SET *B)
     }
     tmp->smallestElement = MIN(A->smallestElement, B->smallestElement);
     SetCopy(C,tmp);
-    //SetFree(tmp); // no need to free since it's on the stack
+    SetFree(tmp); // no need to free since it's on the stack
     return C;
 }
 
@@ -397,7 +397,7 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
     int i;
     assert(C);
     assert(A->maxElem == B->maxElem && B->maxElem == C->maxElem);
-    SET *tmp = SetAllocA(A->maxElem);
+    SET *tmp = SetAlloc(A->maxElem);
     if(A->bitvec || B->bitvec) { // at least one uses bitvec
 	SetMakeBitvec(tmp);
 	if(A->bitvec && B->bitvec) { // both use bitvecs
@@ -429,7 +429,7 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
 	for(i=0;i<shorter->cardinality;i++) if(SetIn(longer, shorter->list[i])) SetAdd(tmp, shorter->list[i]);
     }
     SetCopy(C,tmp);
-    // SetFree(tmp); no need to free since it's on the stack
+    SetFree(tmp); // no need to free since it's on the stack
     return C;
 }
 

@@ -16,11 +16,7 @@ extern "C" {
 void Fatal_fl( const char *message, const char *file, const int line )
 {
     fprintf( stderr, "[%s:%d] Error: %s\n", file, line, message );
-
-#ifdef DEBUG
     assert( false );
-#endif
-
     exit( 1 );
 }
 

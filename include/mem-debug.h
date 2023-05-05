@@ -3,6 +3,7 @@ extern "C" {
 #endif
 /*
 ** YOU MUST INCLUDE THIS FILE AFTER ANY OTHERS THAT MAY DEFINE MALLOC, CALLOC, ETC.
+**
 ** mem-debug.h: note that memory tracking is available regardless of whether
 ** DEBUG is defined or not; it's dependent only upon whether or not you
 ** call EnableMemoryTracking().  DEBUG just gives you the chance for
@@ -77,15 +78,13 @@ void EnableMemDebug( const char *file, const int line );
 ** 3. DO NOT mix calls to Malloc and Free with calls to the standard C library
 **    functions malloc and free.
 */
-#ifdef NDEBUG
-//#define MALLOC(size) Malloc(size)
-//#define CALLOC(num,size) Calloc((num),(size))
-#else
-// Do not CALL ANY OF these functions directly
+#ifndef NDEBUG
+// Do NOT call ANY of these functions directly; use the macros below
 void *Malloc_fl( const int size, const char *file, const int line ); 
 char *Strdup_fl(char *s, const char *file, const int line ); 
 void *Calloc_fl( const int size, const int num, const char *file, const int line );
 void *Realloc_fl( void *ptr, const int size, const char *file, const int line );
+
 #define Malloc(size) Malloc_fl( (size), __FILE__, __LINE__ )
 #define Strdup(s) Strdup_fl((s), __FILE__, __LINE__ )
 #define Calloc(num,size) Calloc_fl( (num),(size), __FILE__, __LINE__ )
@@ -103,9 +102,7 @@ void *Realloc_fl( void *ptr, const int size, const char *file, const int line );
 ** 3. DO NOT mix calls to Malloc and Free with calls to the standard C
 **    library functions malloc and free.
 */
-#ifdef NDEBUG
-//#define FREE(p) Free(p)
-#else
+#ifndef NDEBUG
 void Free_fl( void *memoryBlock, const char *file, const int line );
 #define Free(pointer) Free_fl( (pointer), __FILE__, __LINE__ )
 #endif
