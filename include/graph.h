@@ -23,6 +23,7 @@ typedef struct _Graph {
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
+    unsigned **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
 #if SORT_NEIGHBORS
     SET *sorted; // Boolean array: when sparse, is the neighbor list of node[i] sorted or not?
 #endif
@@ -34,10 +35,13 @@ typedef struct _Graph {
 } GRAPH;
 
 GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames);
+GRAPH *GraphMakeWeighted(GRAPH *G);
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, int i, int j);
 GRAPH *GraphDisconnect(GRAPH *G, int i, int j);
+unsigned GraphSetWeight(GRAPH *G, int i, int j, int w); // returns old weight
+unsigned GraphGetWeight(GRAPH *G, int i, int j);
 int GraphNumCommonNeighbors(GRAPH *G, int i, int j);
 GRAPH *GraphComplement(GRAPH *G);
 GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2);

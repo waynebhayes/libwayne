@@ -54,12 +54,26 @@ GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
     return G;
 }
 
+
+GRAPH *GraphMakeWeighted(GRAPH *G)
+{
+    assert(G);
+    assert(!SORT_NEIGHBORS);
+    assert(G->sparse>=true); // >=true means "both"
+    G->weight = Calloc(G->n, sizeof(G->weight[0]));
+    return G;
+}
+
+
 void GraphFree(GRAPH *G)
 {
     int i;
     for(i=0; i<G->n; i++)
     {
-	if(G->sparse>=true) Free(G->neighbor[i]);
+	if(G->sparse>=true) {
+	    Free(G->neighbor[i]);
+	    if(G->weight && G->weight[i]) Free(G->weight[i]);
+	}
 	if(!G->sparse||G->sparse==both)
 	    SetFree(G->A[i]);
     }
@@ -68,6 +82,7 @@ void GraphFree(GRAPH *G)
     {
 	Free(G->edgeList);
 	Free(G->neighbor);
+	if(G->weight) Free(G->weight);
     }
     if(!G->sparse||G->sparse==both)
 	Free(G->A);
@@ -88,10 +103,12 @@ GRAPH *GraphCopy(GRAPH *G)
     Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
     for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
 
+
     Gc->sparse = G->sparse;
     if(G->sparse >= true)
     {
 	Gc->A = NULL;
+	if(G->weight) Apology("Sorry GraphCopy not yet implemented for weighted graphs");
 	for(i=0;i<G->n;i++) { int j;
 	    Gc->neighbor[i] = Calloc(G->degree[i] , sizeof(Gc->neighbor[i][0]));
 	    for(j=0; j<G->degree[i];j++) Gc->neighbor[i][j]=G->neighbor[i][j];
@@ -124,6 +141,7 @@ static int IntCmp(const void *a, const void *b)
 
 static GRAPH *GraphSort(GRAPH *G)
 {
+    if(G->weight) Apology("Sorry GraphSort not yet implemented for weighted graphs");
     if(G->sparse>=true)
     {
 	int v;
@@ -151,10 +169,18 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
     {
 	G->neighbor[i] = Realloc(G->neighbor[i], (G->degree[i]+1)*sizeof(int));
 	G->neighbor[j] = Realloc(G->neighbor[j], (G->degree[j]+1)*sizeof(int));
+	if(G->weight) {
+	    G->weight[i] = Realloc(G->weight[i], (G->degree[i]+1)*sizeof(int));
+	    G->weight[j] = Realloc(G->weight[j], (G->degree[j]+1)*sizeof(int));
+	}
 	assert(G->neighbor[i]);
 	assert(G->neighbor[j]);
 	G->neighbor[i][G->degree[i]] = j;
 	G->neighbor[j][G->degree[j]] = i;
+	if(G->weight) { // should we increment? Set to 1 if zero? Leave it the same if nonzero???
+	    G->weight[i][G->degree[i]] = 1;
+	    G->weight[j][G->degree[j]] = 1;
+	}
 #if SORT_NEIGHBORS
 	SetDelete(G->sorted, i);
 	SetDelete(G->sorted, j);
@@ -178,6 +204,43 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
     ++G->degree[i];
     ++G->degree[j];
     return G;
+}
+
+unsigned GraphSetWeight(GRAPH *G, int i, int j, int w)
+{
+    assert(w>0);
+    GraphConnect(G,i,j);
+    int k=0, oldWeight;
+    assert(G->weight);
+
+    while(G->neighbor[i][k] != j) k++;
+    assert(k < G->degree[i] && G->neighbor[i][k] == j);
+    oldWeight = G->weight[i][k];
+    G->weight[i][k] = w;
+
+    k=0;
+    while(G->neighbor[j][k] != i) k++;
+    assert(k < G->degree[j] && G->neighbor[j][k] == i);
+    assert(oldWeight == G->weight[j][k]);
+    G->weight[j][k] = w;
+    return oldWeight;
+}
+
+unsigned GraphGetWeight(GRAPH *G, int i, int j)
+{
+    if(!GraphAreConnected(G,i,j)) return 0;
+    int k=0;
+    assert(G->weight);
+
+    while(G->neighbor[i][k] != j) k++;
+    assert(k < G->degree[i] && G->neighbor[i][k] == j);
+    int w = G->weight[i][k];
+
+    k=0;
+    while(G->neighbor[j][k] != i) k++;
+    assert(k < G->degree[j] && G->neighbor[j][k] == i);
+    assert(G->weight[j][k] == w);
+    return w;
 }
 
 GRAPH *GraphEdgesAllDelete(GRAPH *G)
@@ -240,12 +303,14 @@ GRAPH *GraphDisconnect(GRAPH *G, int i, int j)
 	k++;
     assert(k <= G->degree[i] && G->neighbor[i][k] == j); /* this is the new degree, so using "<=" is correct */
     G->neighbor[i][k] = G->neighbor[i][G->degree[i]];
+    if(G->weight) G->weight[i][k] = G->weight[i][G->degree[i]];
 
     k=0;
     while(G->neighbor[j][k] != i)
 	k++;
     assert(k <= G->degree[j] && G->neighbor[j][k] == i);
     G->neighbor[j][k] = G->neighbor[j][G->degree[j]];
+    if(G->weight) G->weight[j][k] = G->weight[j][G->degree[j]];
 #if SORT_NEIGHBORS
     SetDelete(G->sorted, i);
     SetDelete(G->sorted, j);
@@ -438,6 +503,7 @@ GRAPH *GraphFromEdgeList(int n, int m, int *pairs, Boolean sparse)
     GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
     assert(n == G->n);
     assert(G->degree);
+    if(G->weight) Apology("Sorry, GraphFromEdgeList not done with weights yet");
     if(sparse>=true)
 	for(i=0;i<n;i++)
 	    assert(!G->neighbor[i]);
@@ -765,7 +831,7 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 	SetAdd(visited, v);
 	Varray[(*pn)++] = v;
     	int i;
-	if(G->sparse) for(i=0; i < G->degree[v]; i++) GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
+	if(G->sparse>=true) for(i=0; i < G->degree[v]; i++) GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
 	else for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) GraphVisitCC(G, i, visited, Varray, pn);
     }
     return *pn;
