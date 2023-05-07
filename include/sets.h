@@ -113,7 +113,7 @@ SET *SetPrimes(long n); /* return the set of all primes between 0 and n */
 void SetPrint(SET *A); /* space-separated elements of the set, no newline */
 
 // returns pointer array of set members using either s->list or SetToArray into array YOU pre-allocate
-unsigned *SetSmartArray(const SET const * const s, unsigned *array, const unsigned maxSize);
+unsigned *SetSmartArray(const SET *const s, unsigned *array, const unsigned maxSize);
 
 // These macros loop through members of a set. You must pre-declare both the member variable (an unsigned int),
 // and the SET* variable. If you need the loop only once, just use FOREACH. However, note that there potentially

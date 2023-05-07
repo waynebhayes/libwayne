@@ -504,7 +504,7 @@ unsigned SetToArray(unsigned int *array, const SET *set)
     return pos;
 }
 
-unsigned *SetSmartArray(const SET const * const s, unsigned *array, const unsigned maxSize)
+unsigned *SetSmartArray(const SET *const s, unsigned *array, const unsigned maxSize)
 {
     assert(maxSize >= SetCardinality(s));
     if(s->list) return s->list;
