@@ -42,7 +42,7 @@ typedef struct _memoryBlockHeader {
     const char *file; /* pointer to constant string containing the name of
 			 the source file in which the block was allocated */
     int line;	/* line number file where the block was allcoated */
-    int size;          /* size of the user portion of the block, in bytes */
+    size_t size;          /* size of the user portion of the block, in bytes */
     const char *fileFree; /* pointer to constant string containing the name of
 			 the source file in which the block was freed */
     int lineFree;
@@ -68,13 +68,13 @@ static MEMORY_BLOCK_HEADER memoryBlockList = {
 /*
 ** Total number of memory blocks currently allocated.
 */
-static int memoryBlockCount = 0;
+static size_t memoryBlockCount = 0;
 
 
 /*
 ** Total number of bytes of memory currently allocated.
 */
-static int memoryTotalUsage = 0;
+static size_t memoryTotalUsage = 0;
 
 
 /*
@@ -83,11 +83,11 @@ static int memoryTotalUsage = 0;
 static int memoryTrackingEnabled = false;
 
 
-void *Malloc_fl( const int size, const char *file, const int line )
+void *Malloc_fl( const size_t size, const char *file, const int line )
 {
     MEMORY_BLOCK_HEADER *memoryBlockHeader;
     void *memoryBlock;
-    int totalSize;
+    size_t totalSize;
 
     assert( size >= 0 );
     totalSize=size + (memoryTrackingEnabled ? sizeof(MEMORY_BLOCK_HEADER) : 0);
@@ -131,20 +131,20 @@ void *Malloc_fl( const int size, const char *file, const int line )
 }
 
 char *Strdup_fl(char *s, const char *file, const int line ) {
-    int len = 1+strlen(s);
+    size_t len = 1+strlen(s);
     char *t = (char*)Malloc_fl(len, file, line);
     strcpy(t,s);
     return t;
 }
 
-void *Calloc_fl( const int num, const int size, const char *file, const int line )
+void *Calloc_fl( const size_t num, const size_t size, const char *file, const int line )
 {
     void *mem = Malloc_fl(num*size, file, line);
     return memset(mem, 0, num*size);
 }
 
 
-void *Realloc_fl( void *memoryBlock, const int newSize, const char *file, const int line )
+void *Realloc_fl( void *memoryBlock, const size_t newSize, const char *file, const int line )
 {
     MEMORY_BLOCK_HEADER *memoryBlockHeader;
 
@@ -189,7 +189,7 @@ void *Realloc_fl( void *memoryBlock, const int newSize, const char *file, const 
 	    assert( memoryTotalUsage >= 0 );
 
 	/* call true realloc here and check if it has moved or not */
-	int totalSize = sizeof(MEMORY_BLOCK_HEADER) + newSize;
+	size_t totalSize = sizeof(MEMORY_BLOCK_HEADER) + newSize;
 	memoryBlockHeader = realloc( memoryBlockHeader, totalSize ); // this way we cannot touch old one of it moved
 
 	    align = (int*)memoryBlockHeader->align;
@@ -216,11 +216,11 @@ void *Realloc_fl( void *memoryBlock, const int newSize, const char *file, const 
 }
 
 #if 0
-void *Realloc_fl2( void *ptr, const int newSize, const char *file, const int line )
+void *Realloc_fl2( void *ptr, const size_t newSize, const char *file, const int line )
 {
     MEMORY_BLOCK_HEADER *memoryBlockHeader;
     void *memoryBlock;
-    int totalSize, oldSize;
+    size_t totalSize, oldSize;
 
     assert( newSize >= 0 );
     totalSize=newSize + (memoryTrackingEnabled ? sizeof(MEMORY_BLOCK_HEADER) : 0);

@@ -80,10 +80,10 @@ void EnableMemDebug( const char *file, const int line );
 */
 #ifndef NDEBUG
 // Do NOT call ANY of these functions directly; use the macros below
-void *Malloc_fl( const int size, const char *file, const int line ); 
+void *Malloc_fl( const size_t size, const char *file, const int line ); 
 char *Strdup_fl(char *s, const char *file, const int line ); 
-void *Calloc_fl( const int size, const int num, const char *file, const int line );
-void *Realloc_fl( void *ptr, const int size, const char *file, const int line );
+void *Calloc_fl( const size_t size, const size_t num, const char *file, const int line );
+void *Realloc_fl( void *ptr, const size_t size, const char *file, const int line );
 
 #define Malloc(size) Malloc_fl( (size), __FILE__, __LINE__ )
 #define Strdup(s) Strdup_fl((s), __FILE__, __LINE__ )

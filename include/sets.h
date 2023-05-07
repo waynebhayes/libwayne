@@ -28,7 +28,7 @@ extern "C" {
 #include <assert.h>
 #include "misc.h"
 #include "bitvec.h"
-#include "mem-debug.h"
+//#include "mem-debug.h"
 
 typedef unsigned SET_ELEMENT_TYPE;
 
