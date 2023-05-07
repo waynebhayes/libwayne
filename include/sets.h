@@ -81,8 +81,8 @@ SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
 SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */
 SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
-unsigned SetCardinality(SET *A);    /* returns non-negative integer */
-Boolean SetInSafe(SET *set, unsigned element); /* boolean: 0 or 1 */
+unsigned SetCardinality(const SET *A);    /* returns non-negative integer */
+Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < set->maxElem, which is dangerous
@@ -105,12 +105,28 @@ Boolean SetSubsetProper(SET *sub, SET *super);	/* proper subset */
 ** and the function returns the cardinality (ie, number of array elements
 ** populated)
 */
-unsigned SetToArray(unsigned *array, SET *set);
+unsigned SetToArray(unsigned *array, const SET *set);
 SET *SetFromArray(SET *s, int n, unsigned *array);
 char *SetToString(int len, char s[], SET *set);
 
 SET *SetPrimes(long n); /* return the set of all primes between 0 and n */
 void SetPrint(SET *A); /* space-separated elements of the set, no newline */
+
+// returns pointer array of set members using either s->list or SetToArray into array YOU pre-allocate
+unsigned *SetSmartArray(const SET const * const s, unsigned *array, const unsigned maxSize);
+
+// These macros loop through members of a set. You must pre-declare both the member variable (an unsigned int),
+// and the SET* variable. If you need the loop only once, just use FOREACH. However, note that there potentially
+// involves a call to SetToArray, which can be expensive. Thus, if you're going to perform a loop over the EXACT
+// SAME set multiple times (eg nested inside another loop), then it is more efficient to perform a FOREACH_DECLARE
+// once, and then use FOREACH_LOOP for the recurring (nested) loop---and the parameters for the LOOP must be EXACTLY
+// identical in name to those used in the DECLARE. Finally, note that since we use the name of the set in
+// constructing internal temporary variables, the set name must be an actual VARIABLE NAME of a set, not an array member
+// or structure reference. So for example, s cannot be (cluster->nodes) or a member of an array like Sets[i].
+// In these these cases you'd need to declare a SET *s=cluster->nodes, or SET *s=Sets[i], etc.
+#define FOREACH_DECLARE(m,s) unsigned __##s##_i, __##s##_member[SetCardinality(s)], *__##s##_list=SetSmartArray((s),__##s##_member, SetCardinality(s))
+#define FOREACH_LOOP(m,s) for(__##s##_i=0;((m)=__##s##_list[__##s##_i],__##s##_i)<SetCardinality(s);__##s##_i++)
+#define FOREACH(m,s) FOREACH_DECLARE(m,s); FOREACH_LOOP(m,s)
 
 
 /* SMALL SETS: directly use a bit vector, without using BITVEC. Yes it

@@ -108,7 +108,7 @@ static void SetListSort(SET *s)
 
 /* query if an element is in a set; return 0 or non-zero.
 */
-Boolean SetInSafe(SET *set, unsigned element)
+Boolean SetInSafe(const SET *set, unsigned element)
 {
     assert(element < set->maxElem);
     if(set->bitvec) {
@@ -479,16 +479,16 @@ SET *SetComplement(SET *B, SET *A)
 }
 
 
-unsigned SetCardinality(SET *A)
+unsigned SetCardinality(const SET *A)
 {
-    if(A->bitvec) A->cardinality = BitvecCardinality(A->bitvec);
+    if(A->bitvec) assert(A->cardinality == BitvecCardinality(A->bitvec));
     return A->cardinality;
 }
 
 /* populate the given array with the list of members currently present
 ** in the set.  The array is assumed to have enough space.
 */
-unsigned SetToArray(unsigned int *array, SET *set)
+unsigned SetToArray(unsigned int *array, const SET *set)
 {
     int i;
     if(set->list) {
@@ -503,6 +503,17 @@ unsigned SetToArray(unsigned int *array, SET *set)
     assert(pos == SetCardinality(set));
     return pos;
 }
+
+unsigned *SetSmartArray(const SET const * const s, unsigned *array, const unsigned maxSize)
+{
+    assert(maxSize >= SetCardinality(s));
+    if(s->list) return s->list;
+    else {
+	SetToArray(array, s);
+	return array;
+    }
+}
+
 
 unsigned SSetToArray(unsigned int *array, SSET set)
 {

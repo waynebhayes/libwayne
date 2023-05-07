@@ -331,7 +331,7 @@ void MemoryAllocationReport( const char *file, const int line )
 
     if( memoryBlockCount > 0 )
     {
-	fprintf( stderr, "Total leaked memory: %d byte%s in %d block%s.\n\n",
+	fprintf( stderr, "Total leaked memory: %ld byte%s in %ld block%s.\n\n",
 	    memoryTotalUsage, ((memoryTotalUsage > 1)?"s":""),
 	    memoryBlockCount, ((memoryBlockCount > 1)?"s":""));
 	fprintf( stderr, "Address:  Bytes:      Line:  File:\n" );
@@ -339,7 +339,7 @@ void MemoryAllocationReport( const char *file, const int line )
 
 	while( memoryBlockHeader != NULL )
 	{
-	    fprintf( stderr, "%8p  %10.1d  %5.1d  %s\n",
+	    fprintf( stderr, "%8p  %10.1ld  %5.1d  %s\n",
 		(void *)((unsigned char*)memoryBlockHeader +
 		    sizeof(MEMORY_BLOCK_HEADER) ),
 		memoryBlockHeader->size,
