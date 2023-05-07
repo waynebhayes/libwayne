@@ -231,7 +231,7 @@ SET *SetCopy(SET *dst, SET *src)
 	SetMakeBitvec(dst);
 	BitvecCopy(dst->bitvec, src->bitvec);
     } else {
-	assert(dst->list && src->list && src->cardinality <= src->crossover);
+	assert(src->list && src->cardinality <= src->crossover);
 	int i;
 	for(i=0;i<src->cardinality;i++) SetAdd(dst, src->list[i]);
     }
@@ -490,8 +490,12 @@ unsigned SetCardinality(SET *A)
 */
 unsigned SetToArray(unsigned int *array, SET *set)
 {
-    int pos = 0;
     int i;
+    if(set->list) {
+	memcpy(array, set->list, set->cardinality*sizeof(set->list[0]));
+	return set->cardinality;
+    }
+    int pos = 0;
     for(i=0; i < set->maxElem; i++)
 	if(SetIn(set,i))
 	    array[pos++] = i;
@@ -580,7 +584,6 @@ void SetPrint(SET *A)
 {
     int i;
     for(i=0;i<A->maxElem;i++) if(SetIn(A,i)) printf("%d ", i);
-    printf("\n");
 }
 
 

@@ -110,7 +110,7 @@ SET *SetFromArray(SET *s, int n, unsigned *array);
 char *SetToString(int len, char s[], SET *set);
 
 SET *SetPrimes(long n); /* return the set of all primes between 0 and n */
-void SetPrint(SET *A); /* print elements of the set */
+void SetPrint(SET *A); /* space-separated elements of the set, no newline */
 
 
 /* SMALL SETS: directly use a bit vector, without using BITVEC. Yes it
