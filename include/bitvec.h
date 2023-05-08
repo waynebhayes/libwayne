@@ -66,8 +66,8 @@ BITVEC *BitvecUnion(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = union of A and B *
 BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = intersection of A and B */
 BITVEC *BitvecXOR(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = XOR of A and B */
 BITVEC *BitvecComplement(BITVEC *B, BITVEC *A);  /* B = complement of A */
-unsigned BitvecCardinality(BITVEC *A);    /* returns non-negative integer */
-Boolean BitvecInSafe(BITVEC *vec, unsigned element); /* boolean: 0 or 1 */
+unsigned BitvecCardinality(const BITVEC *const A);    /* returns non-negative integer */
+Boolean BitvecInSafe(const BITVEC *const vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < vec->maxElem, which is dangerous
@@ -92,13 +92,17 @@ unsigned int BitvecAssignSmallestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
 ** and the function returns the cardinality (ie, number of array elements
 ** populated)
 */
-unsigned BitvecToArray(unsigned *array, BITVEC *vec);
+unsigned BitvecToArray(unsigned *array, const BITVEC *vec);
+unsigned *BitvecSmartArray(const BITVEC *vec, unsigned *array, unsigned maxSize);
 BITVEC *BitvecFromArray(BITVEC *s, int n, unsigned *array);
 char *BitvecToString(int len, char s[], BITVEC *vec);
 
 BITVEC *BitvecPrimes(long n); /* return the vec of all primes between 0 and n */
 void BitvecPrint(BITVEC *A); /* print elements of the vec */
 
+#define BV_FOREACH_DECLARE(m,s) unsigned __##s##_i, __##s##_member[BitvecCardinality(s)], *__##s##_list=BitvecSmartArray((s),__##s##_member, BitvecCardinality(s))
+#define BV_FOREACH_LOOP(m,s) for(__##s##_i=0;((m)=__##s##_list[__##s##_i],__##s##_i)<BitvecCardinality(s);__##s##_i++)
+#define BV_FOREACH(m,s) BV_FOREACH_DECLARE(m,s); BV_FOREACH_LOOP(m,s)
 /*
 *********  SPARSE_BITVEC  ********
 */

@@ -158,6 +158,7 @@ SET *SetResize(SET *set, unsigned new_n)
 SET *SetEmpty(SET *set)
 {
     if(set->bitvec) BitvecEmpty(set->bitvec);
+    else set->numSorted = 0;
     set->smallestElement = set->maxElem;
     set->cardinality = 0; // in the spirit of C, don't bother zapping the list elements to zero
     return set;
@@ -234,6 +235,7 @@ SET *SetCopy(SET *dst, SET *src)
 	assert(src->list && src->cardinality <= src->crossover);
 	int i;
 	for(i=0;i<src->cardinality;i++) SetAdd(dst, src->list[i]);
+	dst->numSorted = src->numSorted;
     }
     assert(dst->maxElem == src->maxElem);
     dst->smallestElement = src->smallestElement;
@@ -311,13 +313,20 @@ SET *SetDelete(SET *set, unsigned element)
     assert(element < set->maxElem);
     if(set->bitvec && _smallestGood) assert(set->smallestElement == set->bitvec->smallestElement);
     if(!SetIn(set, element)) return set;
+    assert(set->cardinality > 0);
     if(set->bitvec) BitvecDelete(set->bitvec, element);
     else {
-	int i;
-	for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
-	assert(i<set->cardinality); // it SHOULD be there!
-	set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
-	if(set->numSorted > i+1) set->numSorted = i+1; // sort is OK up to and including new location of last element
+	assert(set->list);
+	if(set->cardinality == 1) { // if cardinality == 1 we cannot do anything other than decrement cardinality
+	    set->numSorted = 0;
+	    set->smallestElement = set->maxElem;
+	} else {
+	    int i;
+	    for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
+	    assert(i<set->cardinality); // it SHOULD be there!
+	    set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
+	    if(set->numSorted > i+1) set->numSorted = i+1; // sort is OK up to and including new location of last element
+	}
     }
     set->cardinality--;
     if(element == set->smallestElement)

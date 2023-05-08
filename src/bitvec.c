@@ -267,7 +267,7 @@ BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 /* query if an element is in a vec; return 0 or non-zero.
 */
 #define BITVEC_BIT_SAFE(e) (1U<<((e)&bitvecBits_1))
-Boolean BitvecInSafe(BITVEC *vec, unsigned element)
+Boolean BitvecInSafe(const BITVEC *const vec, unsigned element)
 {
     assert(element < vec->maxElem);
     unsigned segment = element/bitvecBits, e_bit = BITVEC_BIT_SAFE(element);
@@ -434,7 +434,7 @@ BITVEC *BitvecComplement(BITVEC *B, BITVEC *A)
 }
 
 
-unsigned BitvecCardinality(BITVEC *A)
+unsigned BitvecCardinality(const BITVEC *const A)
 {
     unsigned n = 0, i, loop = NUMSEGS(A->maxElem);
     for(i=0; i < loop; i++)
@@ -455,7 +455,7 @@ unsigned long SparseBitvecCardinality(SPARSE_BITVEC *vec)
 /* populate the given array with the list of members currently present
 ** in the vec.  The array is assumed to have enough space.
 */
-unsigned BitvecToArray(unsigned int *array, BITVEC *vec)
+unsigned BitvecToArray(unsigned *array, const BITVEC *vec)
 {
     int pos = 0;
     int i;
@@ -466,6 +466,7 @@ unsigned BitvecToArray(unsigned int *array, BITVEC *vec)
     assert(pos == BitvecCardinality(vec));
     return pos;
 }
+unsigned *BitvecSmartArray(const BITVEC *vec, unsigned *array, unsigned maxSize) { BitvecToArray(array, vec); return array;}
 
 /* Add the elements listed in the array to the vec.
 */
