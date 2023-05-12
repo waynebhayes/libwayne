@@ -94,11 +94,17 @@ void GraphFree(GRAPH *G)
     Free(G);
 }
 
+static void GraphNameWarn(const char *s) {
+    static char warned;
+    if(!warned) Warning("%s called on graph with names; not copying names", s);
+    warned=1;
+}
+
 /* If Gc == NULL, create duplicate.  Otherwise just copy G's info into Gc. */
 GRAPH *GraphCopy(GRAPH *G)
 {
     int i;
-    if(G->supportNodeNames) Warning("GraphCopy called on graph with names; not copying names");
+    if(G->supportNodeNames) GraphNameWarn("GraphCopy");
     GRAPH *Gc = GraphAlloc(G->n, G->sparse, false);
     Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
     for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
@@ -690,7 +696,7 @@ GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
 GRAPH *GraphComplement(GRAPH *G)
 {
     int i, j;
-    if(G->supportNodeNames) Warning("GraphComplement called on graph with names; not copying names");
+    if(G->supportNodeNames) GraphNameWarn("GraphComplement");
     GRAPH *Gbar = GraphAlloc(G->n, G->sparse, false);
 
     assert(Gbar->n == G->n);
@@ -712,8 +718,8 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
 
     assert(G1->sparse == G2->sparse);
 
-    if(G1->supportNodeNames || G2->supportNodeNames) Warning("GraphUnion called on graph(s) with names; not copying names");
     GRAPH *dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
+    if(G1->supportNodeNames || G2->supportNodeNames) GraphNameWarn("GraphUnion");
 
     for(i=0; i < n; i++) for(j=i+1; j < n; j++)
 	if(GraphAreConnected(G1, i, j) || GraphAreConnected(G2, i, j))
@@ -841,7 +847,7 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 GRAPH *GraphInduced(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    if(G->supportNodeNames) Warning("GraphInduced called on graph(s) with names; not copying names");
+    if(G->supportNodeNames) GraphNameWarn("GraphInduced");
     GRAPH *Gv = GraphAlloc(nV, G->sparse, false);
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
@@ -854,7 +860,7 @@ GRAPH *GraphInduced(GRAPH *G, SET *V)
 GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    if(G->supportNodeNames) Warning("GraphInduced_NoVertexDelete called on graph with names; not copying names");
+    if(G->supportNodeNames) GraphNameWarn("GraphInduced_NoVertexDelete");
     GRAPH *Gv = GraphAlloc(G->n, G->sparse, false);
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)

@@ -53,7 +53,13 @@ unsigned short SetComputeCrossover(unsigned n)
     }
     prevResult = MAX((unsigned)mid,SET_MIN_LIST);
     //fprintf(stderr, "n=%u CROSSOVER %u\n", n,prevResult);
-    if(prevResult > 65535) Apology("SET datatype can't handle sets of %u elements; change code to allow n as unsigned long so crossover can be larger than 65535",n);
+    static const unsigned max_crossover=65535;
+    if(prevResult > max_crossover) {
+	static char warned;
+	if(!warned) Warning("SET datatype can't handle lits of %u elements; setting crossover to %u", prevResult, max_crossover);
+	warned=1;
+	prevResult = max_crossover;
+    }
     return (unsigned short)prevResult;
 }
 
