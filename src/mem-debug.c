@@ -317,7 +317,6 @@ void Free_fl( void *memoryBlock, const char *file, const int line )
 	free( memoryBlock );
 }
 
-
 void MemoryAllocationReport( const char *file, const int line )
 {
     MEMORY_BLOCK_HEADER *memoryBlockHeader = memoryBlockList.next;
@@ -332,8 +331,8 @@ void MemoryAllocationReport( const char *file, const int line )
     if( memoryBlockCount > 0 )
     {
 	fprintf( stderr, "Total leaked memory: %ld byte%s in %ld block%s.\n\n",
-	    memoryTotalUsage, ((memoryTotalUsage > 1)?"s":""),
-	    memoryBlockCount, ((memoryBlockCount > 1)?"s":""));
+	    (long) memoryTotalUsage, ((memoryTotalUsage > 1)?"s":""),
+	    (long) memoryBlockCount, ((memoryBlockCount > 1)?"s":""));
 	fprintf( stderr, "Address:  Bytes:      Line:  File:\n" );
 	fprintf( stderr, "--------  ----------  -----  ----------\n" );
 
@@ -342,7 +341,7 @@ void MemoryAllocationReport( const char *file, const int line )
 	    fprintf( stderr, "%8p  %10.1ld  %5.1d  %s\n",
 		(void *)((unsigned char*)memoryBlockHeader +
 		    sizeof(MEMORY_BLOCK_HEADER) ),
-		memoryBlockHeader->size,
+		(long) memoryBlockHeader->size,
 		memoryBlockHeader->line,
 		memoryBlockHeader->file );
 
