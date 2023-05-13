@@ -340,18 +340,13 @@ SET *SetDelete(SET *set, unsigned element)
     if(set->bitvec) {assert(BitvecIn(set->bitvec, element)); BitvecDelete(set->bitvec, element);}
     else {
 	assert(set->list);
-	if(set->cardinality == 1) { // if cardinality == 1 we cannot do anything other than decrement cardinality
-	    set->numSorted = 0;
-	    set->smallestElement = set->maxElem;
-	} else {
-	    int i;
-	    for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
-	    assert(i<set->cardinality); // it SHOULD be there!
-	    assert(set->list[i] == element);
-	    if(i == set->cardinality-1) ; // it's the last element, it'll go away when we decrement cardinality below
-	    else set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
-	    if(set->numSorted > i) set->numSorted = i; // sort is OK up to the element before i, but not necessarily i
-	}
+	int i;
+	for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
+	assert(i<set->cardinality); // it SHOULD be there!
+	assert(set->list[i] == element);
+	if(i == set->cardinality-1) ; // it's the last element, it'll go away when we decrement cardinality below
+	else set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
+	if(set->numSorted > i) set->numSorted = i; // sort is OK up to the element before i, but not necessarily i
     }
     set->cardinality--;
     if(element == set->smallestElement)
