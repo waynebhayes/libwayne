@@ -98,23 +98,28 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
 #endif
 
 // Used when qsort'ing the neighbors when graph is sparse.
-static int IntCmp(const void *a, const void *b)
+static int ElementCmp(const void *a, const void *b)
 {
-    const int *i = (const int*)a, *j = (const int*)b;
-    return (*i)-(*j);
+    const SET_ELEMENT_TYPE *i = (const SET_ELEMENT_TYPE*)a, *j = (const SET_ELEMENT_TYPE*)b;
+    if(*i<*j) return -1;
+    if(*i>*j) return 1;
+    return 0;
 }
 
 static void SetListSort(SET *s)
 {
     if(!s->list) {assert(s->listSize==0); return;}
     if(s->numSorted == s->cardinality) return;
-    qsort(s->list, s->cardinality, sizeof(s->list[0]), IntCmp);
+    qsort(s->list, s->cardinality, sizeof(SET_ELEMENT_TYPE), ElementCmp);
+#if PARANOID_ASSERTS
+    int i; for(i=1; i < s->cardinality; i++) assert(s->list[i-1] < s->list[i]); // ensure it's sorted
+#endif
     s->numSorted = s->cardinality;
 }
 
 /* query if an element is in a set; return 0 or non-zero.
 */
-Boolean SetInSafe(const SET *set, unsigned element)
+Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
 {
     assert(element < set->maxElem);
     if(set->bitvec) {
@@ -125,7 +130,14 @@ Boolean SetInSafe(const SET *set, unsigned element)
     }
     assert(set->list && set->cardinality <= set->crossover);
     int i;
-    if(bsearch(&element, set->list, set->numSorted, sizeof(set->list[0]), IntCmp)) return true;
+    if(set->numSorted > 0) {
+	if(bsearch(&element, set->list, set->numSorted, sizeof(SET_ELEMENT_TYPE), ElementCmp)) return true;
+	// bsearch sometimes FAILS to find an element that exists! So search from ZERO rather than set->numSorted.... Grrrr!
+#if PARANOID_ASSERTS
+	for(i=1; i<set->numSorted; i++) assert(set->list[i-1] < set->list[i]); // ensure it's sorted
+	for(i=0; i<set->numSorted; i++) if(element == set->list[i]) Fatal("bsearch failed: element %d, position %d", element, i);
+#endif
+    }
     for(i=set->numSorted; i<set->cardinality; i++) if(element == set->list[i]) return true;
     return false;
 }
@@ -214,8 +226,13 @@ SET *SetAdd(SET *s, unsigned element)
 	}
     }
     ++s->cardinality;
-    if(s->list && s->cardinality > 2*(s->numSorted+64)) SetListSort(s); // 32 is arbitrary to avoid sorting too frequently
     if(element < s->smallestElement) s->smallestElement = element;
+    if(s->list && s->cardinality > 2*(s->numSorted+64)) {
+	SetListSort(s); // 32 is arbitrary to avoid sorting too frequently
+	assert(s->numSorted == s->cardinality);
+	int i; for(i=1; i < s->cardinality; i++) assert(s->list[i-1] < s->list[i]); // ensure it's sorted
+	assert(s->smallestElement == s->list[0]);
+    }
 #if PARANOID_ASSERTS
     if(s->bitvec) {
 	assert(!_smallestGood || s->smallestElement == s->bitvec->smallestElement);
@@ -320,7 +337,7 @@ SET *SetDelete(SET *set, unsigned element)
     if(set->bitvec && _smallestGood) assert(set->smallestElement == set->bitvec->smallestElement);
     if(!SetIn(set, element)) return set;
     assert(set->cardinality > 0);
-    if(set->bitvec) BitvecDelete(set->bitvec, element);
+    if(set->bitvec) {assert(BitvecIn(set->bitvec, element)); BitvecDelete(set->bitvec, element);}
     else {
 	assert(set->list);
 	if(set->cardinality == 1) { // if cardinality == 1 we cannot do anything other than decrement cardinality
@@ -330,8 +347,10 @@ SET *SetDelete(SET *set, unsigned element)
 	    int i;
 	    for(i=0; i<set->cardinality; i++) if(set->list[i] == element) break;
 	    assert(i<set->cardinality); // it SHOULD be there!
-	    set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
-	    if(set->numSorted > i+1) set->numSorted = i+1; // sort is OK up to and including new location of last element
+	    assert(set->list[i] == element);
+	    if(i == set->cardinality-1) ; // it's the last element, it'll go away when we decrement cardinality below
+	    else set->list[i] = set->list[set->cardinality-1]; // nuke the element by moving the last one to its position
+	    if(set->numSorted > i) set->numSorted = i; // sort is OK up to the element before i, but not necessarily i
 	}
     }
     set->cardinality--;

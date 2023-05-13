@@ -86,7 +86,7 @@ Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < set->maxElem, which is dangerous
-#define SetIn(set,e) ( (set)->bitvec ? BetvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
+#define SetIn(set,e) ( (set)->bitvec ? BitvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
 #else
 #define SetIn SetInSafe
 #endif
