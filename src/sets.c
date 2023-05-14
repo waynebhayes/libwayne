@@ -236,7 +236,8 @@ SET *SetAdd(SET *s, unsigned element)
 #if PARANOID_ASSERTS
     if(s->bitvec) {
 	assert(!_smallestGood || s->smallestElement == s->bitvec->smallestElement);
-	assert(s->cardinality == BitvecCardinality(s->bitvec));
+	if(s->maxElem != 2136745621U) // this is MCMC_MAX_HASH, and we don't want to count it every time we add one element
+	    assert(s->cardinality == BitvecCardinality(s->bitvec));
     }
     else
 	assert(s->cardinality <= s->listSize && s->listSize <= s->crossover);
