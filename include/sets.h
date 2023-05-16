@@ -60,6 +60,7 @@ typedef struct _setType {
 } SET;
 
 Boolean SetStartup(void); // always succeeds, but returns whether it did anything or not.
+extern unsigned setBits, setBits_1;
 
 /* allocate & return empty set capable of storing integers 0..n-1 inclusive */
 #if 0 // use this in you want to use mem-debug to track where a set was allocated

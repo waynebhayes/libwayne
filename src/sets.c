@@ -23,11 +23,14 @@ extern "C" {
 ** BitvecStartup needs to set some stuff, and since we use it bitvecs...
 */
 static Boolean _doneInit;
+unsigned setBits, setBits_1;
 Boolean SetStartup(void)
 {
     if(_doneInit) return false;
     _doneInit = true;
-    return BitvecStartup();
+    Boolean s = BitvecStartup();
+    setBits = bitvecBits; setBits_1 = bitvecBits_1;
+    return s;
 }
 
 
