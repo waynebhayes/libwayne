@@ -442,7 +442,7 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
 
 	    Boolean subTest;
 	    subTest = TinyGraphsIsomorphic(perm, &neighG1i, &neighG2j);
-	    if(!subTest) {--recursionDepth; return TinyGraphsIsomorphic(perm, &neighG1i, &neighG2j);}
+	    if(!subTest) {--recursionDepth; return false; }
 
 	    /* Now ask if the remainder of the graphs are isomorphic */
 	    TSET all;
@@ -451,7 +451,7 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
 	    all = ((TSET)(-1)) >> (MAX_TSET-G2->n);
 	    TinyGraphInduced(&restG2j, G2, TSetDelete(all, j));
 	    subTest = TinyGraphsIsomorphic(perm, &restG1i, &restG2j);
-	    if(!subTest) {--recursionDepth; return TinyGraphsIsomorphic(perm, &restG1i, &restG2j);}
+	    if(!subTest) {--recursionDepth; return false; }
 	}
     }
 

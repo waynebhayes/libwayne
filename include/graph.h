@@ -21,6 +21,7 @@ typedef struct _Graph {
     int n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
+    Boolean selfLoops; // self-loops allowed iff this is true
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
     unsigned **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
@@ -34,7 +35,9 @@ typedef struct _Graph {
     char **name;	// int to string map (inverse of the above)
 } GRAPH;
 
-GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames);
+GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames); // does NOT allow self-loops
+GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
+
 GRAPH *GraphMakeWeighted(GRAPH *G);
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
