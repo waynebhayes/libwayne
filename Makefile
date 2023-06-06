@@ -13,7 +13,6 @@ STACKSIZE=$(shell ($(GCC) -v 2>&1; uname -a) | awk '/CYGWIN/{print "-Wl,--stack,
 CC=$(GCC) $(OPT) $(GDB) $(DEBUG) -Wall -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow $(PG) $(STACKSIZE)
 
 default: gcc-ver
-	# Make the same thing we made most recently
 	if ls -rtlL *.a | tail -1 | grep .-g; then $(MAKE) debug; else $(MAKE) opt; fi
 
 gcc-ver:
@@ -27,15 +26,15 @@ all:
 libwayne_all:
 	# Make the pg versions (for profiling)
 	$(MAKE) debug_clean
-	$(MAKE) -j$(CORES) 'PG=-pg' debug
+	$(MAKE) -j$(CORES) 'PG=-pg' debug && mv libwayne-g.a src/libwayne-pg-g/libwayne-pg-g.a
 	$(MAKE) opt_clean
-	$(MAKE) -j$(CORES) 'PG=-pg' opt
-	for i in *.a; do b=`basename $$i .a`; mv $$i $$b-pg.a; done
+	$(MAKE) -j$(CORES) 'PG=-pg' opt && mv libwayne.a src/libwayne-pg/libwayne-pg.a
 	# Make the non-pg versions (for profiling)
 	$(MAKE) debug_clean
-	$(MAKE) -j$(CORES) debug
+	$(MAKE) -j$(CORES) debug && mv libwayne-g.a src/libwayne-g/libwayne-g.a
 	$(MAKE) opt_clean
-	$(MAKE) -j$(CORES) opt
+	$(MAKE) -j$(CORES) opt && mv libwayne.a src/libwayne/libwayne.a
+	cp src/libwayne*/*.a src && cp src/*.a .
 
 tests: libwayne_all
 	for x in ebm covar stats hashtest htree-test bintree-test CI graph-sanity; do rm -f bin/$$x tests/$$x.o; (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi); done
@@ -73,4 +72,4 @@ $(LIBOUT): src/$(LIBOUT)
 	mv src/$(LIBOUT) .
 
 src/$(LIBOUT):
-	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'GDB=$(GDB)'
+	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'GDB=$(GDB)' '$(LIBOUT)'
