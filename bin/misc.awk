@@ -1,4 +1,4 @@
-BEGIN{PI=M_PI=3.14159265358979324;BIGNUM=1*1e30}
+BEGIN{PI=M_PI=3.14159265358979324;BIGNUM=1*1e30; for(i=0;i<256;i++)ASCII[sprintf("%c",i)]=i}
 
 function ASSERT(cond,str){if(!cond){s=sprintf("ASSERTION failure, line %d of input file %s: %s.\nInput line was:\n<%s>\n", FNR,FILENAME,str,$0); print s >"/dev/stderr"; exit 1}}
 function WARN(cond,str,verbose){if(!cond){s=sprintf("WARNING: line %d of input file %s: %s",FNR,FILENAME,str); if(verbose)s=s sprintf("\nInput line was:\n<%s>\n", $0); print s >"/dev/stderr"}}
@@ -8,15 +8,15 @@ function MAX(x,y){return x>y?x:y}
 function MIN(x,y){return x<y?x:y}
 
 function nul(s){} # do nothing; useful for holding temp strings in code on the command line.
+
 # The default srand() uses time-of-day, which only changes once per second. Not good enough for paraell runs.
-function Srand(){
-    srand(); # seed with time-of-day
-    srand(srand()+PROCINFO["uid"]) # add user ID.
-    srand(srand()+PROCINFO["ppid"]) # add user parent PID.
-    srand(srand()+PROCINFO["pid"]) # add process ID
+function GetFancySeed(           seed,hostname,n,h,i){
+    seed=systime()+PROCINFO["gid"]+PROCINFO["uid"]+PROCINFO["pgrpid"]+PROCINFO["ppid"]+PROCINFO["pid"];
+    "hostname"|getline hostname; n=length(hostname); for(i=1;i<=n;i++) seed+=ASCII[substr(hostname,i,1)];
+    return seed;
 }
 function randsort(i1,v1,i2,v2) { return rand()-0.5 } # use this to have for loops go in random order
-
+function Srand() { return srand(GetFancySeed());}
 
 function ftos(f){f=sprintf("%.3g",f); gsub("e[+]0","e+",f); return f} # remove leading 0s from exponent
 function floor(x) {if(x>=0) return int(x); else return int(x)-1}
@@ -183,6 +183,7 @@ function SetUnion(res2,T1,T2,
     g){delete res2;for(g in T1)res2[g]=1;for(g in T2)res2[g]=1}
 # cumulative add set T to res3
 function SetCumulativeUnion(res3,T, g){for(g in T)res3[g]=1}
+function SetCopy(dest,src,   g){delete dest;for(g in src)dest[g]=1}
 
 function Jaccard(T1,T2,   i,u){SetIntersect(i,T1,T2); SetUnion(u,T1,T2); return length(i)/length(u);}
 
@@ -680,27 +681,113 @@ function LeastSquaresMSR(  i) {
   variance = (SUMres2 - SUMres*SUMres/_LS_n)/(_LS_n-1);
 }
 
-#Input: a single node, u, to start the BFS, along with the edge list for a graph stored in edge[][]; ASSUMED SYMMETRIC
-#Output: array _BFSdist[] contains shortest paths from u to all nodes reachable from u; includes _BFSdist[u]=0.
-function BFS(u,  V,Q,m,M,x,y) {
-    ASSERT(isarray(edge), "2D edge array must exist");
+
+################# GRAPH ROUTINES ##################
+
+#Input: edgeList; a single node, u, to start the BFS; and an (optional) "searchNode" to stop at.
+#Output: array dist[] contains shortest paths from u to all nodes reachable from u within maxDist; includes dist[u]=0.
+#        Call with maxDist=n (size of network) to get the BFS distance to everybody
+function BFS(edgeList,u,searchNode,dist,   V,Q,m,M,x,y) {
+    ASSERT(isarray(edge), "BFS: edgeList must be binary symmetric 2D array");
     delete V; # visited
     delete Q; # queue
-    delete _BFSdist; # distance from u
-    _BFSdist[u]=0;
+    delete dist; # distance from u
+    dist[u]=0;
     m=M=0;
     Q[M++]=u; # the BFS queue runs from m [inclusive] to M-1, and we increment m as we dequeue elements
     while(M>m) {
 	x = Q[m++];
-	ASSERT(x in _BFSdist, x" in Q but not in distance array");
+	ASSERT(x in dist, x" in Q but not in distance array");
 	if(!(x in V)) {
 	    V[x]=1;
 	    ASSERT(isarray(edge[x]), "edge["x"] is not an array");
 	    for(y in edge[x]) if(!(y in V)) {
-		if(y in _BFSdist) _BFSdist[y]=MIN(_BFSdist[y],_BFSdist[x]+1);
-		else _BFSdist[y]=_BFSdist[x]+1;
+		if(y in dist) dist[y]=MIN(dist[y],dist[x]+1);
+		else dist[y]=dist[x]+1;
+		if(y==searchNode) return;
 		Q[M++]=y;
 	    }
 	}
     }
 }
+function MakeEmptySet(S){delete S; S[0]=1; delete S[0]}
+function InducedEdges(edge,T,D,       u,v,m) { # note you can skip passing in D
+    MakeEmptySet(D);
+    for(u in T) for(v in T) if((u in edge) && (v in edge[u])) { ++D[u]; ++D[v]; ++m; }
+    for(u in T) { ASSERT(D[u]%2==0, "InducedEdges: D["u"]="D[u]); D[u]/=2; }
+    ASSERT(m%2==0, "m is not even");
+    return m/2;
+}
+
+# Priority Queue Implementation, by Pablo Martin Redondo, UCI March 2023.
+function PQueueAlloc(name) { _PQ_count[name]=0; _PQ_heap[name][0][0]=1; delete _PQ_heap[name][0][0];}
+function PQueueDelloc(name){ delete _PQ_count[name]; delete _PQ_heap[name];}
+function PQueueLength(name) {return _PQ_count[name]}
+function _PQ_swap(name,i,j,	tmp) {
+    tmp[0] = _PQ_heap[name][i][0];tmp[1] = _PQ_heap[name][i][1];
+    _PQ_heap[name][i][0] = _PQ_heap[name][j][0]; _PQ_heap[name][i][1] = _PQ_heap[name][j][1];
+    _PQ_heap[name][j][0] = tmp[0]; _PQ_heap[name][j][1] = tmp[1];
+
+}
+function _PQ_heapify(name,i,	largest,l,r,n) {
+    largest = i;
+    l = 2 * i;
+    r = 2 * i + 1;
+    n = _PQ_count[name];
+
+    if ((l <= n) && (_PQ_heap[name][l][0] > _PQ_heap[name][largest][0])) largest = l;
+    if ((r <= n) && (_PQ_heap[name][r][0] > _PQ_heap[name][largest][0])) largest = r;
+
+    if (largest != i){
+        _PQ_swap(name, i, largest);
+        _PQ_heapify(name, largest);
+    }
+}
+
+function PQueuePush(name,p,el,	size,i){
+    size = _PQ_count[name];
+    _PQ_heap[name][size][0] = p;
+    _PQ_heap[name][size][1] = el;
+    _PQ_count[name]++;
+    if (size > 0){
+        for(i=int(size/2); i>=0; i--){
+            _PQ_heapify(name, i);
+        }
+    }
+}
+
+function PQueuePop(name,	size,element){
+    size = _PQ_count[name];
+    element = _PQ_heap[name][0][1];
+    _PQ_swap(name, 0, size-1);
+    delete _PQ_heap[name][size-1]; _PQ_count[name]--;
+    _PQ_heapify(name,0);
+    return element
+}
+
+
+# Note: Possible sort orders are: "@unsorted",
+# "@ind_str_asc",	"@ind_num_asc",	 "@val_type_asc",  "@val_str_asc",  "@val_num_asc",
+# "@ind_str_desc",	"@ind_num_desc", "@val_type_desc", "@val_str_desc", "@val_num_desc",
+# This implementation allows multiple elements with the same priority... and even multiple [p][element] duplicates
+function PQpush(name, pri, element) { ++_PQ_[name][pri][element]; }
+
+function PQpop(name,	old_sort_order, element, p) {
+    old_sort_order=PROCINFO["sorted_in"]; # remember sort order to restore it afterwards
+    PROCINFO["sorted_in"]="@ind_num_desc";
+    for(p in _PQ_[name]) {
+	# Note that if multiple elements have the same priority, we will return them in SORTED order not INSERTION order
+	for(element in _PQ_[name][p]) {
+	    if(--_PQ_[name][p][element]==0) {
+		delete _PQ_[name][p][element];
+		if(length(_PQ_[name][p])==0) delete _PQ_[name][p];
+	    }
+	    break; # exit at first iteration
+	}
+	break; # exit at first iteration
+    }
+    PROCINFO["sorted_in"]=old_sort_order; # restore sort order
+    return element;
+}
+
+function PQlength(name) { return length(_PQ_[name]); }
