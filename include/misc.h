@@ -9,7 +9,7 @@ extern "C" {
 #include <assert.h>
 #include <time.h> // because I use the time() function so much
 
-#define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
+#define PARANOID_ASSERTS 0  // turn on copious assert checking --- slows down execution significantly
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)<(b)?(a):(b))

@@ -32,7 +32,7 @@ extern unsigned bitvecBits, bitvecBits_1;
 
 typedef struct _bitvecType {
     unsigned maxElem; /* in bits */
-    unsigned smallestElement;
+    unsigned smallestElement, cardinality;
     BITVEC_SEGMENT* segment;
 } BITVEC;
 
@@ -66,7 +66,8 @@ BITVEC *BitvecUnion(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = union of A and B *
 BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = intersection of A and B */
 BITVEC *BitvecXOR(BITVEC *C, BITVEC *A, BITVEC *B);  /* C = XOR of A and B */
 BITVEC *BitvecComplement(BITVEC *B, BITVEC *A);  /* B = complement of A */
-unsigned BitvecCardinality(const BITVEC *const A);    /* returns non-negative integer */
+#define BitvecCardinality(B) ((B)->cardinality)
+unsigned BitvecCardinalitySafe(const BITVEC *const A);    /* returns non-negative integer */
 Boolean BitvecInSafe(const BITVEC *const vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS

@@ -78,11 +78,6 @@ SET *SetCopy(SET *dst, SET *src);  /* if dst is NULL, it will be alloc'd */
 SET *SetAdd(SET *set, unsigned element);    /* add single element to set */
 SET *SetAddList(SET *set, ...); /* end list with (-1); uses varargs/stdarg */
 SET *SetDelete(SET *set, unsigned element); /* delete a single element */
-SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
-SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
-SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */
-SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
-unsigned SetCardinality(const SET *A);    /* returns non-negative integer */
 Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
@@ -91,6 +86,11 @@ Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #else
 #define SetIn SetInSafe
 #endif
+SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
+SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
+SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */
+SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
+unsigned SetCardinality(const SET *A);    /* returns non-negative integer */
 unsigned short SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
 Boolean SetEq(SET *set1, SET *set2);
 Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */

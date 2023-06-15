@@ -514,7 +514,9 @@ SET *SetComplement(SET *B, SET *A)
 
 unsigned SetCardinality(const SET *A)
 {
+#if PARANOID_ASSERTS
     if(A->bitvec) assert(A->cardinality == BitvecCardinality(A->bitvec));
+#endif
     return A->cardinality;
 }
 
