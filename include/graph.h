@@ -23,6 +23,7 @@ typedef struct _Graph {
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfLoops; // self-loops allowed iff this is true
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
+    unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
     unsigned **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
 #if SORT_NEIGHBORS
@@ -39,6 +40,7 @@ GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames); // 
 GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
 
 GRAPH *GraphMakeWeighted(GRAPH *G);
+GRAPH *GraphAllocateNeighborLists(GRAPH *G, int *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, int i, int j);

@@ -62,6 +62,11 @@ GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 }
 
 
+GRAPH *GraphAllocateNeighborLists(GRAPH *G, int *maxDegree) // YING
+{
+    // go through all the nodes and pre-allocate the correct length neighbor lists, and set G->maxDegree[i] for each
+    // to be the same as the parameter above maxDegree[i]
+}
 
 GRAPH *GraphMakeWeighted(GRAPH *G)
 {
@@ -182,6 +187,7 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
     }
     if(G->sparse>=true)
     {
+	// YING: change this to only realloc if necessary, and just add 1, don't double the size since this should be rare.
 	G->neighbor[i] = Realloc(G->neighbor[i], (G->degree[i]+1)*sizeof(int));
 	if(j!=i) G->neighbor[j] = Realloc(G->neighbor[j], (G->degree[j]+1)*sizeof(int));
 	if(G->weight) {
@@ -317,9 +323,9 @@ GRAPH *GraphDisconnect(GRAPH *G, int i, int j)
     }
     assert(found);
 
-    /* now find and delete each other's neighbors */
+    /* now find and delete each other's neighbors--they MUST exist since we checked above */
     k=0;
-    while(G->neighbor[i][k] != j) k++;
+    while(G->neighbor[i][k] != j) k++; // this MUST halt since (i,j) are neighbors (checked above)
     assert(k <= G->degree[i] && G->neighbor[i][k] == j); /* this is the new degree, so using "<=" is correct */
     G->neighbor[i][k] = G->neighbor[i][G->degree[i]];
     if(G->weight) G->weight[i][k] = G->weight[i][G->degree[i]];
