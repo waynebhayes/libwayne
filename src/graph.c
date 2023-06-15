@@ -62,7 +62,7 @@ GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 }
 
 
-GRAPH *GraphAllocateNeighborLists(GRAPH *G, int *maxDegree) // YING
+GRAPH *GraphAllocateNeighborLists(GRAPH *G, int *maxDegree) // YANG
 {
     // go through all the nodes and pre-allocate the correct length neighbor lists, and set G->maxDegree[i] for each
     // to be the same as the parameter above maxDegree[i]
@@ -187,7 +187,7 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
     }
     if(G->sparse>=true)
     {
-	// YING: change this to only realloc if necessary, and just add 1, don't double the size since this should be rare.
+	// YANG: change this to only realloc if necessary, and just add 1, don't double the size since this should be rare.
 	G->neighbor[i] = Realloc(G->neighbor[i], (G->degree[i]+1)*sizeof(int));
 	if(j!=i) G->neighbor[j] = Realloc(G->neighbor[j], (G->degree[j]+1)*sizeof(int));
 	if(G->weight) {
@@ -527,6 +527,7 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
     return G;
 }
 
+// YANG: change this to accept the maxDegrees as parameter, and then call your GraphAllocateNeighborLists().
 GRAPH *GraphFromEdgeList(int n, int m, int *pairs, Boolean sparse)
 {
     int i;
@@ -567,6 +568,7 @@ char *HashString(char *s)
     return hash;
 }
 
+// YANG: we could potentially accumulate the degrees here and pass them into GraphFromEdgeList
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 {
     int numNodes=0;
