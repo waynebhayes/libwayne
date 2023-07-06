@@ -62,7 +62,7 @@ GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 }
 
 
-GRAPH *GraphAllocateNeighborLists(GRAPH *G, int *maxDegree) // YANG
+GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegree) // YANG
 {
     // go through all the nodes and pre-allocate the correct length neighbor lists, and set G->maxDegree[i] for each
     // to be the same as the parameter above maxDegree[i]
@@ -176,7 +176,7 @@ static GRAPH *GraphSort(GRAPH *G)
 #define GraphSort(x)
 #endif
 
-GRAPH *GraphConnect(GRAPH *G, int i, int j)
+GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j)
 {
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
     if(i==j) assert(G->selfLoops);
@@ -209,7 +209,7 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
 	assert(G->numEdges <= G->maxEdges);
 	if(G->numEdges == G->maxEdges)
 	{
-	    G->maxEdges *= 2;
+	    G->maxEdges = 2*G->maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
 	    G->edgeList = Realloc(G->edgeList, 2*G->maxEdges*sizeof(int));
 	    assert(G->edgeList);
 	}
@@ -227,7 +227,7 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
     return G;
 }
 
-unsigned GraphSetWeight(GRAPH *G, int i, int j, int w)
+unsigned GraphSetWeight(GRAPH *G, unsigned i, unsigned j, int w)
 {
     assert(w>0);
     GraphConnect(G,i,j);
@@ -249,7 +249,7 @@ unsigned GraphSetWeight(GRAPH *G, int i, int j, int w)
     return oldWeight;
 }
 
-unsigned GraphGetWeight(GRAPH *G, int i, int j)
+unsigned GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 {
     if(!GraphAreConnected(G,i,j)) return 0;
     int k=0;
@@ -286,7 +286,7 @@ GRAPH *GraphEdgesAllDelete(GRAPH *G)
     return G;
 }
 
-GRAPH *GraphDisconnect(GRAPH *G, int i, int j)
+GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
 {
     int k;
     if(i==j) assert(G->selfLoops);
@@ -388,7 +388,7 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
 #endif
 
 
-int GraphNumCommonNeighbors(GRAPH *G, int i, int j)
+unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
 {
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
     if(i==j) {
@@ -528,7 +528,7 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
 }
 
 // YANG: change this to accept the maxDegrees as parameter, and then call your GraphAllocateNeighborLists().
-GRAPH *GraphFromEdgeList(int n, int m, int *pairs, Boolean sparse)
+GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse)
 {
     int i;
     GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
@@ -571,12 +571,12 @@ char *HashString(char *s)
 // YANG: we could potentially accumulate the degrees here and pass them into GraphFromEdgeList
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 {
-    int numNodes=0;
-    int numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
-    int *pairs = Malloc(2*maxEdges*sizeof(int));
+    unsigned numNodes=0;
+    unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
+    unsigned *pairs = Malloc(2*maxEdges*sizeof(unsigned));
 
     // SUPPORT_NODE_NAMES
-    int maxNodes=MIN_EDGELIST;
+    unsigned maxNodes=MIN_EDGELIST;
     char **names = NULL;
     BINTREE *nameDict = NULL;
     if(supportNodeNames)
@@ -592,12 +592,12 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	// nuke all whitespace, including DOS carriage returns, from the end of the line
 	int len = strlen(line);
 	while(isspace(line[len-1])) line[--len]='\0';
-	int v1, v2;
+	unsigned v1, v2;
 	assert(numEdges <= maxEdges);
 	if(numEdges >= maxEdges)
 	{
-	    maxEdges *=2;
-	    pairs = Realloc(pairs, 2*maxEdges*sizeof(int));
+	    maxEdges = 2*maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
+	    pairs = Realloc(pairs, 2*maxEdges*sizeof(unsigned));
 	}
 	if(supportNodeNames)
 	{
@@ -651,7 +651,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	pairs[2*numEdges+1] = v2;
 	if(pairs[2*numEdges] > pairs[2*numEdges+1])
 	{
-	    int tmp = pairs[2*numEdges];
+	    unsigned tmp = pairs[2*numEdges];
 	    pairs[2*numEdges] = pairs[2*numEdges+1];
 	    pairs[2*numEdges+1] = tmp;
 	}
@@ -661,7 +661,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
     if(supportNodeNames)
     {
 	//printf("BINTREE Dictionary Dump\n");
-	int i;
+	unsigned i;
 	for(i=0; i<numNodes;i++)
 	{
 	    foint info;
