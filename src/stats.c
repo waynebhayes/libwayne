@@ -626,11 +626,11 @@ double StatACMStudentZ2P(double t, int df)
 #if TEST
 int main(void)
 {
-    int v;
-    double gamma;
-    puts("Enter3 df, gamma pairs until you're happy (see Law&Kelton, Appendix)");
-    while(scanf("%d %lf", &v, &gamma) == 2)
-	printf("%g\n", StatACMStudentZ2P(StatTDistP2Z(gamma, v),v));
+    double x;
+    STAT *s = StatAlloc(0, 0, 0, false, false);
+    puts("Enter a bunch of numbers, as many as you want, until EOF");
+    while(scanf("%lf", &x)==1) StatAddSample(s,x);
+    printf("%d entries, mean %g, stdDev %g\n", StatN(s), StatMean(s), StatStdDev(s));
     return 0;
 }
 #endif
