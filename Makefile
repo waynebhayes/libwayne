@@ -68,7 +68,7 @@ clean:
 	@/bin/rm -f made
 
 $(LIBOUT): src/$(LIBOUT)
-	ranlib src/$(LIBOUT)
+	if ranlib src/$(LIBOUT); then :; else echo "ranlib failed but it's not crucial" >&2; fi
 	mv src/$(LIBOUT) .
 
 src/$(LIBOUT):

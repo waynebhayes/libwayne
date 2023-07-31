@@ -12,6 +12,6 @@ INCLUDE=-I../include
 CFLAGS=$(INCLUDE)
 
 $(LIBOUT): $(OBJS)
-	ar rcvu $(LIBOUT) $(OBJS)
+	if ar rcvu $(LIBOUT) $(OBJS); then : else echo "Internal ranlib failed?; try without it" >&2; ar Srcvu $(LIBOUT) $(OBJS); fi
 
 %.c: ../include/%.h
