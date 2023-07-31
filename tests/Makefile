@@ -7,7 +7,6 @@
 # Wayne Hayes, whayes@uci.edu (previously wayne@cs.toronto.edu)
 
 # The below variables should be set by a parent process
-#LIBWAYNE_HOME:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))/..
 #CC=$(LIBWAYNE_HOME)/bin/wgcc
 CC=../bin/wgcc -ggdb
 
