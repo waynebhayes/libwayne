@@ -20,11 +20,12 @@ gcc-ver:
 	$(GCC) -v
 
 all:
-	/bin/rm -f *.a
-	$(MAKE) tests
+	@if [ -f do-not-make ]; then echo "not making; assuming they already exist"; ls -l libwayne*.a; else /bin/rm -f *.a; $(MAKE) libwayne_all; fi
+	$(MAKE) testlib
 	touch made
 
 libwayne_all:
+	/bin/rm -f *.a
 	# Make the pg versions (for profiling)
 	$(MAKE) debug_clean
 	$(MAKE) -j$(CORES) 'PG=-pg' debug && mv libwayne-g.a src/libwayne-pg-g/libwayne-pg-g.a
@@ -37,7 +38,7 @@ libwayne_all:
 	$(MAKE) -j$(CORES) opt && mv libwayne.a src/libwayne/libwayne.a
 	cp src/libwayne*/*.a src && cp src/*.a .
 
-tests: libwayne_all
+testlib:
 	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hashtest htree-test bintree-test CI graph-sanity; do rm -f bin/$$x tests/$$x.o; (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi); done
 
 opt:
