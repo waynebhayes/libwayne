@@ -66,6 +66,7 @@ GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegree) // YANG
 {
     // go through all the nodes and pre-allocate the correct length neighbor lists, and set G->maxDegree[i] for each
     // to be the same as the parameter above maxDegree[i]
+    return (GRAPH*) NULL;
 }
 
 GRAPH *GraphMakeWeighted(GRAPH *G)
