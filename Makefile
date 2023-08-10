@@ -49,7 +49,8 @@ debug:
 
 libwayne:
 	$(MAKE) $(LIBOUT)
-	[ "$(UNAME)" = Darwin ] || ar r $(LIBOUT)
+	# add misc.o below since adding nothing fails on Mac M1, and misc.o is pretty much necessary for libwayne to work.
+	[ "$(UNAME)" = Darwin ] || ar r $(LIBOUT) src/misc.o
 
 debug_clean:
 	@$(MAKE) 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' raw_clean
