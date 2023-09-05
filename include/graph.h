@@ -12,16 +12,13 @@ extern "C" {
 
 #define SORT_NEIGHBORS 0 // Thought this might speed things up but it appears not to.
 
-
-/* Constructs for simple graphs, no self-loops: edge (i,i) never exists.
-*/
-
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
     unsigned n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
+    Boolean useComplement; // when true, calls to GraphAreConnected are inverted
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
-    Boolean selfLoops; // self-loops allowed iff this is true
+    Boolean selfAllowed; // self-loops allowed iff this is true
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
@@ -47,11 +44,17 @@ GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
 unsigned GraphSetWeight(GRAPH *G, unsigned i, unsigned j, int w); // returns old weight
 unsigned GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
-unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j);
+unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
 GRAPH *GraphComplement(GRAPH *G);
 GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2);
-#define GraphDegree(G,v) ((G)->degree[v])
+#define GraphDegree(G,v) ((G)->useComplement ? (G)->n-(G)->degree[v] : (G)->degree[v])
+#define GraphNumEdges(G) ((G)->useComplement ? ((((G)->n)*((G)->n-1))/2 - (G)->numEdges) : (G)->numEdges)
 GRAPH *GraphCopy(GRAPH *G); // (deep) copy a graph
+
+// buf must be a pointer to a pre-allocated integer. When called with *buf=0, return u's first neighbor. 
+// Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
+int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted
+int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
 
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
@@ -98,13 +101,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
-int GraphNumEdges(GRAPH *G); // total number of edges, just the sum of the degrees / 2.
-
-// Only enable this macro if you're not allowing sparse graphs
-//#define GraphAreConnected(G,i,j) SetIn((G)->A[i],(j))
-#ifndef GraphAreConnected
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
-#endif
 
 /*
 ** The following subroutines should be used with caution, because they take

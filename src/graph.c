@@ -8,6 +8,7 @@ extern "C" {
 #include "rand48.h"
 #include "Oalloc.h"
 #include <ctype.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include "mem-debug.h"
@@ -57,10 +58,9 @@ GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 {
     GRAPH *G = GraphAlloc(n, sparse, supportNodeNames);
-    G->selfLoops=true;
+    G->selfAllowed=true;
     return G;
 }
-
 
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegree) // YANG
 {
@@ -114,7 +114,6 @@ static void GraphNameWarn(const char *s) {
     warned=1;
 }
 
-/* If Gc == NULL, create duplicate.  Otherwise just copy G's info into Gc. */
 GRAPH *GraphCopy(GRAPH *G)
 {
     int i;
@@ -123,7 +122,7 @@ GRAPH *GraphCopy(GRAPH *G)
     Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
     for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
 
-
+    Gc->useComplement = G->useComplement;
     Gc->sparse = G->sparse;
     if(G->sparse >= true)
     {
@@ -180,7 +179,7 @@ static GRAPH *GraphSort(GRAPH *G)
 GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j)
 {
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    if(i==j) assert(G->selfLoops);
+    if(i==j) assert(G->selfAllowed);
     if(GraphAreConnected(G, i, j))
     {
 	assert(GraphAreConnected(G, j, i));
@@ -290,7 +289,7 @@ GRAPH *GraphEdgesAllDelete(GRAPH *G)
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
 {
     int k;
-    if(i==j) assert(G->selfLoops);
+    if(i==j) assert(G->selfAllowed);
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
     if(!GraphAreConnected(G, i, j))
 	return G;
@@ -345,11 +344,9 @@ GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
     return G;
 }
 
-#ifndef GraphAreConnected
-Boolean GraphAreConnected(GRAPH *G, int i, int j)
+static Boolean _rawConnected(GRAPH *G, int i, int j)
 {
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    // do NOT check if(i==j), since even without self-loops you're allowed to ASK if they are connected...
     if(G->sparse>=true)
     {
 #if SORT_NEIGHBORS
@@ -362,7 +359,7 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
 	{
 	    int k, n, me, other;
 	    unsigned *neighbors;
-	    // Check through the shorter list; works even if selfLoops
+	    // Check through the shorter list; works even if selfAllowed
 	    if(G->degree[i] < G->degree[j]) { me = i; other = j; }
 	    else { me = j; other = i; }
 	    n = G->degree[me];
@@ -386,47 +383,91 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
     }
     return false;
 }
-#endif
 
+Boolean GraphAreConnected(GRAPH *G, int i, int j)
+{
+    if(G->useComplement) return !_rawConnected(G,i,j);
+    else		 return  _rawConnected(G,i,j);
+}
 
+int GraphRandomNeighbor(GRAPH *G, int u)
+{
+    if(G->useComplement) {
+	assert(G->degree[u] < G->n);
+	int v;
+	do { v = G->n * drand48(); } while(_rawConnected(G,u,v));
+	return v;
+    } else {
+	assert(G->degree[u] > 0);
+	return G->neighbor[u][G->degree[u]] * drand48();
+    }
+}
+
+int GraphNextNeighbor(GRAPH *G, int u, int *buf)
+{
+    assert(0 <= *buf && *buf <= G->n);
+    if(G->useComplement) {
+	while(*buf < G->n && _rawConnected(G,u,*buf)) (*buf)++;
+	if(*buf == G->n) return -1;
+	else return (*buf)++;
+    } else {
+	if(*buf == G->degree[u]) return -1;
+	else return G->neighbor[u][(*buf)++];
+    }
+}
+
+// Basic idea: loop through ALL neighbors v of i, increment count if j is also connected to v (including self-loops)
+// This works even if self-loops are allowed, because if (u,u) and (u,v) both exist, then u is neighbor to both
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
 {
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
+    int numCommon1 = 0, numCommon2 = 0; // for G', these are actually the number of NON-common
     if(i==j) {
-	assert(G->selfLoops);
-	return G->degree[i]; // it's the same node, so number of common neighbors is all neighbors
+	if(G->useComplement) numCommon1 = G->n - G->degree[i];
+	else numCommon1 = G->degree[i]; // it's the same node, so number of common neighbors is all neighbors
     }
-    int numCommon1 = 0, numCommon2 = 0;
-    if(G->sparse>=true) // loop version is MUCH faster on large graphs, so use it if possible
+    if(G->sparse>=true) // loop version is MUCH faster on large sparse graphs, so use it if possible
     {
-	unsigned k, n, *neighbors, me, other;
-	// Check through the shorter list
-	if(G->degree[i] < G->degree[j]) { me = i; other = j; }
-	else { me = j; other = i; }
-	n = G->degree[me];
-	neighbors = G->neighbor[me];
+	unsigned k, n;
+	// ensure i has the shorter list, j has the larger
+	if(G->degree[i] > G->degree[j]) { int tmp=j; j=i; i=tmp; }
+	n = G->degree[i];
 	for(k=0; k<n; k++)
-	    if(neighbors[k] != other && GraphAreConnected(G, neighbors[k], other))
-		++numCommon1;
-    }
-    else
-    {
-	assert(!G->sparse||G->sparse==both);
-	static SET *intersect;
-	if(!intersect) intersect = SetAlloc(G->n);
-	SetReset(intersect);
-	SetIntersect(intersect, G->A[i], G->A[j]);
-#if PARANOID_ASSERTS
-	assert(!SetIn(intersect,i) && !SetIn(intersect,j));
-#endif
-	numCommon2 = SetCardinality(intersect); // no self-loops, so this works even if edge (i,j) exists (assertion above)
-	if(numCommon1) {
-	    assert(numCommon1 == numCommon2);
-	    numCommon1=0;
+	    if(_rawConnected(G, G->neighbor[i][k], j)) ++numCommon1;
+	// for G complement, we need to check neighbors of BOTH i and j, and then subtract the sum from G->n
+	if(G->useComplement) {
+	    n = G->degree[j];
+	    for(k=0; k<n; k++)
+		if(_rawConnected(G, G->neighbor[j][k], i)) ++numCommon1;
+	    // Inverting it is a bit tricky: if self-loops are ALLOWED, then max possible value is G->n, and any
+	    // self-loops that actually exist above become non-connnected in G', so they SHOULD be subtracted.
+	    numCommon1 = G->n - numCommon1;
+	    // However, if self-loops are NOT allowed, then max possible value is (G->n - 2), so bump it down by 2 below
+	    // if(!G->selfAllowed) numCommon1 -= 2;
 	}
     }
+    if(G->sparse != true) // ie, if it's 0 or 2
+    {
+	assert(!G->sparse||G->sparse==both);
+	static SET *combined; // for G this is the SetIntersect; for G' it'll be the SetUnion
+	if(!combined) combined = SetAlloc(G->n);
+	SetReset(combined);
+	if(G->useComplement) { 
+	    SetUnion(combined, G->A[i], G->A[j]);
+	    numCommon2 = G->n - SetCardinality(combined);
+	}
+	else {
+	    SetIntersect(combined, G->A[i], G->A[j]);
+	    numCommon2 = SetCardinality(combined);
+	}
+    }
+    if(numCommon1 && numCommon2) {
+	assert(numCommon1 == numCommon2);
+	numCommon2=0;
+    }
     assert(numCommon1 == 0 || numCommon2 == 0);
-    return numCommon1 + numCommon2;
+    if(G->useComplement) return numCommon1 + numCommon2 - 2*G->selfAllowed;
+    else return numCommon1 + numCommon2;
 }
 
 int GraphNumEdges(GRAPH *G)
@@ -470,7 +511,7 @@ GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse)
 	    if(i==j) {
 		static Boolean warned;
 		if(!warned) Warning("GraphReadAdjMatrix: node %d has a self-loop; assuming they are allowed",i);
-		warned = G->selfLoops = true;
+		warned = G->selfAllowed = true;
 	    }
 	    GraphConnect(G,i,j);
 	}
@@ -518,7 +559,7 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
 		if(neigh == i) {
 		    static Boolean warned;
 		    if(!warned) Warning("GraphReadAdjList: node %d has a self-loop; assuming they are allowed", i);
-		    warned = G->selfLoops = true;
+		    warned = G->selfAllowed = true;
 		}
 		GraphConnect(G, i, neigh);
 	    }
@@ -540,10 +581,10 @@ GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse
 	for(i=0;i<n;i++)
 	    assert(!G->neighbor[i]);
     for(i=0; i<m; i++) {
-	if(pairs[2*i] == pairs[2*i+1] && !G->selfLoops) {
+	if(pairs[2*i] == pairs[2*i+1] && !G->selfAllowed) {
 	    static Boolean warned;
 	    if(!warned) Warning("GraphFromEdgeList: node %d has a self-loop; assuming they are allowed", pairs[2*i]);
-	    warned = G->selfLoops = true;
+	    warned = G->selfAllowed = true;
 	}
 	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
     }
@@ -730,7 +771,7 @@ GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
 	if(i==j) {
 	    static Boolean warned;
 	    if(!warned) Warning("GraphReadConnections: node %d has a self-loop; assuming they are allowed", i);
-	    warned = G->selfLoops = true;
+	    warned = G->selfAllowed = true;
 	}
 	GraphConnect(G, i, j);
     }
@@ -746,14 +787,14 @@ GRAPH *GraphComplement(GRAPH *G)
     int i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphComplement");
     GRAPH *Gbar = GraphAlloc(G->n, G->sparse, false);
-    Gbar->selfLoops = G->selfLoops;
+    Gbar->selfAllowed = G->selfAllowed;
 
     assert(Gbar->n == G->n);
 
     for(i=0; i < G->n; i++) for(j=i+1; j < G->n; j++)
 	if(!GraphAreConnected(G, i, j))
 	    GraphConnect(Gbar, i, j);
-    if(G->selfLoops) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
+    if(G->selfAllowed) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
     GraphSort(Gbar);
     return Gbar;
 }
@@ -767,7 +808,7 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
 	return NULL;
 
     assert(G1->sparse == G2->sparse);
-    assert(G1->selfLoops == G2->selfLoops);
+    assert(G1->selfAllowed == G2->selfAllowed);
 
     GRAPH *dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
     if(G1->supportNodeNames || G2->supportNodeNames) GraphNameWarn("GraphUnion");
@@ -775,7 +816,7 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
     for(i=0; i < n; i++) for(j=i+1; j < n; j++)
 	if(GraphAreConnected(G1, i, j) || GraphAreConnected(G2, i, j))
 	    GraphConnect(dest, i ,j);
-    if(G1->selfLoops)
+    if(G1->selfAllowed)
 	for(i=0; i < G1->n; i++) if(GraphAreConnected(G1, i, i) || GraphAreConnected(G2, i, i)) GraphConnect(dest, i ,i);
     GraphSort(dest);
     return dest;
@@ -826,7 +867,7 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 	    if(G->sparse>=true)
 	    {
 		for(j=0; j < G->degree[v]; j++)
-		    if(G->neighbor[v][j] == v) assert(G->selfLoops); // nothing to do; don't add self to a BFS
+		    if(G->neighbor[v][j] == v) assert(G->selfAllowed); // nothing to do; don't add self to a BFS
 		    else if(distArray[G->neighbor[v][j]] == -1) /* some of the neighbors might have already been visited */
 		    {
 			distArray[G->neighbor[v][j]] = distArray[v] + 1;
@@ -837,7 +878,7 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 	    {
 		for(j=0; j < G->n; j++) if(GraphAreConnected(G, v, j))
 		{
-		    if(v==j) assert(G->selfLoops); // nothing to do; don't add self to a BFS
+		    if(v==j) assert(G->selfAllowed); // nothing to do; don't add self to a BFS
 		    else if(distArray[j] == -1)
 		    {
 			distArray[j] = distArray[v] + 1;
@@ -874,7 +915,7 @@ static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
     if (*k <= 0) return true;
     int i;
     for (i = 0; i < G->degree[v]; i++) {
-        if (G->neighbor[v][i]==v) assert(G->selfLoops); // nothing to do, don't add self in a DFS
+        if (G->neighbor[v][i]==v) assert(G->selfAllowed); // nothing to do, don't add self in a DFS
         else if (!SetIn(visited, G->neighbor[v][i])) {
             Boolean result = _GraphCCatLeastKHelper(G, visited, G->neighbor[v][i], k);
             if (result)
@@ -897,12 +938,12 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
     	int i;
 	if(G->sparse>=true) {
 	    for(i=0; i < G->degree[v]; i++)
-		if(G->neighbor[v][i]==v) assert(G->selfLoops);
+		if(G->neighbor[v][i]==v) assert(G->selfAllowed);
 		else GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
 	}
 	else {
 	    for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) {
-		if(v==i) assert(G->selfLoops);
+		if(v==i) assert(G->selfAllowed);
 		else GraphVisitCC(G, i, visited, Varray, pn);
 	    }
 	}
@@ -916,11 +957,11 @@ GRAPH *GraphInduced(GRAPH *G, SET *V)
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphInduced");
     GRAPH *Gv = GraphAlloc(nV, G->sparse, false);
-    Gv->selfLoops = G->selfLoops;
+    Gv->selfAllowed = G->selfAllowed;
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, i, j);
-    if(G->selfLoops) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, i, i);
+    if(G->selfAllowed) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, i, i);
     GraphSort(Gv);
     return Gv;
 }
@@ -931,12 +972,12 @@ GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphInduced_NoVertexDelete");
     GRAPH *Gv = GraphAlloc(G->n, G->sparse, false);
-    Gv->selfLoops = G->selfLoops;
+    Gv->selfAllowed = G->selfAllowed;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, array[i], array[j]);
-    if(G->selfLoops) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, array[i], array[i]);
+    if(G->selfAllowed) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, array[i], array[i]);
     GraphSort(Gv);
     return Gv;
 }
@@ -1155,7 +1196,7 @@ static Boolean _permutationIdentical(int n, int perm[n])
 	    !GraphAreConnected(isoG2, perm[i], perm[j]))
 	    return false;   /* non-isomorphic */
     // Note they don't both have to ALLOW self loops, but if one does, then both need to have or not the same loops
-    if(isoG1->selfLoops || isoG2->selfLoops) for(i=0; i<n; i++)
+    if(isoG1->selfAllowed || isoG2->selfAllowed) for(i=0; i<n; i++)
        if(!GraphAreConnected(isoG1, i,i) != !GraphAreConnected(isoG2, perm[i], perm[i])) return false;   /* non-isomorphic */
     return true;   /* isomorphic! */
 }
@@ -1165,7 +1206,7 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     static int recursionDepth;
     ++recursionDepth;
     assert(recursionDepth <= G1->n + 1);
-    Boolean self = (G1->selfLoops || G2->selfLoops);
+    Boolean self = (G1->selfAllowed || G2->selfAllowed);
     int i, n = G1->n, degreeCount1[n+self], degreeCount2[n+self];
 
     SET *degreeOnce;
@@ -1178,7 +1219,7 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     if(n < 2) {--recursionDepth; return true;}
 
     /*
-    ** Ensure each degree occurs the same number of times in each... and the count can be == n if selfLoops is true
+    ** Ensure each degree occurs the same number of times in each... and the count can be == n if selfAllowed is true
     */
     for(i=0; i<n+self; i++) degreeCount1[i] = degreeCount2[i] = 0;
     for(i=0; i<n; i++) {
