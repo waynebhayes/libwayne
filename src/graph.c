@@ -395,11 +395,11 @@ int GraphRandomNeighbor(GRAPH *G, int u)
     if(G->useComplement) {
 	assert(G->degree[u] < G->n);
 	int v;
-	do { v = G->n * drand48(); } while(_rawConnected(G,u,v));
+	do { v = G->n * drand48(); } while((u==v && !G->selfAllowed) || _rawConnected(G,u,v));
 	return v;
     } else {
 	assert(G->degree[u] > 0);
-	return G->neighbor[u][G->degree[u]] * drand48();
+	return G->neighbor[u][(int)(G->degree[u] * drand48())];
     }
 }
 
@@ -470,6 +470,7 @@ unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
     else return numCommon1 + numCommon2;
 }
 
+#ifndef GraphNumEdges
 int GraphNumEdges(GRAPH *G)
 {
     int total=0, i;
@@ -479,6 +480,7 @@ int GraphNumEdges(GRAPH *G)
     assert(G->numEdges == total/2);
     return G->numEdges;
 }
+#endif
 
 void GraphPrintAdjMatrix(FILE *fp, GRAPH *G)
 {
