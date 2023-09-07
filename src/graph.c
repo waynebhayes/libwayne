@@ -390,6 +390,16 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
     else		 return  _rawConnected(G,i,j);
 }
 
+void GraphRandomEdge(GRAPH *G, int *u, int *v)
+{
+    if(G->useComplement) {
+	do { *u=G->n*drand48(); *v=G->n*drand48(); } while((*u==*v && !G->selfAllowed) || _rawConnected(G,*u,*v));
+    } else {
+	int e = G->numEdges*drand48();
+	*u=G->edgeList[2*e]; *v=G->edgeList[2*e+1];
+    }
+}
+
 int GraphRandomNeighbor(GRAPH *G, int u)
 {
     if(G->useComplement) {

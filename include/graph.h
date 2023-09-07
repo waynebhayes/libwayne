@@ -55,6 +55,7 @@ GRAPH *GraphCopy(GRAPH *G); // (deep) copy a graph
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
 int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted
 int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
+void GraphRandomEdge(GRAPH *G, int *u, int *v); // A return a random edge (u,v) written into the pointers
 
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
