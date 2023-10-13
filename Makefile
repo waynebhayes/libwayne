@@ -22,7 +22,6 @@ gcc-ver:
 all:
 	@if [ -f do-not-make ]; then echo "not making; assuming they already exist"; ls -l libwayne*.a; else /bin/rm -f *.a; $(MAKE) libwayne_all; fi
 	$(MAKE) testlib
-	touch made
 
 libwayne_all:
 	/bin/rm -f *.a
@@ -59,7 +58,7 @@ opt_clean:
 	@$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' raw_clean
 
 raw_clean:
-	@/bin/rm -f src/*.[oa] $(LIBOUT) made
+	@/bin/rm -f src/*.[oa] $(LIBOUT)
 	@cd MT19937; $(MAKE) clean
 
 clean:
@@ -68,7 +67,6 @@ clean:
 	@/bin/rm -f *.a
 	@$(MAKE) debug_clean
 	@$(MAKE) opt_clean
-	@/bin/rm -f made
 
 $(LIBOUT): src/$(LIBOUT)
 	if ranlib src/$(LIBOUT); then :; else echo "ranlib failed but it's not crucial" >&2; fi
