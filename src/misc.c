@@ -310,7 +310,7 @@ const char* getDecompressionProgram(char* fileName) {
     if(strcmp(ext, "gz") == 0)
         return "gunzip";
     else if(strcmp(ext, "xz") == 0)
-        return "xzcat";
+        return "unxz";
     else if(strcmp(ext, "bz2") == 0)
         return "bzip2 -dk";
     return "";
