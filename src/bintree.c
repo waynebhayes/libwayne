@@ -86,11 +86,9 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 
 Boolean BinTreeDelete(BINTREE *tree, foint key)
 {
-    int depth = 0;
     BINTREENODE *p = tree->root, **locative = &(tree->root);
     while(p)
     {
-	++depth;
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0)
 	    break;

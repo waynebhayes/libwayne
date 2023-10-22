@@ -227,12 +227,14 @@ GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j)
     return G;
 }
 
-unsigned GraphSetWeight(GRAPH *G, unsigned i, unsigned j, int w)
+double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w)
 {
     assert(w>0);
-    GraphConnect(G,i,j);
-    int k=0, oldWeight;
+    GraphConnect(G,i,j); // this will allocate G->weight[i] and G->weight[j] if necessary.
     assert(G->weight);
+
+    int k=0;
+    double oldWeight;
 
     while(G->neighbor[i][k] != j) k++;
     assert(k < G->degree[i] && G->neighbor[i][k] == j);
@@ -249,7 +251,7 @@ unsigned GraphSetWeight(GRAPH *G, unsigned i, unsigned j, int w)
     return oldWeight;
 }
 
-unsigned GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
+double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 {
     if(!GraphAreConnected(G,i,j)) return 0;
     int k=0;
@@ -257,7 +259,8 @@ unsigned GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 
     while(G->neighbor[i][k] != j) k++;
     assert(k < G->degree[i] && G->neighbor[i][k] == j);
-    int w = G->weight[i][k];
+    double w = G->weight[i][k];
+    assert(w>0);
 
     if(j!=i) {
 	k=0;
@@ -581,14 +584,14 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
     return G;
 }
 
-// YANG: change this to accept the maxDegrees as parameter, and then call your GraphAllocateNeighborLists().
-GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse)
+GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
 {
     int i;
     GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
+    if(weights) GraphMakeWeighted(G);
     assert(n == G->n);
     assert(G->degree);
-    if(G->weight) Apology("Sorry, GraphFromEdgeList not done with weights yet");
+    if(G->weight) assert(weights);
     if(sparse>=true)
 	for(i=0;i<n;i++)
 	    assert(!G->neighbor[i]);
@@ -599,6 +602,7 @@ GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse
 	    warned = G->selfAllowed = true;
 	}
 	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
+	if(weights) GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);
     }
     if(sparse>=true)
     {
@@ -622,12 +626,13 @@ char *HashString(char *s)
     return hash;
 }
 
-// YANG: we could potentially accumulate the degrees here and pass them into GraphFromEdgeList
-GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
+GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted)
 {
     unsigned numNodes=0;
     unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
-    unsigned *pairs = Malloc(2*maxEdges*sizeof(unsigned));
+    unsigned *pairs = Malloc(2*maxEdges*sizeof(pairs[0]));
+    float *fweight = NULL;
+    if(weighted) fweight=Malloc(maxEdges*sizeof(fweight[0]));
 
     // SUPPORT_NODE_NAMES
     unsigned maxNodes=MIN_EDGELIST;
@@ -646,12 +651,13 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	// nuke all whitespace, including DOS carriage returns, from the end of the line
 	int len = strlen(line);
 	while(isspace(line[len-1])) line[--len]='\0';
-	unsigned v1, v2;
+	unsigned v1, v2; float w;
 	assert(numEdges <= maxEdges);
 	if(numEdges >= maxEdges)
 	{
 	    maxEdges = 2*maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
-	    pairs = Realloc(pairs, 2*maxEdges*sizeof(unsigned));
+	    pairs = Realloc(pairs, 2*maxEdges*sizeof(pairs[0]));
+	    if(weighted) fweight = Realloc(fweight, maxEdges*sizeof(fweight[0]));
 	}
 	if(supportNodeNames)
 	{
@@ -661,9 +667,12 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 		maxNodes *=2;
 		names = Realloc(names, maxNodes*sizeof(char*));
 	    }
-	    char name1[BUFSIZ], name2[BUFSIZ];
-	    if(sscanf(line, "%s%s ", name1, name2) != 2)
-		Fatal("GraphReadEdgeList: line %d does not contain 2 strings\n", numEdges);
+	    char name1[BUFSIZ], name2[BUFSIZ], *fmt, numExpected;
+	    if(weighted) { fmt = "%s%s%f "; numExpected=3;}
+	    else         { fmt = "%s%s "; numExpected=2;}
+	    if(sscanf(line, fmt, name1, name2, &w) != numExpected)
+		Fatal("GraphReadEdgeList: line %d must contain 2 strings%s, but instead is\n%s\n", numEdges,
+		    (numExpected==3 ? " and a weight":""), line);
 	    if(strcmp(name1,name2)==0 && !selfWarned) {
 		Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", numEdges, name1);
 		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
@@ -686,8 +695,12 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	}
 	else
 	{
-	    if(sscanf(line, "%d%d ", &v1, &v2) != 2)
-		Fatal("GraphReadEdgeList: tried to read pairs number %d but couldn't find 2 ints\n", numEdges);
+	    char *fmt, numExpected;
+	    if(weighted) { fmt = "%d%d%f "; numExpected=3;}
+	    else         { fmt = "%d%d "; numExpected=2;}
+	    if(sscanf(line, fmt, &v1, &v2, &w) != numExpected)
+		Fatal("GraphReadEdgeList: line %d must contain 2 ints%s, but instead is\n%s\n", numEdges,
+		    (numExpected==3 ? " and a weight":""), line);
 	    if(v1==v2 && !selfWarned) {
 		Warning("GraphReadEdgeList: line %d has self-loop (%d to itself); assuming they are allowed", numEdges, v1);
 		Warning("GraphReadEdgeList: (another warning may appear below from \"GraphFromEdgeList\")\n");
@@ -703,6 +716,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
 	}
 	pairs[2*numEdges] = v1;
 	pairs[2*numEdges+1] = v2;
+	if(weighted) { assert(w>0.0); fweight[numEdges] = w;}
 	if(pairs[2*numEdges] > pairs[2*numEdges+1])
 	{
 	    unsigned tmp = pairs[2*numEdges];
@@ -727,13 +741,14 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames)
     else
 	numNodes++;	// increase it by one since so far it's simply been the biggest integer seen on the input.
 
-    GRAPH *G = GraphFromEdgeList(numNodes, numEdges, pairs, sparse);
+    GRAPH *G = GraphFromEdgeList(numNodes, numEdges, pairs, sparse, fweight);
     if((G->supportNodeNames = supportNodeNames))
     {
 	G->nameDict = nameDict;
 	G->name = names;
     }
     Free(pairs);
+    if(weighted) Free(fweight);
     assert(G->maxEdges <= maxEdges);
     assert(G->numEdges <= numEdges);
     if(sparse>=true)

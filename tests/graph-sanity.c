@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames);
+    GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
     GraphFree(Gbar);
