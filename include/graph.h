@@ -22,8 +22,7 @@ typedef struct _Graph {
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
-    unsigned **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
-    float **fweight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
+    float **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
 #if SORT_NEIGHBORS
     SET *sorted; // Boolean array: when sparse, is the neighbor list of node[i] sorted or not?
 #endif

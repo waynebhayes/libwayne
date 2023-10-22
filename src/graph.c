@@ -602,7 +602,7 @@ GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse
 	    warned = G->selfAllowed = true;
 	}
 	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
-	if(weights) GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);
+	if(weights) {assert(weights[i]!=0.0); GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);}
     }
     if(sparse>=true)
     {
