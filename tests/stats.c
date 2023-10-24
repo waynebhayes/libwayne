@@ -78,15 +78,15 @@ int main(int argc, char *argv[])
 	StatAddSample(st, sample);
 
     if(gain)
-	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g gain %.6g\n",
+	printf("# %6d\tmean %-9.6g\tmin %-9.6g\tmax %-9.6g\tstdDev %-9.6g\tvar %-9.6g\tgain %-9.6g\n",
 	    StatNumSamples(st), StatGeomMean(st), StatMin(st), StatMax(st),
 	    StatGeomStdDev(st), StatGeomVariance(st), exp(st->geomSum));
     else if(geom)
-	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g\n",
+	printf("# %6d\tmean %-9.6g\tmin %-9.6g\tmax %-9.6g\tstdDev %-9.6g\tvar %-9.6g\n",
 	    StatNumSamples(st), StatGeomMean(st), StatMin(st), StatMax(st),
 	    StatGeomStdDev(st), StatGeomVariance(st));
     else
-	printf("# %6d mean %.6g min %.6g max %.6g stdDev %.6g var %.6g skew %.6g\n",
+	printf("# %6d\tmean %-9.6g\tmin %-9.6g\tmax %-9.6g\tstdDev %-9.6g\tvar %-9.6g\tskew %-9.6g\n",
 	    StatNumSamples(st), StatMean(st), StatMin(st), StatMax(st),
 	    StatStdDev(st), StatVariance(st), StatSkew(st));
 
@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	    }
 	    else
 		value = ivalue;
-	    printf("%.9g %.9g\n", st->histMin + ss*binSize, value);
+	    printf("%9.6g %9.6g\n", st->histMin + ss*binSize, value);
 	    Free(s);
 	}
     }
