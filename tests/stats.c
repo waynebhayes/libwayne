@@ -125,7 +125,7 @@ int main(int argc, char *argv[])
 	    }
 	    else
 		value = ivalue;
-	    printf("%9.6g %9.6g\n", st->histMin + ss*binSize, value);
+	    printf("% -9.6g % -9.6g\n", st->histMin + ss*binSize, value);
 	    Free(s);
 	}
     }
