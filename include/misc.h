@@ -9,7 +9,13 @@ extern "C" {
 #include <assert.h>
 #include <time.h> // because I use the time() function so much
 
-#define PARANOID_ASSERTS 0  // turn on copious assert checking --- slows down execution significantly
+#ifndef PARANOID_ASSERTS
+#ifdef NDEBUG
+#define PARANOID_ASSERTS 0  // turn OFF copious assert checking --- slows down execution significantly
+#else
+#define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
+#endif
+#endif
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define MIN(a,b) ((a)<(b)?(a):(b))
