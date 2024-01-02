@@ -38,7 +38,7 @@ libwayne_all:
 	cp src/libwayne*/*.a src && cp src/*.a .
 
 testlib:
-	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hashtest htree-test bintree-test CI graph-sanity graph-weighted; do rm -f bin/$$x tests/$$x.o; (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi); done
+	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats raw_hashmap htree-test bintree-test CI graph-sanity graph-weighted; do rm -f bin/$$x tests/$$x.o; (cd tests; $(MAKE) $$x; mv $$x ../bin; [ -f $$x.in ] && cat $$x.in | ../bin/$$x $$x.in | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi); done
 
 opt:
 	$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' libwayne
@@ -63,7 +63,7 @@ raw_clean:
 
 clean:
 	@# The following is meant to remove the non-Windows binary, ie stats but not stats.exe.
-	@/bin/rm -f bin/stats bin/hashtest
+	@/bin/rm -f bin/stats bin/raw_hashmap
 	@/bin/rm -f *.a
 	@$(MAKE) debug_clean
 	@$(MAKE) opt_clean

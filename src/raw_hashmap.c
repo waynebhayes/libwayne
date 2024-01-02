@@ -8,39 +8,37 @@ extern "C" {
  * SEE: http://elliottback.com/wp/hashmap-implementation-in-c/
  */
 
-#include "hashmap.h"
+#include "raw_hashmap.h"
 
 #include <stdlib.h>
 #include <stdio.h>
-//#include <minithreads/hashmap.h>
-//#include <minithreads/synch.h>
 
 #define INITIAL_SIZE 1024
 
 // We need to keep keys and values
-typedef struct _hashmap_element{
+typedef struct _raw_hashmap_element{
     int key;
     int in_use;
     any_t data;
-} hashmap_element;
+} raw_hashmap_element;
 
 // A hashmap has some maximum size and current size,
 // as well as the data to hold.
-typedef struct _hashmap_map{
+typedef struct _raw_hashmap_map{
     int table_size;
     int size;
-    hashmap_element *data;
+    raw_hashmap_element *data;
     //semaphore_t lock;
-} hashmap_map;
+} raw_hashmap_map;
 
 /*
  * Return an empty hashmap, or NULL on failure.
  */
-hashmap_t hashmap_new(void) {
-    hashmap_map* m = (hashmap_map*) malloc(sizeof(hashmap_map));
+raw_hashmap_t raw_hashmap_new(void) {
+    raw_hashmap_map* m = (raw_hashmap_map*) malloc(sizeof(raw_hashmap_map));
     if(!m) goto err;
 
-    m->data = (hashmap_element*) calloc(INITIAL_SIZE, sizeof(hashmap_element));
+    m->data = (raw_hashmap_element*) calloc(INITIAL_SIZE, sizeof(raw_hashmap_element));
     if(!m->data) goto err;
 
     //m->lock = (semaphore_t) semaphore_create();
@@ -53,14 +51,14 @@ hashmap_t hashmap_new(void) {
     return m;
     err:
         if (m)
-            hashmap_free(m);
+            raw_hashmap_free(m);
         return NULL;
 }
 
 /*
  * Hashing function for an integer
  */
-unsigned int hashmap_hash_int(hashmap_map * m, unsigned int key){
+unsigned int raw_hashmap_hash_int(raw_hashmap_map * m, unsigned int key){
     /* Robert Jenkins' 32 bit Mix Function */
     key += (key << 12);
     key ^= (key >> 22);
@@ -79,20 +77,20 @@ unsigned int hashmap_hash_int(hashmap_map * m, unsigned int key){
 
 /*
  * Return the integer of the location in data
- * to store the point to the item, or MAP_FULL.
+ * to store the point to the item, or RAW_HASHMAP_FULL.
  */
-int hashmap_hash(hashmap_t in, int key){
+int raw_hashmap_hash(raw_hashmap_t in, int key){
     int curr;
     int i;
 
-    /* Cast the hashmap */
-    hashmap_map* m = (hashmap_map *) in;
+    /* Cast the raw_hashmap */
+    raw_hashmap_map* m = (raw_hashmap_map *) in;
 
     /* If full, return immediately */
-    if(m->size == m->table_size) return MAP_FULL;
+    if(m->size == m->table_size) return RAW_HASHMAP_FULL;
 
     /* Find the best index */
-    curr = hashmap_hash_int(m, key);
+    curr = raw_hashmap_hash_int(m, key);
 
     /* Linear probling */
     for(i = 0; i< m->table_size; i++){
@@ -105,22 +103,22 @@ int hashmap_hash(hashmap_t in, int key){
         curr = (curr + 1) % m->table_size;
     }
 
-    return MAP_FULL;
+    return RAW_HASHMAP_FULL;
 }
 
 /*
- * Doubles the size of the hashmap, and rehashes all the elements
+ * Doubles the size of the raw_hashmap, and rehashes all the elements
  */
-int hashmap_rehash(hashmap_t in){
+int raw_hashmap_rehash(raw_hashmap_t in){
     int i;
     int old_size;
-    hashmap_element* curr;
+    raw_hashmap_element* curr;
 
     /* Setup the new elements */
-    hashmap_map *m = (hashmap_map *) in;
-    hashmap_element* temp = (hashmap_element *)
-        calloc(2 * m->table_size, sizeof(hashmap_element));
-    if(!temp) return MAP_OMEM;
+    raw_hashmap_map *m = (raw_hashmap_map *) in;
+    raw_hashmap_element* temp = (raw_hashmap_element *)
+        calloc(2 * m->table_size, sizeof(raw_hashmap_element));
+    if(!temp) return RAW_HASHMAP_OMEM;
 
     /* Update the array */
     curr = m->data;
@@ -133,37 +131,37 @@ int hashmap_rehash(hashmap_t in){
 
     /* Rehash the elements */
     for(i = 0; i < old_size; i++){
-        int status = hashmap_put(m, curr[i].key, curr[i].data);
-        if (status != MAP_OK)
+        int status = raw_hashmap_put(m, curr[i].key, curr[i].data);
+        if (status != RAW_HASHMAP_OK)
             return status;
     }
 
     free(curr);
 
-    return MAP_OK;
+    return RAW_HASHMAP_OK;
 }
 
 /*
- * Add a pointer to the hashmap with some key
+ * Add a pointer to the raw_hashmap with some key
  */
-int hashmap_put(hashmap_t in, int key, any_t value){
+int raw_hashmap_put(raw_hashmap_t in, int key, any_t value){
     int index;
-    hashmap_map* m;
+    raw_hashmap_map* m;
 
-    /* Cast the hashmap */
-    m = (hashmap_map *) in;
+    /* Cast the raw_hashmap */
+    m = (raw_hashmap_map *) in;
 
     /* Lock for concurrency */
     //semaphore_P(m->lock);
 
     /* Find a place to put our value */
-    index = hashmap_hash(in, key);
-    while(index == MAP_FULL){
-        if (hashmap_rehash(in) == MAP_OMEM) {
+    index = raw_hashmap_hash(in, key);
+    while(index == RAW_HASHMAP_FULL){
+        if (raw_hashmap_rehash(in) == RAW_HASHMAP_OMEM) {
             //semaphore_V(m->lock);
-            return MAP_OMEM;
+            return RAW_HASHMAP_OMEM;
         }
-        index = hashmap_hash(in, key);
+        index = raw_hashmap_hash(in, key);
     }
 
     /* Set the data */
@@ -175,25 +173,25 @@ int hashmap_put(hashmap_t in, int key, any_t value){
     /* Unlock */
     //semaphore_V(m->lock);
 
-    return MAP_OK;
+    return RAW_HASHMAP_OK;
 }
 
 /*
- * Get your pointer out of the hashmap with a key
+ * Get your pointer out of the raw_hashmap with a key
  */
-int hashmap_get(hashmap_t in, int key, any_t *arg){
+int raw_hashmap_get(raw_hashmap_t in, int key, any_t *arg){
     int curr;
     int i;
-    hashmap_map* m;
+    raw_hashmap_map* m;
 
-    /* Cast the hashmap */
-    m = (hashmap_map *) in;
+    /* Cast the raw_hashmap */
+    m = (raw_hashmap_map *) in;
 
     /* Lock for concurrency */
     //semaphore_P(m->lock);
 
     /* Find data location */
-    curr = hashmap_hash_int(m, key);
+    curr = raw_hashmap_hash_int(m, key);
 
     /* Linear probing, if necessary */
     for(i = 0; i< m->table_size; i++){
@@ -201,7 +199,7 @@ int hashmap_get(hashmap_t in, int key, any_t *arg){
         if(m->data[curr].key == key && m->data[curr].in_use == 1){
             *arg = (int *) (m->data[curr].data);
             //semaphore_V(m->lock);
-            return MAP_OK;
+            return RAW_HASHMAP_OK;
         }
 
         curr = (curr + 1) % m->table_size;
@@ -213,22 +211,22 @@ int hashmap_get(hashmap_t in, int key, any_t *arg){
     //semaphore_V(m->lock);
 
     /* Not found */
-    return MAP_MISSING;
+    return RAW_HASHMAP_MISSING;
 }
 
 /*
- * Get a random element from the hashmap
+ * Get a random element from the raw_hashmap
  */
-int hashmap_get_one(hashmap_t in, any_t *arg, int remove){
+int raw_hashmap_get_one(raw_hashmap_t in, any_t *arg, int remove){
     int i;
-    hashmap_map* m;
+    raw_hashmap_map* m;
 
-    /* Cast the hashmap */
-    m = (hashmap_map *) in;
+    /* Cast the raw_hashmap */
+    m = (raw_hashmap_map *) in;
 
-    /* On empty hashmap return immediately */
-    if (hashmap_length(m) <= 0)
-        return MAP_MISSING;
+    /* On empty raw_hashmap return immediately */
+    if (raw_hashmap_length(m) <= 0)
+        return RAW_HASHMAP_MISSING;
 
     /* Lock for concurrency */
     //semaphore_P(m->lock);
@@ -242,27 +240,27 @@ int hashmap_get_one(hashmap_t in, any_t *arg, int remove){
                 m->size--;
             }
             //semaphore_V(m->lock);
-            return MAP_OK;
+            return RAW_HASHMAP_OK;
         }
 
     /* Unlock */
     //semaphore_V(m->lock);
 
-    return MAP_OK;
+    return RAW_HASHMAP_OK;
 }
 
 /*
- * Iterate the function parameter over each element in the hashmap.
+ * Iterate the function parameter over each element in the raw_hashmap.
  */
-int hashmap_iterate(hashmap_t in, PFany f) {
+int raw_hashmap_iterate(raw_hashmap_t in, PFany f) {
     int i;
 
-    /* Cast the hashmap */
-    hashmap_map* m = (hashmap_map*) in;
+    /* Cast the raw_hashmap */
+    raw_hashmap_map* m = (raw_hashmap_map*) in;
 
-    /* On empty hashmap, return immediately */
-    if (hashmap_length(m) <= 0)
-        return MAP_MISSING;
+    /* On empty raw_hashmap, return immediately */
+    if (raw_hashmap_length(m) <= 0)
+        return RAW_HASHMAP_MISSING;
 
     /* Lock for concurrency */
     //semaphore_P(m->lock);
@@ -273,7 +271,7 @@ int hashmap_iterate(hashmap_t in, PFany f) {
             int key    = (int) (m->data[i].key);
             any_t data = (any_t) (m->data[i].data);
             int status = f(key, data);
-            if (status != MAP_OK) {
+            if (status != RAW_HASHMAP_OK) {
                 //semaphore_V(m->lock);
                 return status;
             }
@@ -282,25 +280,25 @@ int hashmap_iterate(hashmap_t in, PFany f) {
     /* Unlock */
     //semaphore_V(m->lock);
 
-        return MAP_OK;
+        return RAW_HASHMAP_OK;
 }
 
 /*
  * Remove an element with that key from the map
  */
-int hashmap_remove(hashmap_t in, int key){
+int raw_hashmap_remove(raw_hashmap_t in, int key){
     int i;
     int curr;
-    hashmap_map* m;
+    raw_hashmap_map* m;
 
-    /* Cast the hashmap */
-    m = (hashmap_map *) in;
+    /* Cast the raw_hashmap */
+    m = (raw_hashmap_map *) in;
 
     /* Lock for concurrency */
     //semaphore_P(m->lock);
 
     /* Find key */
-    curr = hashmap_hash_int(m, key);
+    curr = raw_hashmap_hash_int(m, key);
 
     /* Linear probing, if necessary */
     for(i = 0; i< m->table_size; i++){
@@ -313,7 +311,7 @@ int hashmap_remove(hashmap_t in, int key){
             /* Reduce the size */
             m->size--;
             //semaphore_V(m->lock);
-            return MAP_OK;
+            return RAW_HASHMAP_OK;
         }
         curr = (curr + 1) % m->table_size;
     }
@@ -322,20 +320,20 @@ int hashmap_remove(hashmap_t in, int key){
     //semaphore_V(m->lock);
 
     /* Data not found */
-    return MAP_MISSING;
+    return RAW_HASHMAP_MISSING;
 }
 
-/* Deallocate the hashmap */
-void hashmap_free(hashmap_t in){
-    hashmap_map* m = (hashmap_map*) in;
+/* Deallocate the raw_hashmap */
+void raw_hashmap_free(raw_hashmap_t in){
+    raw_hashmap_map* m = (raw_hashmap_map*) in;
     free(m->data);
     //semaphore_destroy(m->lock);
     free(m);
 }
 
-/* Return the length of the hashmap */
-int hashmap_length(hashmap_t in){
-    hashmap_map* m = (hashmap_map *) in;
+/* Return the length of the raw_hashmap */
+int raw_hashmap_length(raw_hashmap_t in){
+    raw_hashmap_map* m = (raw_hashmap_map *) in;
     if(m != NULL) return m->size;
     else return 0;
 }
