@@ -17,9 +17,9 @@ extern "C" {
 
 // We need to keep keys and values
 typedef struct _raw_hashmap_element{
-    int key;
-    int in_use;
     any_t data;
+    int key;
+    char in_use;
 } raw_hashmap_element;
 
 // A hashmap has some maximum size and current size,
@@ -215,9 +215,9 @@ int raw_hashmap_get(raw_hashmap_t in, int key, any_t *arg){
 }
 
 /*
- * Get a random element from the raw_hashmap
+ * Get the KEY of an arbitrary element from the raw_hashmap--NOT RANDOM, may return the same item each time.
  */
-int raw_hashmap_get_one(raw_hashmap_t in, any_t *arg, int remove){
+int raw_hashmap_get_one(raw_hashmap_t in, int *keyp, int remove){
     int i;
     raw_hashmap_map* m;
 
@@ -234,7 +234,7 @@ int raw_hashmap_get_one(raw_hashmap_t in, any_t *arg, int remove){
     /* Linear probing */
     for(i = 0; i< m->table_size; i++)
         if(m->data[i].in_use != 0){
-            *arg = (any_t) (m->data[i].data);
+            *keyp = (m->data[i].key);
             if (remove) {
                 m->data[i].in_use = 0;
                 m->size--;

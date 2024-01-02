@@ -65,10 +65,10 @@ extern int raw_hashmap_get(raw_hashmap_t in, int key, any_t *arg);
 extern int raw_hashmap_remove(raw_hashmap_t in, int key);
 
 /*
- * Get any element. Return RAW_HASHMAP_OK or RAW_HASHMAP_MISSING.
- * remove - should the element be removed from the hashmap
+ * Get the KEY of an arbitrary element. NOT RANDOM, may return the same item every
+ * time unless "remove" is true. Return RAW_HASHMAP_OK or RAW_HASHMAP_MISSING if empty.
  */
-extern int raw_hashmap_get_one(raw_hashmap_t in, any_t *arg, int remove);
+extern int raw_hashmap_get_one(raw_hashmap_t in, int *keyp, int remove);
 
 /*
  * Free the hashmap

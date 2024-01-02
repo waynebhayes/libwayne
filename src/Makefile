@@ -4,7 +4,7 @@
 all:
 	make -f Makefile.inc all
 
-OBJS=stream48.o longlong.o bitvec.o sets.o smallgraph-transitive.o misc.o dverk.o rkd78.o lsode.o ddriv2.o bsode.o ldbsode.o rk4.o rk4s.o rk12.o rk23.o stack.o event.o heap.o linked-list.o stats.o queue.o compressedInt.o Oalloc.o variable_leapfrog.o leapfrog.o htree.o bintree.o eigen.o mem-debug.o smallgraph.o tinygraph.o graph.o combin.o matvec.o sorts.o heun_euler.o multisets.o dynarray.o raw_hashmap.o #qrkd78.o iqrkd78.o llfile.o
+OBJS=stream48.o longlong.o bitvec.o sets.o smallgraph-transitive.o misc.o dverk.o rkd78.o lsode.o ddriv2.o bsode.o ldbsode.o rk4.o rk4s.o rk12.o rk23.o stack.o event.o heap.o linked-list.o stats.o queue.o compressedInt.o Oalloc.o variable_leapfrog.o leapfrog.o htree.o bintree.o eigen.o mem-debug.o smallgraph.o tinygraph.o graph.o combin.o matvec.o sorts.o heun_euler.o multisets.o dynarray.o raw_hashmap.o hash.o #qrkd78.o iqrkd78.o llfile.o
 
 INCLUDE=-I../include
 #LIB=$(HOME)/lib/libwayne.a
