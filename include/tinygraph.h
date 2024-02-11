@@ -27,6 +27,7 @@ TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n); // allows self-loops
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
 TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j);
+TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v); // this changes G
 TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j);
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *destination, TINY_GRAPH *G1, TINY_GRAPH *G2);
