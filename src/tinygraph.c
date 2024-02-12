@@ -50,13 +50,13 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
     if(u==v) return G;
     // TODO FIXME: there's probably a more efficient way to do this than constructing the whole TINY_GRAPH from scratch...
     static TINY_GRAPH H; // note this is NOT a pointer
+    H.n = G->n;
     TinyGraphEdgesAllDelete(&H);
     int i,j, perm[MAX_TSET];
     for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
     perm[u]=v; perm[v]=u;  // swap u and v
-
-    for(i=0; i<G->n; i++) for(j=i+1; j<G->n;j++) TinyGraphConnect(&H, perm[i], perm[j]);
-    *G = H;
+    for(i=0; i<G->n; i++) for(j=i+1; j<G->n;j++) if(TinyGraphAreConnected(G,i,j)) TinyGraphConnect(&H, perm[i], perm[j]);
+    TinyGraphCopy(G, &H);
     return G;
 }
 

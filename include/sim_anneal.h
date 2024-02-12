@@ -28,6 +28,8 @@ typedef struct _sim_anneal {
 
 // direction < 0 to minimize, > 0 to maximize
 SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pSolutionFunc Move, pScoreFunc, pSolutionFunc Accept, int maxIters);
+Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay);
+void SimAnnealAutoSchedule(SIM_ANNEAL *sa); // to automatically create schedule
 int SimAnnealRun(SIM_ANNEAL *sa); // returns >0 if success, 0 if not done and can continue, <0 if error
 foint SimAnnealSol(SIM_ANNEAL *sa);
 void SimAnnealFree(SIM_ANNEAL *sa);
