@@ -13,11 +13,10 @@ STACKSIZE=$(shell ($(GCC) -v 2>&1; uname -a) | awk '/CYGWIN/{print "-Wl,--stack,
 CC=$(GCC) $(OPT) $(GDB) $(DEBUG) -Wall -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow $(PG) $(STACKSIZE)
 LIBWAYNE_HOME:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
-default: gcc-ver
-	if ls -rtlL *.a | tail -1 | grep .-g; then $(MAKE) debug; else $(MAKE) opt; fi
-
-gcc-ver:
-	$(GCC) -v
+make-successful:
+	touch make-started # create this file so it is OLDER than .a files
+	make all
+	mv make-started make-successful
 
 all:
 	@if [ -f do-not-make ]; then echo "not making; assuming they already exist"; ls -l libwayne*.a; else /bin/rm -f *.a; $(MAKE) libwayne_all; fi
@@ -58,10 +57,12 @@ opt_clean:
 	@$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' raw_clean
 
 raw_clean:
+	rm -f make-successful
 	@/bin/rm -f src/*.[oa] $(LIBOUT)
 	@cd MT19937; $(MAKE) clean
 
 clean:
+	rm -f make-successful
 	@# The following is meant to remove the non-Windows binary, ie stats but not stats.exe.
 	@/bin/rm -f bin/stats bin/raw_hashmap bin/hash
 	@/bin/rm -f *.a
@@ -70,7 +71,7 @@ clean:
 
 $(LIBOUT): src/$(LIBOUT)
 	if ranlib src/$(LIBOUT); then :; else echo "ranlib failed but it's not crucial" >&2; fi
-	mv src/$(LIBOUT) .
+	cp -p src/$(LIBOUT) .
 
 src/$(LIBOUT):
-	cd src; $(MAKE) 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'GDB=$(GDB)' '$(LIBOUT)'
+	cd src; $(MAKE) -f Makefile.all 'CC=$(CC)' 'LIBOUT=$(LIBOUT)' 'GDB=$(GDB)' '$(LIBOUT)'
