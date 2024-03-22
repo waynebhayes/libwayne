@@ -667,12 +667,11 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
 		maxNodes *=2;
 		names = Realloc(names, maxNodes*sizeof(char*));
 	    }
-	    char name1[BUFSIZ], name2[BUFSIZ], *fmt, numExpected;
-	    if(weighted) { fmt = "%s%s%f "; numExpected=3;}
-	    else         { fmt = "%s%s "; numExpected=2;}
-	    if(sscanf(line, fmt, name1, name2, &w) != numExpected)
+	    char name1[BUFSIZ], name2[BUFSIZ];
+	    const char *fmt[2] = {"%s%s ", "%s%s%f "}, numExpected[2] = {2,3};
+	    if(sscanf(line, fmt[weighted], name1, name2, &w) != numExpected[weighted])
 		Fatal("GraphReadEdgeList: line %d must contain 2 strings%s, but instead is\n%s\n", numEdges,
-		    (numExpected==3 ? " and a weight":""), line);
+		    (weighted ? " and a weight":""), line);
 	    if(strcmp(name1,name2)==0 && !selfWarned) {
 		Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", numEdges, name1);
 		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
@@ -695,12 +694,10 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
 	}
 	else
 	{
-	    char *fmt, numExpected;
-	    if(weighted) { fmt = "%d%d%f "; numExpected=3;}
-	    else         { fmt = "%d%d "; numExpected=2;}
-	    if(sscanf(line, fmt, &v1, &v2, &w) != numExpected)
+	    const char *fmt[2] = {"%s%s ", "%s%s%f "}, numExpected[2] = {2,3};
+	    if(sscanf(line, fmt[weighted], &v1, &v2, &w) != numExpected[weighted])
 		Fatal("GraphReadEdgeList: line %d must contain 2 ints%s, but instead is\n%s\n", numEdges,
-		    (numExpected==3 ? " and a weight":""), line);
+		    (weighted ? " and a weight":""), line);
 	    if(v1==v2 && !selfWarned) {
 		Warning("GraphReadEdgeList: line %d has self-loop (%d to itself); assuming they are allowed", numEdges, v1);
 		Warning("GraphReadEdgeList: (another warning may appear below from \"GraphFromEdgeList\")\n");

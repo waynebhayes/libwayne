@@ -95,6 +95,7 @@ static double findPbad(SIM_ANNEAL *sa, double temperature) {
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay) {
     sa->tInitial = tInitial;
     sa->tDecay = tDecay;
+    return true;
 }
 
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
