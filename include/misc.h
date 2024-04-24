@@ -5,9 +5,20 @@ extern "C" {
 #define _MISC_H
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <limits.h>
 #include <string.h>
+#include <strings.h>
+#include <unistd.h>
 #include <assert.h>
+#include "rand48.h"
+#include "intSizes.h"
 #include <time.h> // because I use the time() function so much
+
+#include <math.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 #ifndef PARANOID_ASSERTS
 #ifdef NDEBUG

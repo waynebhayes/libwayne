@@ -59,7 +59,7 @@ unsigned short SetComputeCrossover(unsigned n)
     static const unsigned max_crossover=65535;
     if(prevResult > max_crossover) {
 	static char warned;
-	if(!warned) Warning("SET datatype can't handle lits of %u elements; setting crossover to %u", prevResult, max_crossover);
+	if(!warned) Warning("SET datatype can't handle list of %u elements; setting crossover to %u", prevResult, max_crossover);
 	warned=1;
 	prevResult = max_crossover;
     }

@@ -24,6 +24,7 @@ all:
 
 libwayne_all:
 	/bin/rm -f *.a
+	$(CC) -o intSizes intSizes.c && ./intSizes > include/intSizes.h
 	# Make the pg versions (for profiling)
 	$(MAKE) debug_clean
 	$(MAKE) -j$(CORES) 'PG=-pg' debug && mv libwayne-g.a src/libwayne-pg-g/libwayne-pg-g.a

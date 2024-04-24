@@ -173,7 +173,7 @@ Boolean SSetDictIn(SSETDICT*, SSET);
 void SSetDictFree(SSETDICT*);
 
 #ifndef TINY_SET_SIZE
-#define TINY_SET_SIZE 8
+#define TINY_SET_SIZE 16
 #endif
 
 #if TINY_SET_SIZE >= 64
@@ -202,11 +202,11 @@ void SSetDictFree(SSETDICT*);
 
 #else
     #if TINY_SET_SIZE == 32
-	typedef unsigned int TSET;
+	typedef uint32_t TSET;
     #elif TINY_SET_SIZE == 16
-	typedef unsigned short TSET;
+	typedef uint16_t TSET;
     #elif TINY_SET_SIZE == 8
-	typedef unsigned char TSET;
+	typedef uint8_t TSET;
     #else
 	#error unknown TINY_SET_SIZE
     #endif

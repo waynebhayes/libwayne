@@ -1,6 +1,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "misc.h"
 #include "htree.h" // bintree is included there
 
 /*-------------------  Types  ------------------*/
