@@ -8,7 +8,7 @@ char *space2line(const char *S) {
     return t;
 }
 
-#define PrintSz(x) printf("#define sizeof_%s %d\n#define %s_width %d\n", space2line(#x), sizeof(x), space2line(#x), 8*sizeof(x))
+#define PrintSz(x) printf("#define sizeof_%s %zu\n#define %s_width %zu\n", space2line(#x), sizeof(x), space2line(#x), 8*sizeof(x))
 
 int main(void) {
     unsigned char c=1, nBits=1;
