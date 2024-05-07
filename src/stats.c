@@ -126,6 +126,7 @@ double logChi2_pair (int df, double X2){return df%2==0 ? logChi2_pair2(df,X2) : 
 
 double IncGamma(int s, double x)
 {
+    if(s<1) Fatal("IncGama(%d,%g): first parameter (s) must be >=1", s,x);
     assert(s>=1);
     if(s==1)return Exp(-x);
     else return (s-1)*IncGamma(s-1,x) + IntPow(x,(s-1))*Exp(-x);
@@ -133,6 +134,7 @@ double IncGamma(int s, double x)
 
 double logIncGamma(int s, double x)
 {
+    if(s<1) Fatal("IncGama(%d,%g): first parameter (s) must be >=1", s,x);
     assert(s>=1);
     if(s==1)return -x;
     else {
