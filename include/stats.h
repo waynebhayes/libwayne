@@ -23,6 +23,7 @@ STAT *StatAlloc(int numHistogramBins, double histMin, double histMax,
 STAT *StatReset(STAT *s);   /* reset the stats of this variable */
 void StatFree(STAT *s);     /* de-allocate the variable */
 void StatAddSample(STAT *s, double sample);
+void StatAddWeightedSample(STAT *s, double sample, double weight);
 void StatDelSample(STAT *s, double sample);
 double StatMean(STAT*);
 #define StatMin(s) ((s)->min)

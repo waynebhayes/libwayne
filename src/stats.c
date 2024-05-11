@@ -305,6 +305,55 @@ void StatAddSample(STAT *s, double sample)
     }
     s->n++;
 }
+void StatAddWeightedSample(STAT *s, double sample, double w)
+{
+    s->sum += w*sample;
+    s->sum2 += w*sample*sample;
+    s->sum3 += w * sample * sample * sample;
+    if(sample > s->max)
+	s->max = sample;
+    if(sample < s->min)
+	s->min = sample;
+    if(s->geom)
+    {
+	if(sample > 0)
+	{
+	    double ls = log(sample);
+	    s->geomSum += w*ls;
+	    s->geomSum2 += w*ls*ls;
+	    s->geomSum3 += w*ls*ls*ls;
+	}
+	else
+	    Warning("StatAddSample(geom): sample %g <= 0", sample);
+    }
+    if(s->numHistBins)
+#if 1
+	Apology("histBins not implemented for Weighted samples yet");
+#else
+    {
+	int histBin = s->numHistBins *
+	    (sample - s->histMin)/s->histWidth;
+	if(s->histCumulative)
+	    ToggleHistType(s);
+	if(histBin < 0)
+	    ++s->histogram[-1];
+	else if(histBin >= s->numHistBins)
+	    ++s->histogram[s->numHistBins];
+	else
+	    ++s->histogram[histBin];
+    }
+    if(s->allData) {
+	assert(s->n <= s->dataSize);
+	if(s->n == s->dataSize){
+	    s->dataSize *= 2;
+	    s->allData = Realloc(s->allData, s->dataSize * sizeof(double));
+	}
+	s->allData[s->n] = sample;
+	s->dataSorted = false;
+    }
+#endif
+    s->n+= w;
+}
 
 void StatDelSample(STAT *s, double sample)
 {
