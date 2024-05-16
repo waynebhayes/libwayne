@@ -13,6 +13,7 @@ extern "C" {
 
 #include "misc.h"
 #include "stats.h"
+#include "sorts.h"  // my own sorts, because I don't trust qsort
 #include "rand48.h"
 #include <assert.h>
 #include <math.h>
@@ -25,8 +26,8 @@ STAT *StatAlloc(int numHistogramBins, double histMin, double histMax,
     s->n = 0;
     s->geom = geom;
     s->sum = s->sum2 = s->sum3 = s->geomSum = s->geomSum2 = s->geomSum3 = 0.;
-    s->min = 1e30;
-    s->max = -1e30;
+    s->min = 1e300;
+    s->max = -1e300;
     if(numHistogramBins)
     {
 	s->histogram = Calloc(1, (numHistogramBins+2) * sizeof(int));
@@ -74,14 +75,22 @@ void CovarFree(COVAR*c){Free(c);}
 static int CmpDouble(const void *a, const void *b)
 {
     const double *x = (const double*)a, *y = (const double*)b;
-    return (*x)-(*y);
+    double diff = (*x)-(*y);
+    if(diff<0) return -1;
+    if(diff>0) return 1;
+    return 0;
 }
 
 static STAT *DataSort(STAT *s)
 {
+    int i;
     assert(s->allData);
-    if(s->dataSorted) return s;
+    if(s->dataSorted) {
+	for(i=1; i < s->n; i++) assert(s->allData[i-1] <= s->allData[i]);
+	return s;
+    }
     qsort(s->allData, s->n, sizeof(s->allData[0]), CmpDouble);
+    for(i=1;i < s->n; i++) assert(s->allData[i-1] <= s->allData[i]);
     s->dataSorted = true;
     return s;
 }
@@ -93,17 +102,17 @@ double StatECDF(STAT *s, double z)
     if(z > s->allData[s->n-1]) return 1; // CDF is one to the right of largest element
     void *v = bsearch((void*)&z, (void*)s->allData, s->n, sizeof(s->allData[0]), CmpDouble);
     double *x = (double *)v, *x1, *x2;
-    int i = x - s->allData; // index of element found
-    assert(0<=i && i<s->n);
+    int m = x - s->allData; // index of element found
+    assert(0<=m && m<s->n);
     // following two loops find the *lowest* value that works
-    until(i==s->n-1 || s->allData[i+1]>=z) {assert(i < s->n-1); ++i;}
-    until(i==0 || s->allData[i]<=z) {assert(i>0); --i;}
-    assert(0 <= i && i < s->n);
-    x = s->allData + i;
-    assert(*x == s->allData[i]);
-    if(*x == z) return i*1.0/s->n; // exactly at one of the points
-    else if(*x < z) {x1=x; assert(i+1<s->n); x2=x+1; assert(x2-(s->allData) < s->n);}
-    else {assert(*x > z); x2=x; assert(i>0);      x1=x-1; assert(x1-(s->allData) >= 0  );}
+    until(m==s->n-1 || s->allData[m+1]>=z) {assert(m < s->n-1); ++m;}
+    until(m==0 || s->allData[m]<=z) {assert(m>0); --m;}
+    assert(0 <= m && m < s->n);
+    x = s->allData + m;
+    assert(*x == s->allData[m]);
+    if(*x == z) return m*1.0/s->n; // exactly at one of the points
+    else if(*x < z) {x1=x; assert(m+1<s->n); x2=x+1; assert(x2-(s->allData) < s->n);}
+    else {assert(*x > z); x2=x; assert(m>0);      x1=x-1; assert(x1-(s->allData) >= 0  );}
     assert(*x1<=z && z<=*x2);
     double frac=(z-*x1)/(*x2-*x1), h1=(double)(x1-s->allData)/s->n, h2=(double)(x2-s->allData)/s->n;
     return h1 + frac*(h2-h1);
@@ -220,6 +229,8 @@ STAT *StatReset(STAT *s)
 {
     s->n = 0;
     s->sum = s->sum2 = s->sum3 = s->geomSum = s->geomSum2 = s->geomSum3 = 0.;
+    s->min = 1e300;
+    s->max = -1e300;
     if(s->numHistBins)
     {
 	memset(s->histogram - 1, 0, (s->numHistBins+2) * sizeof(int));
