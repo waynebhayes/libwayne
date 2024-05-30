@@ -56,7 +56,7 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 	{
 	    tree->freeInfo(p->info);
 	    p->info = tree->copyInfo(info);
-	    if(p->deleted) { p->deleted = false; tree->n++; }
+	    if(p->deleted) { p->deleted = false; tree->n++; assert(tree->n); } // n==0 means overflow...
 	    return;
 	}
 	else if(cmp < 0)
@@ -76,9 +76,12 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
     p->info = tree->copyInfo(info);
     p->left = p->right = NULL;
     *locative = p;
-    tree->n++; tree->physical_n++;
+    tree->n++; assert(tree->n);
+    tree->physical_n++; assert(tree->physical_n);
 
-    tree->depthSum += depth; ++tree->depthSamples;
+    unsigned oldSum = tree->depthSum;
+    tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
+    ++tree->depthSamples; assert(tree->depthSamples > 0);
     double meanDepth = tree->depthSum/(double)tree->depthSamples;
     if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
 }
@@ -114,13 +117,14 @@ Boolean BinTreeDelete(BINTREE *tree, foint key)
     else *locative = NULL;
 
     if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
+	assert(tree->physical_n > 0);
 	tree->physical_n--;
 	tree->freeKey(p->key);
 	tree->freeInfo(p->info);
 	Free(p);
     }
 
-    tree->n--;
+    assert(tree->n > 0); tree->n--;
     return true;
 }
 
@@ -144,7 +148,9 @@ Boolean BinTreeLookup(BINTREE *tree, foint key, foint *pInfo)
 	else
 	    p = p->right;
     }
-    tree->depthSum += depth; ++tree->depthSamples;
+    unsigned oldSum = tree->depthSum;
+    tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
+    ++tree->depthSamples; assert(tree->depthSamples > 0);
     double meanDepth = tree->depthSum/(double)tree->depthSamples;
     if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
     return false;
@@ -223,8 +229,9 @@ static void BinTreeFreeHelper(BINTREE *tree, BINTREENODE *t)
 	BinTreeFreeHelper(tree, t->right);
 	tree->freeKey(t->key);
 	tree->freeInfo(t->info);
-	if(!t->deleted) tree->n--;
+	if(!t->deleted) {assert(tree->n > 0); tree->n--; }
 	free(t);
+	assert(tree->physical_n > 0);
 	tree->physical_n--;
     }
 }
@@ -277,6 +284,7 @@ void BinTreeRebalance(BINTREE *tree)
     
     BINTREE *newTree = BinTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);
     // Now re-insert the items in *perfectly balanced* order.
+    assert(tree->n > 0);
     BinTreeInsertMiddleElementOfArray(newTree, 0, tree->n - 1);
     assert(tree->n == newTree->n);
     assert(newTree->n == newTree->physical_n);
