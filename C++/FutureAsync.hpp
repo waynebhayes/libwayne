@@ -1,15 +1,18 @@
+// This is NOT the header file that C code should include when they want to perform threading.
+// Instead, it is the header file used when compiling the C++ code.
+
 #include "misc.h"
-#include "FutureAsync.h"
+#include "thread-sets.h"
 #include <iostream>
 #include <utility>
 #include <future>
 #include <limits>
 
-class FutureAsyncClass {
+class FutureAsync {
     public:
         foint *RunAll(void);
-        FutureAsyncClass(pAsyncFunc f, int n, foint inputs[]);
-	~FutureAsyncClass(void);
+        FutureAsync(pAsyncFunc f, int n, foint inputs[]);
+	~FutureAsync(void);
 
     private:
 	pAsyncFunc f;
@@ -17,16 +20,16 @@ class FutureAsyncClass {
 	foint *inputs, *outputs;
 };
 
-FutureAsyncClass::FutureAsyncClass(pAsyncFunc f, int n, foint inputs[n]) {
+FutureAsync::FutureAsync(pAsyncFunc f, int n, foint inputs[]) {
     this->f = f;
     numThreads = n;
     this->inputs = inputs;
     this->outputs = (foint*)malloc(numThreads * sizeof(*outputs));
 }
 
-FutureAsyncClass::~FutureAsyncClass(void) { free(this->outputs); }
+FutureAsync::~FutureAsync(void) { free(this->outputs); }
 
-foint *FutureAsyncClass::RunAll(void) {
+foint *FutureAsync::RunAll(void) {
     int i;
     std::future<foint> futureList[numThreads];
 

@@ -1,20 +1,22 @@
+// This is the C++ code that will be called from C functions that want to run a bunch of pAsyncFunctions in parallel threads.
+
 #include "FutureAsync.hpp"
-#include "FutureAsync.h"
+#include "thread-sets.h"
 #include <future>
 
 extern "C" {
-    FutureAsync *FutureAsyncAlloc(pAsyncFunc f, int numThreads, foint input[numThreads]) {
-	FutureAsyncClass *fa = new FutureAsyncClass(f, numThreads, input);
-	return (FutureAsync*)fa;
+    THREAD_SET *ThreadSetAlloc(pAsyncFunc f, int numThreads, foint input[]) {
+	FutureAsync *fa = new FutureAsync(f, numThreads, input);
+	return (THREAD_SET*)fa;
     }
 
-    foint *FutureAsyncRunAll(const FutureAsync *fa) {
-	FutureAsyncClass *fac = (FutureAsyncClass *)fa;
-	return fac->RunAll();
+    foint *ThreadSetRunAll(const THREAD_SET *ts) {
+	FutureAsync *fa = (FutureAsync *)ts;
+	return fa->RunAll();
     }
 
-    void FutureAsyncFree(const FutureAsync *fa) {
-	FutureAsyncClass *fac = (FutureAsyncClass *)fa;
-	delete fac;
+    void ThreadSetFree(const THREAD_SET *ts) {
+	FutureAsync *fa = (FutureAsync *)ts;
+	delete fa;
     }
 }

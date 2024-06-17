@@ -11,7 +11,7 @@ extern "C" {
 #include <strings.h>
 #include <unistd.h>
 #include <assert.h>
-#include "rand48.h"
+//#include "rand48.h"
 #include "intSizes.h"
 #include <time.h> // because I use the time() function so much
 
