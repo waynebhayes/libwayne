@@ -100,7 +100,10 @@ void ReadLines(FILE *fp) {
 
 int main(int argc, char *argv[])
 {
-    ReadLines(stdin);
+    if(argc == 1)
+	ReadLines(stdin);
+    else
+	ReadLines(Fopen(argv[1], "r"));
     int m=NR, n=NF-2, i, j, k;
     if(m<1) Fatal("need at least one variable");
     assert(m<=MAX_ROWS);
