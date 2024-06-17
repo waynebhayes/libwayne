@@ -60,7 +60,7 @@ opt_clean:
 raw_clean:
 	rm -f make-successful
 	@/bin/rm -f src/*.[oa] $(LIBOUT)
-	@cd MT19937; $(MAKE) clean
+	@cd C++; $(MAKE) clean
 
 clean:
 	rm -f make-successful

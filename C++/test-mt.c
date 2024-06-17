@@ -10,5 +10,5 @@ int main(){
     for(i=0;i<1000000;i++)
 	printf("%.16lf\n", Mt19937NextDouble(a));
     Mt19937Free(a);
-return 0;
+    return 0;
 }
