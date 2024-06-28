@@ -1,5 +1,5 @@
 CC=gcc
-all: mt19937 threads
+all: mt19937 # threads
 
 mt19937: MTGenerator.hpp test-mt.c mt19937.cpp mt19937.h
 	$(CC) -c test-mt.c
