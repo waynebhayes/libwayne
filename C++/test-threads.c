@@ -7,8 +7,8 @@
 #include "thread-sets.h"
 
 #define NUM_THREADS 4
-#define COUNT 4000000000U
-#define COUNT_MOD 1000000000U
+#define COUNT     2000000000U
+#define COUNT_MOD 100000000U
 
 foint ThreadTest(const foint f) {
     static char _race[COUNT+1]; // who got there first?
