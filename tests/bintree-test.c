@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
     while(scanf("%s", buf) == 1)
     {
 	BinTreeSanityCheck(tree);
-	if(BinTreeLookup(tree, (foint)(key.s=buf), &data))
+	printf("lookup %s = ", key.s=buf);
+	if(BinTreeLookup(tree, (foint)(key.s), &data))
 	    printf("%d\n", data.i);
 	else
 	    puts("nope");
@@ -41,9 +42,10 @@ int main(int argc, char *argv[])
 
     while(lines>0) {
 	BinTreeSanityCheck(tree);
-	Boolean exists = BinTreeLookup(tree, (foint)(key.s=bufs[--lines]), &data);
+	printf("Deleting <%s>; n=%d, phys=%d... ", bufs[--lines], tree->n, tree->physical_n);
+	Boolean exists = BinTreeLookup(tree, (foint)(key.s=bufs[lines]), &data);
 	assert(exists == BinTreeDelete(tree, (foint)(key.s=bufs[lines])));
-	printf("Deleted <%s>; n=%d, phys=%d\n", bufs[lines], tree->n, tree->physical_n);
+	printf("Deleted! n=%d, phys=%d\n", tree->n, tree->physical_n);
 	BinTreeSanityCheck(tree);
     }
     assert(lines == 0 && tree->n == 0 && tree->physical_n >= 0);

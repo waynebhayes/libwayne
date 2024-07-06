@@ -43,11 +43,13 @@ BINTREE *BinTreeAlloc(pCmpFcn cmpKey,
 }
 
 
+#define AssignLocative(P,p,q) (((P)=&(q)),((p)=(q)))
+
 void BinTreeRebalance(BINTREE *tree);
 void BinTreeInsert(BINTREE *tree, foint key, foint info)
 {
     int depth = 0;
-    BINTREENODE *p = tree->root, **locative = &(tree->root);
+    BINTREENODE *p = tree->root, **P = &(tree->root);
     while(p)
     {
 	++depth;
@@ -59,23 +61,15 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 	    if(p->deleted) { p->deleted = false; tree->n++; assert(tree->n); } // n==0 means overflow...
 	    return;
 	}
-	else if(cmp < 0)
-	{
-	    locative = &(p->left);
-	    p = p->left;
-	}
-	else
-	{
-	    locative = &(p->right);
-	    p = p->right;
-	}
+	else if(cmp < 0) AssignLocative(P,p,p->left);
+	else AssignLocative(P,p,p->right);
     }
 
     p = (BINTREENODE*) Calloc(1,sizeof(BINTREENODE));
     p->key = tree->copyKey(key);
     p->info = tree->copyInfo(info);
     p->left = p->right = NULL;
-    *locative = p;
+    *P = p;
     tree->n++; assert(tree->n);
     tree->physical_n++; assert(tree->physical_n);
 
@@ -89,22 +83,14 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 
 Boolean BinTreeDelete(BINTREE *tree, foint key)
 {
-    BINTREENODE *p = tree->root, **locative = &(tree->root);
+    BINTREENODE *p = tree->root, **P = &(tree->root);
     while(p)
     {
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0)
 	    break;
-	else if(cmp < 0)
-	{
-	    locative = &(p->left);
-	    p = p->left;
-	}
-	else
-	{
-	    locative = &(p->right);
-	    p = p->right;
-	}
+	else if(cmp < 0) AssignLocative(P,p,p->left);
+	else AssignLocative(P,p,p->right);
     }
     if(!p) return false;
 
@@ -112,9 +98,9 @@ Boolean BinTreeDelete(BINTREE *tree, foint key)
 
     if(p->left && p->right) // can't properly delete, so just mark as deleted and it'll go away when rebalance happens
 	p->deleted = true;
-    else if(p->left)  *locative = p->left;
-    else if(p->right) *locative = p->right;
-    else *locative = NULL;
+    else if(p->left)  *P = p->left;
+    else if(p->right) *P = p->right;
+    else *P = NULL;
 
     if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
 	assert(tree->physical_n > 0);
