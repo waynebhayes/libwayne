@@ -35,10 +35,9 @@ BINTREE *BinTreeAlloc(pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeK
 void BinTreeInsert(BINTREE *, foint key, foint info); // replaces info if the key already exists
 
 /* O(log n); returns false if failure, and true if found and then assigns to *pInfo if *pInfo is non-NULL */
-Boolean BinTreeLookup(BINTREE *, foint key, foint *pInfo);
-
-// O(log n), returns true if deleted successfully, false if item not found.
-Boolean BinTreeDelete(BINTREE *, foint key);
+Boolean BinTreeLookDel(BINTREE *, foint key, foint *pInfo);
+#define BinTreeLookup(t,k,p) BinTreeLookDel((t),(k),(p))
+#define BinTreeDelete(t,k)   BinTreeLookDel((t),(k),(foint*)1)
 
 /*
 ** BinTreeTraverse: Traverse a binary tree, calling your function pointer (pFointTraversalFcn) on each

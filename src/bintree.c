@@ -81,65 +81,50 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 }
 
 
-Boolean BinTreeDelete(BINTREE *tree, foint key)
-{
-    BINTREENODE *p = tree->root, **P = &(tree->root);
-    while(p)
-    {
-	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0)
-	    break;
-	else if(cmp < 0) AssignLocative(P,p,p->left);
-	else AssignLocative(P,p,p->right);
-    }
-    if(!p) return false;
-
-    // At this point, p points to the node we want to delete. If either child is NULL, then the other child moves up.
-
-    if(p->left && p->right) // can't properly delete, so just mark as deleted and it'll go away when rebalance happens
-	p->deleted = true;
-    else if(p->left)  *P = p->left;
-    else if(p->right) *P = p->right;
-    else *P = NULL;
-
-    if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
-	assert(tree->physical_n > 0);
-	tree->physical_n--;
-	tree->freeKey(p->key);
-	tree->freeInfo(p->info);
-	Free(p);
-    }
-
-    assert(tree->n > 0); tree->n--;
-    return true;
-}
-
-
-Boolean BinTreeLookup(BINTREE *tree, foint key, foint *pInfo)
+Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 {
     int depth=0;
-    BINTREENODE *p = tree->root;
+    BINTREENODE *p = tree->root, **P = &(tree->root);
     while(p)
     {
 	++depth;
 	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0)
-	{
-	    if(p->deleted) return false;
+	if(cmp == 0) {
+	    if((long)pInfo==1) break; // delete the element
 	    if(pInfo) *pInfo = p->info;
 	    return true;
 	}
-	if(cmp < 0)
-	    p = p->left;
-	else
-	    p = p->right;
+	else if(cmp < 0) AssignLocative(P,p,p->left);
+	else AssignLocative(P,p,p->right);
     }
-    unsigned oldSum = tree->depthSum;
-    tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
-    ++tree->depthSamples; assert(tree->depthSamples > 0);
-    double meanDepth = tree->depthSum/(double)tree->depthSamples;
-    if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
-    return false;
+    if(!p) { // element not found, nothing deleted. Check depth.
+	unsigned oldSum = tree->depthSum;
+	tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
+	++tree->depthSamples; assert(tree->depthSamples > 0);
+	double meanDepth = tree->depthSum/(double)tree->depthSamples;
+	if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
+	return false;
+    }
+
+    // At this point, we know the key has been found.
+    if((long)pInfo == 1) { // delete the element
+	// p points to the node we want to delete. If either child is NULL, then the other child moves up.
+	if(p->left && p->right) // can't properly delete, so just mark as deleted and it'll go away when rebalance happens
+	    p->deleted = true;
+	else if(p->left)  *P = p->left;
+	else if(p->right) *P = p->right;
+	else *P = NULL;
+
+	if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
+	    assert(tree->physical_n > 0);
+	    tree->physical_n--;
+	    tree->freeKey(p->key);
+	    tree->freeInfo(p->info);
+	    Free(p);
+	}
+	assert(tree->n > 0); tree->n--;
+    }
+    return true;
 }
 
 static Boolean BinTreeTraverseHelper ( BINTREENODE *p, pFointTraverseFcn f)

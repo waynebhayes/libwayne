@@ -20,20 +20,29 @@ typedef struct _hTree
 {
     BINTREE *tree;
     unsigned char depth; // we're going to assume it's less than 255 layers deep, OK?
+    pCmpFcn cmpKey;
+    pFointCopyFcn copyKey, copyInfo;
+    pFointFreeFcn freeKey, freeInfo;
     //int n; // total number of elements across all sub-trees.
 } HTREE;
 
 /*-----------   Function Prototypes  -----------*/
 
-HTREE *HTreeAlloc(int depth); // Allocate an HTREE of specified depth.
+HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeKey,
+    pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
 // key is an array with exactly "depth" elements, info is what you want to put at the lowest level.
-void HTreeInsert(HTREE *, char *keys[], foint info);
+void HTreeInsert(HTREE *, foint keys[], foint info);
 
-Boolean HTreeLookup(HTREE *, char *keys[], foint *pInfo); // as above, and the lowest level info is returned if it exists.
+// implements both lookup and delete: if not found, return false. Otherwise, if (int)pInfo==1, delete the element.
+// Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
+Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
+#define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
+#define HTreeDelete(h,k)   HTreeLookDel((h),(k),(pInfo*)1)
 
-// number of elements in trees down the hierarchy along key path; returns number of sizes[] we managed to fill.
-int HTreeSizes(HTREE *, char *keys[], int sizes[]);
+// number of elements in trees down the hierarchy along key path; returns number of sizes[] we managed to fill,
+// which should be equal to depth.
+int HTreeSizes(HTREE *, foint keys[], int sizes[]);
 
 void HTreeFree(HTREE *);
 

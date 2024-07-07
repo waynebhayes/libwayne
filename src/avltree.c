@@ -132,54 +132,42 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 }
 
 
-Boolean AvlTreeDelete(AVLTREE *tree, foint key)
+// if pInfo is 1, delete the element; NULL, just return Boolean if found; otherwise populate.
+Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
 {
     AVLTREENODE *p = tree->root, **P = &(tree->root);
     while(p)
     {
 	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0)
-	    break;
+	if(cmp == 0) {
+	    if((long)pInfo == 1) break; // delete the element
+	    if(pInfo) *pInfo = p->info; // lookup with assign
+	    return true;
+	}
 	else if(cmp < 0) AssignLocative(P,p,p->left);
 	else             AssignLocative(P,p,p->right);
     }
     if(!p) return false; // node not found, nothing deleted
-    assert(tree->n > 0);
+    // at this point we know the key has been found
+    if((long)pInfo == 1) { // delete the element
+	assert(tree->n > 0);
 
-    // At this point, p points to the node we want to delete. If either child is NULL, then the other child moves up.
+	// At this point, p points to the node we want to delete. If either child is NULL, then the other child moves up.
 
-    if(p->left && p->right) *P = p->right; // two children, so replace node by its inorder successor
-    else if(p->left)  *P = p->left;
-    else if(p->right) *P = p->right;
-    else *P = NULL;
+	if(p->left && p->right) *P = p->right; // two children, so replace node by its inorder successor
+	else if(p->left)  *P = p->left;
+	else if(p->right) *P = p->right;
+	else *P = NULL;
 
-    tree->freeKey(p->key);
-    tree->freeInfo(p->info);
-    Free(p);
+	tree->freeKey(p->key);
+	tree->freeInfo(p->info);
+	Free(p);
 
-    tree->n--;
+	tree->n--;
+    }
     return true;
 }
 
-
-Boolean AvlTreeLookup(AVLTREE *tree, foint key, foint *pInfo)
-{
-    AVLTREENODE *p = tree->root;
-    while(p)
-    {
-	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0)
-	{
-	    if(pInfo) *pInfo = p->info;
-	    return true;
-	}
-	if(cmp < 0)
-	    p = p->left;
-	else
-	    p = p->right;
-    }
-    return false;
-}
 
 static Boolean AvlTreeTraverseHelper ( AVLTREENODE *p, pFointTraverseFcn f)
 {
