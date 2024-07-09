@@ -12,11 +12,11 @@ extern "C" {
 // For now, to keep things simple, we assume the key is *always* a string, and the data is always a simple foint.
 // That way all key operations use strcmp, strdup, and free.
 
-#ifndef USE_AVL
-#define USE_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
+#ifndef HTREE_USES_AVL
+#define HTREE_USES_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
 #endif
 
-#if USE_AVL
+#if HTREE_USES_AVL
 #include "avltree.h"
 #define TREETYPE AVLTREE
 #define TreeAlloc AvlTreeAlloc
