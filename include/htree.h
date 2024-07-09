@@ -12,13 +12,35 @@ extern "C" {
 // For now, to keep things simple, we assume the key is *always* a string, and the data is always a simple foint.
 // That way all key operations use strcmp, strdup, and free.
 
+#ifndef USE_AVL
+#define USE_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
+#endif
+
+#if USE_AVL
+#include "avltree.h"
+#define TREETYPE AVLTREE
+#define TreeAlloc AvlTreeAlloc
+#define TreeInsert AvlTreeInsert
+#define TreeLookup AvlTreeLookup
+#define TreeLookDel AvlTreeLookDel
+#define TreeTraverse AvlTreeTraverse
+#define TreeFree AvlTreeFree
+#else
 #include "bintree.h"
+#define TREETYPE BINTREE
+#define TreeAlloc BinTreeAlloc
+#define TreeInsert BinTreeInsert
+#define TreeLookup BinTreeLookup
+#define TreeLookDel BinTreeLookDel
+#define TreeTraverse BinTreeTraverse
+#define TreeFree BinTreeFree
+#endif
 
 /*-------------------  Types  ------------------*/
 
 typedef struct _hTree
 {
-    BINTREE *tree;
+    TREETYPE *tree;
     unsigned char depth; // we're going to assume it's less than 255 layers deep, OK?
     pCmpFcn cmpKey;
     pFointCopyFcn copyKey, copyInfo;

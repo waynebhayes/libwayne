@@ -2,7 +2,7 @@
 extern "C" {
 #endif
 #include "misc.h"
-#include "htree.h" // bintree is included there
+#include "htree.h" // bintree or avltree is included there (as appropriate)
 
 /*-------------------  Types  ------------------*/
 
@@ -15,24 +15,24 @@ HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFc
     // Be nice and create the top-level tree.
     h->cmpKey = cmpKey; h->copyKey = copyKey; h->freeKey = freeKey;
     h->copyInfo = copyInfo; h->freeInfo = freeInfo;
-    h->tree = BinTreeAlloc(cmpKey, copyKey, freeKey, copyInfo, freeInfo);
+    h->tree = TreeAlloc(cmpKey, copyKey, freeKey, copyInfo, freeInfo);
     return h;
 }
 
-static void HTreeInsertHelper(HTREE *h, int currentDepth, BINTREE *tree, foint keys[], foint data)
+static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint keys[], foint data)
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-	BinTreeInsert(tree, keys[currentDepth], data);
+	TreeInsert(tree, keys[currentDepth], data);
     else {
 	// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,
 	// so to find the next tree we use the key at this level to *look up* the binary tree at the next level down
 	foint nextLevel;
-	BINTREE *nextTree;
-	if(!BinTreeLookup(tree, keys[currentDepth], &nextLevel)) {
-	    nextTree = BinTreeAlloc(h->cmpKey, h->copyKey, h->freeKey, h->copyInfo, h->freeInfo);
+	TREETYPE *nextTree;
+	if(!TreeLookup(tree, keys[currentDepth], &nextLevel)) {
+	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, h->copyInfo, h->freeInfo);
 	    nextLevel.v = nextTree;
-	    BinTreeInsert(tree, keys[currentDepth], nextLevel);
+	    TreeInsert(tree, keys[currentDepth], nextLevel);
 	}
 	else
 	    nextTree = nextLevel.v;
@@ -48,15 +48,15 @@ void HTreeInsert(HTREE *h, foint keys[], foint data)
     HTreeInsertHelper(h, 0, h->tree, fkeys, data);
 }
 
-static Boolean HTreeLookDelHelper(HTREE *h, int currentDepth, BINTREE *tree, foint keys[], foint *pData)
+static Boolean HTreeLookDelHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint keys[], foint *pData)
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we've hit the lowest level tree; its data elements are the final elements.
-	return BinTreeLookDel(tree, keys[currentDepth], pData);
+	return TreeLookDel(tree, keys[currentDepth], pData);
     else {
 	foint nextLevel;
-	BINTREE *nextTree;
-	if(!BinTreeLookup(tree, keys[currentDepth], &nextLevel))
+	TREETYPE *nextTree;
+	if(!TreeLookup(tree, keys[currentDepth], &nextLevel))
 	    return false;
 	else
 	    nextTree = nextLevel.v;
@@ -71,7 +71,7 @@ Boolean HTreeLookDel(HTREE *h, foint keys[], foint *pData)
     return HTreeLookDelHelper(h, 0, h->tree, fkeys, pData);
 }
 
-static int HTreeSizesHelper(HTREE *h, int currentDepth, BINTREE *tree, foint keys[], int sizes[])
+static int HTreeSizesHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint keys[], int sizes[])
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     sizes[currentDepth] = tree->n;
@@ -79,8 +79,8 @@ static int HTreeSizesHelper(HTREE *h, int currentDepth, BINTREE *tree, foint key
 	return 1;
     else {
 	foint nextLevel;
-	BINTREE *nextTree;
-	if(!BinTreeLookup(tree, keys[currentDepth], &nextLevel))
+	TREETYPE *nextTree;
+	if(!TreeLookup(tree, keys[currentDepth], &nextLevel))
 	    return 1;
 	else
 	    nextTree = nextLevel.v;
@@ -96,25 +96,25 @@ int HTreeSizes(HTREE *h, foint keys[], int sizes[])
 }
 
 
-static void HTreeFreeHelper(HTREE *h, int currentDepth, BINTREE *tree);
+static void HTreeFreeHelper(HTREE *h, int currentDepth, TREETYPE *tree);
 static HTREE *_TraverseH;
 static int _TraverseDepth;
 static void TraverseFree(foint key, foint data) {
     assert(_TraverseDepth < _TraverseH->depth);
-    BINTREE *t = data.v;
+    TREETYPE *t = data.v;
     int depth = _TraverseDepth;
     HTreeFreeHelper(_TraverseH, _TraverseDepth+1, t);
     _TraverseDepth = depth;
 }
 
-static void HTreeFreeHelper(HTREE *h, int currentDepth, BINTREE *tree)
+static void HTreeFreeHelper(HTREE *h, int currentDepth, TREETYPE *tree)
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-	BinTreeFree(tree);
+	TreeFree(tree);
     else {
 	_TraverseH = h; _TraverseDepth = currentDepth;
-	BinTreeTraverse(tree, (pFointTraverseFcn) TraverseFree);
+	TreeTraverse(tree, (pFointTraverseFcn) TraverseFree);
     }
 }
 

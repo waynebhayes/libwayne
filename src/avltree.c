@@ -140,7 +140,7 @@ Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
     {
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0) {
-	    if((long)pInfo == 1) break; // delete the element
+	    if((long)pInfo==1) break; // delete the element
 	    if(pInfo) *pInfo = p->info; // lookup with assign
 	    return true;
 	}
@@ -151,9 +151,7 @@ Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
     // at this point we know the key has been found
     if((long)pInfo == 1) { // delete the element
 	assert(tree->n > 0);
-
 	// At this point, p points to the node we want to delete. If either child is NULL, then the other child moves up.
-
 	if(p->left && p->right) *P = p->right; // two children, so replace node by its inorder successor
 	else if(p->left)  *P = p->left;
 	else if(p->right) *P = p->right;

@@ -91,11 +91,11 @@ Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0) {
 	    if((long)pInfo==1) break; // delete the element
-	    if(pInfo) *pInfo = p->info;
+	    if(pInfo) *pInfo = p->info; // lookup with assign
 	    return true;
 	}
 	else if(cmp < 0) AssignLocative(P,p,p->left);
-	else AssignLocative(P,p,p->right);
+	else             AssignLocative(P,p,p->right);
     }
     if(!p) { // element not found, nothing deleted. Check depth.
 	unsigned oldSum = tree->depthSum;
