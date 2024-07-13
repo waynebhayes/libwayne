@@ -9,8 +9,7 @@ extern "C" {
 // are associated only with K. And so it goes down the hierarchy.
 // The hierarchy has a fixed depth, and when you insert or lookup an element, you specify a depth you wish to go,
 // and an array of keys with length equal to the depth you're searching.
-// For now, to keep things simple, we assume the key is *always* a string, and the data is always a simple foint.
-// That way all key operations use strcmp, strdup, and free.
+// Both keys and data are foints; the user is responsible for knowing what's actually stored.
 
 #ifndef HTREE_USES_AVL
 #define HTREE_USES_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
