@@ -19,8 +19,13 @@ int main(void) {
     PrintSz(int);
     PrintSz(long);
     PrintSz(long long);
+    PrintSz(float);
+    PrintSz(double);
 #if __GLIBCXX_TYPE_INT_N_0 == 128
     PrintSz(__int128);
+#endif
+#if 0
+    PrintSz(void*);
 #endif
     return 0;
 }

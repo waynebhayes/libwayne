@@ -88,8 +88,11 @@ typedef union _voidInt {
     int i, i_array[sizeof(long)/sizeof(int)];
     unsigned int ui, ui_array[sizeof(long)/sizeof(unsigned int)];
     float f;
-    // double and (long long) are twice as long as everything else, so leave them out unless necessary.
-    // double d;
+    // On a 32-bit machine, double and (long long) are twice as long as everything else, so leave them out.
+    // However, on 64-bit machines, long is 64 bits which is the same as double. So include them.
+#if sizeof_long >= sizeof_double
+    double d;
+#endif
     // long long ll;
 } foint;
 
