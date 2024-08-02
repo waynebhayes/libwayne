@@ -30,11 +30,15 @@ libwayne_all:
 	$(MAKE) -j$(CORES) 'PG=-pg' debug && mv libwayne-g.a src/libwayne-pg-g/libwayne-pg-g.a
 	$(MAKE) opt_clean
 	$(MAKE) -j$(CORES) 'PG=-pg' opt && mv libwayne.a src/libwayne-pg/libwayne-pg.a
-	# Make the non-pg versions (for profiling)
+	$(MAKE) ndebug_clean
+	$(MAKE) -j$(CORES) 'PG=-pg' ndebug && mv libwayne-nd.a src/libwayne-pg/libwayne-pg-nd.a
+	# Make the non-pg versions (no profiling)
 	$(MAKE) debug_clean
 	$(MAKE) -j$(CORES) debug && mv libwayne-g.a src/libwayne-g/libwayne-g.a
 	$(MAKE) opt_clean
 	$(MAKE) -j$(CORES) opt && mv libwayne.a src/libwayne/libwayne.a
+	$(MAKE) ndebug_clean
+	$(MAKE) -j$(CORES) ndebug && mv libwayne-nd.a src/libwayne/libwayne-nd.a
 	cp src/libwayne*/*.a src && cp src/*.a .
 
 testlib:
@@ -46,6 +50,9 @@ opt:
 debug:
 	$(MAKE) 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' libwayne
 
+ndebug:
+	$(MAKE) 'OPT=-O2' 'DEBUG=-DNDEBUG=1' 'LIBOUT=libwayne-nd.a' libwayne
+
 libwayne:
 	$(MAKE) $(LIBOUT)
 	# add misc.o below since adding nothing fails on Mac M1, and misc.o is pretty much necessary for libwayne to work.
@@ -56,6 +63,9 @@ debug_clean:
 
 opt_clean:
 	@$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' raw_clean
+
+ndebug_clean:
+	@$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne-nd.a' raw_clean
 
 raw_clean:
 	rm -f make-successful

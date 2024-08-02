@@ -59,9 +59,10 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp);
 
-#if NDEBUG
-#define TinyGraphAreConnected(G,i,j) TSetIn((G)->A[i],(j))
-#endif
+// Doesn't work for some reason with NDEBUG. GRRR.
+// #ifdef NDEBUG
+// #define TinyGraphAreConnected(G,i,j) TSetIn((G)->A[i],(j))
+// #endif
 #ifndef TinyGraphAreConnected
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
 #endif

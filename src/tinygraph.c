@@ -90,8 +90,10 @@ Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j)
 {
     if(TSetIn(G->A[i],j))
     {
+#if PARANOID_ASSERTS
 	if(i==j) assert(G->selfLoops);
 	else assert(TSetIn(G->A[j],i));
+#endif
 	return true;
     }
     else

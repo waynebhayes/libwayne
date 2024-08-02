@@ -349,7 +349,9 @@ GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
 
 static Boolean _rawConnected(GRAPH *G, int i, int j)
 {
+#if PARANOID_ASSERTS
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
+#endif
     if(G->sparse>=true)
     {
 #if SORT_NEIGHBORS
@@ -377,8 +379,10 @@ static Boolean _rawConnected(GRAPH *G, int i, int j)
     {
 	if(SetIn(G->A[i],j))
 	{
+#if PARANOID_ASSERTS
 	    if(j!=i && !SetIn(G->A[j],i))
 		Fatal("SetIn(%d,%d)=%ld, SetIn(%d,%d)=%ld\n", i,j,SetIn(G->A[i],j), j,i,SetIn(G->A[j],i));
+#endif
 	    return true;
 	}
 	else

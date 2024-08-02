@@ -78,7 +78,12 @@ void EnableMemDebug( const char *file, const int line );
 ** 3. DO NOT mix calls to Malloc and Free with calls to the standard C library
 **    functions malloc and free.
 */
-#ifndef NDEBUG
+#ifdef NDEBUG
+#define Malloc malloc
+#define Strdup strdup
+#define Calloc calloc
+#define Realloc realloc
+#else
 // Do NOT call ANY of these functions directly; use the macros below
 void *Malloc_fl( const size_t size, const char *file, const int line ); 
 char *Strdup_fl(char *s, const char *file, const int line ); 
