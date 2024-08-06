@@ -22,7 +22,11 @@ int main(int argc, char *argv[])
 	printf("Inserting %s %s %s = %d\n", keys[0], keys[1], keys[2], data.i);
 	HTreeInsert(h, (foint*)keys, (foint)data);
 	foint found;
-	assert(HTreeLookup(h, (foint*)keys, &found));
+	if(!HTreeLookup(h, (foint*)keys, &found)) {
+	    fprintf(stderr, "For key ");
+	    for(i=0;i<DEPTH;i++) fprintf(stderr, "[%s]", keys[i]);
+	    Fatal("HTreeLookup couldn't find an entry");
+	}
 	assert(found.i == data.i);
     }
     fclose(fp);

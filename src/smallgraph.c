@@ -81,9 +81,9 @@ void SmallGraphPrintAdjMatrix(FILE *fp, SMALL_GRAPH *G)
 
 SMALL_GRAPH *SmallGraphReadAdjMatrix(FILE *fp)
 {
-    int i,j,n;
+    int i,j,n=-1;
     SMALL_GRAPH *G;
-    assert(1==fscanf(fp, "%d", &n));
+    assert(1==fscanf(fp, "%d", &n) && n>=0);
     G = SmallGraphAlloc(n);
     for(i=0; i<n; i++) for(j=0; j<n; j++)
     {

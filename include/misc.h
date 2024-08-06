@@ -20,12 +20,12 @@ extern "C" {
 #define M_PI 3.14159265358979323846
 #endif
 
-#ifndef PARANOID_ASSERTS
 #ifdef NDEBUG
-#define PARANOID_ASSERTS 0  // turn OFF copious assert checking --- slows down execution significantly
+ #define PARANOID_ASSERTS 0  // turn OFF copious assert checking --- slows down execution significantly
 #else
-#define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
-#endif
+ #ifndef PARANOID_ASSERTS
+ #define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
+ #endif
 #endif
 
 #define MAX(a,b) ((a)>(b)?(a):(b))

@@ -622,6 +622,7 @@ double StatACMStudentZ2P_D(double t, double df)
       y + 3.0) / b + 1.0) * sqrt(y);
   return StatACMGaussZ2P(-y);
 } // StatACMStudentZ2P_D (double df)
+
 double StatACMStudentZ2P(double t, int df)
 {
   // adapted from ACM algorithm 395
@@ -682,6 +683,7 @@ double StatACMStudentZ2P(double t, int df)
   }
 
   assert(false);  // shouldn't get here
+  return -1;
 } // StatACMStudentZ2P (int df)
 
 

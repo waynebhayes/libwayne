@@ -725,7 +725,8 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
 	for(i=0; i<numNodes;i++)
 	{
 	    foint info;
-	    assert(BinTreeLookup(nameDict, (foint)names[i], &info));
+	    if(!BinTreeLookup(nameDict, (foint)names[i], &info))
+		Fatal("couldn't find int for name '%s'", names[i]);
 	    assert(i == info.i);
 	    //printf("%d is %s which in turn is %d\n", i, names[i], info.i);
 	}
@@ -754,7 +755,8 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
 int GraphNodeName2Int(GRAPH *G, char *name)
 {
     foint info;
-    assert(BinTreeLookup(G->nameDict, (foint)name, &info));
+    if(!BinTreeLookup(G->nameDict, (foint)name, &info))
+	Fatal("BinTreeLookup couldn't find an int for name '%s'", name);
     return info.i;
 }
 
