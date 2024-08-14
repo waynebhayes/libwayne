@@ -1,4 +1,5 @@
 CC=gcc
+CXX=g++ -std=c++11 
 all: mt19937 threads
 
 mt19937: MTGenerator.hpp test-mt.c mt19937.cpp mt19937.h
