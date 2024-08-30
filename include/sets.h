@@ -51,7 +51,7 @@ typedef struct _setType {
 	*list, // initially make the set an unsorted array of integers... NULL if we use BITVEC
 	cardinality, // logical number of elements in the set (whether list or BITVEC)
 	maxElem; // maximum number of elements the set can store (change only using SetResize).
-    unsigned short
+    unsigned
 	listSize, // physical list size, starts at SET_MIN_LIST and increases until crossover, then it's reset to zero
 	crossover, // size (in bytes) at which BITVEC representation becomes more space efficient than unordered list
 	numSorted; // the number of elements of the list that are sorted, ie., sorted from 0 to (numSorted-1) inclusive.
@@ -91,7 +91,7 @@ SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
 SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */
 SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
 unsigned SetCardinality(const SET *A);    /* returns non-negative integer */
-unsigned short SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
+unsigned SetComputeCrossover(unsigned n); // returns the number of elements when BITVEC uses less RAM than an array
 Boolean SetEq(SET *set1, SET *set2);
 Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */
 #define SetSupersetEq(spr,sb) SetSubsetEq((sb),(spr))

@@ -34,7 +34,7 @@ Boolean SetStartup(void)
 }
 
 
-unsigned short SetComputeCrossover(unsigned n)
+unsigned SetComputeCrossover(unsigned n)
 {
     static unsigned prevN;
     static unsigned prevResult;
@@ -56,14 +56,14 @@ unsigned short SetComputeCrossover(unsigned n)
     }
     prevResult = MAX((unsigned)mid,SET_MIN_LIST);
     //fprintf(stderr, "n=%u CROSSOVER %u\n", n,prevResult);
-    static const unsigned max_crossover=65535;
+    static const unsigned max_crossover=(unsigned)(-1);
     if(prevResult > max_crossover) {
 	static char warned;
 	if(!warned) Warning("SET datatype can't handle list of %u elements; setting crossover to %u", prevResult, max_crossover);
 	warned=1;
 	prevResult = max_crossover;
     }
-    return (unsigned short)prevResult;
+    return (unsigned)prevResult;
 }
 
 static SET *_allocaSet;
