@@ -20,9 +20,6 @@ extern "C" {
 #define M_PI 3.14159265358979323846
 #endif
 
-#ifndef NDEBUG
-#define NDEBUG 0
-#endif
 #ifndef PARANOID_ASSERTS
 #define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
 #endif

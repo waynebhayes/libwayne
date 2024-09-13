@@ -14,7 +14,8 @@ TINY_GRAPH *TinyGraphAlloc(unsigned int n)
 {
     static Boolean startup = 1;
     TINY_GRAPH *G = Calloc(1, sizeof(TINY_GRAPH));
-    assert(n <= MAX_TSET);
+    // Note: an assert(n<=MAX_TSET) isn't enough, because it can be turned off with NDEBUG. We need to be CERTAIN.
+    if(n > MAX_TSET) Fatal("TinyGraphAlloc can only handle up to %d nodes, not %d", MAX_TSET, n);
     if(startup)
     {
 	startup = 0;
