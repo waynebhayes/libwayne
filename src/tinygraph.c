@@ -77,11 +77,11 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
     if(!TinyGraphAreConnected(G, i, j))
 	return G;
     TSetDelete(G->A[i], j);
-    --G->degree[i];
+    G->degree[i]--;
     if(j==i) assert(G->selfLoops);
     else {
 	TSetDelete(G->A[j], i);
-	--G->degree[j];
+	G->degree[j]--;
     }
     return G;
 }
@@ -136,6 +136,7 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp)
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
 {
     int i,j;
+    assert(Gbar != G); // can't handle complementing a graph to itself
     if(!Gbar)
 	Gbar = TinyGraphAlloc(G->n);
     Gbar->selfLoops = G->selfLoops;
@@ -187,6 +188,10 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
     {
 	dest->A[i] = G1->A[i];
 	dest->degree[i] = G1->degree[i];
+    }
+    for(;i < MAX_TSET; i++) {
+	dest->A[i] = TSET_NULLSET;
+	dest->degree[i] = 0;
     }
 
     return dest;
@@ -262,9 +267,9 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
 }
 
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed) {
-    TSET visited = 0;
+    TSET visited = TSET_NULLSET;
     TinyGraphDFSConnectedHelper(G, seed, &visited);
-    return (G->n <= TSetCardinality(visited));
+    return (G->n == TSetCardinality(visited));
 }
 
 void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {

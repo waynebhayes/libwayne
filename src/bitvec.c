@@ -50,13 +50,13 @@ static unsigned DumbCountBits(unsigned long i)
 Boolean BitvecStartup(void)
 {
     if(bitvecBits_1)
-	return 0;
+	return false;
     assert(sizeof(BITVEC_SEGMENT) == 4);	// we assume 32-bit ints
     bitvecBits_1 = bitvecBits-1;
     unsigned long i;
     for(i=0; i<BITVEC_LOOKUP_SIZE; i++)
 	lookupBitCount[i] = DumbCountBits(i);
-    return 1;
+    return true;
 }
 
 

@@ -790,15 +790,18 @@ unsigned TSetToArray(unsigned int *array, TSET set)
 TSET TSetFromArray(int n, unsigned int *array)
 {
     TSET set;
+    assert(n>=0 && n<=MAX_TSET);
     TSetEmpty(set);
     while(n > 0)
 	TSetAdd(set, array[--n]);
+    assert(n==0);
     return set;
 }
 
 char *TSetToString(int len, char s[], TSET set)
 {
     int i;
+    assert(len>=0 && len <=MAX_TSET);
     for(i=0; i<len-1; i++)
 	s[i] = '0' + !!TSetIn(set, i);
     s[len-1] = '\0';
