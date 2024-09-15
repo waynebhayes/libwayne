@@ -173,7 +173,7 @@ Boolean SSetDictIn(SSETDICT*, SSET);
 void SSetDictFree(SSETDICT*);
 
 #ifndef TINY_SET_SIZE
-#define TINY_SET_SIZE 16
+#define TINY_SET_SIZE 8
 #endif
 
 #if TINY_SET_SIZE >= 64
