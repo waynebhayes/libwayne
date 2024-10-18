@@ -22,9 +22,9 @@ all:
 	@if [ -f do-not-make ]; then echo "not making; assuming they already exist"; ls -l libwayne*.a; else /bin/rm -f *.a; $(MAKE) libwayne_all; fi
 	$(MAKE) testlib
 
-libwayne_all:
+libwayne_all: parallel
 	/bin/rm -f *.a
-	$(CC) -o intSizes intSizes.c && ./intSizes > include/intSizes.h
+	$(CC) -o bin/intSizes intSizes.c && ./bin/intSizes > include/intSizes.h
 	# Make the pg versions (for profiling)
 	$(MAKE) debug_clean
 	$(MAKE) -j$(CORES) 'PG=-pg' debug && mv libwayne-g.a src/libwayne-pg-g/libwayne-pg-g.a
@@ -40,6 +40,9 @@ libwayne_all:
 	$(MAKE) ndebug_clean
 	$(MAKE) -j$(CORES) ndebug && mv libwayne-nd.a src/libwayne/libwayne-nd.a
 	cp src/libwayne*/*.a src && cp src/*.a .
+
+parallel: parallel.c
+	$(CC) -o bin/parallel parallel.c
 
 testlib:
 	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity graph-weighted; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; if [ -f $$x.in ]; then cat $$x.in | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; fi; /bin/rm -f /tmp/$$x.test$$$$); done
