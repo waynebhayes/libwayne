@@ -47,7 +47,7 @@ void Fatal(char *s)
 int GetLoadAv(double minutes) {
 	// The three load averages are over 1, 5, and 15 minutes, respectively.
 	// Linux uload[1];ses "load average:", Darwin uses "load averages:" (with an 's'), thus the "s*" regexp.
-	FILE *fp = popen("uptime | tee /dev/tty | sed 's/.*load averages*: //' -e 's/,//g'", "r");
+	FILE *fp = popen("uptime | tee /dev/tty | sed 's/.*load averages*: //' | sed 's/,//g'", "r");
 	int i; float load[3];
 	for(i=0;i<3;i++) fscanf(fp, "%g", &load[i]);
 	// Take a weigthed average based on minutes since last check
