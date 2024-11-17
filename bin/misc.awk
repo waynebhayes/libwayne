@@ -825,6 +825,7 @@ function LS_R2(  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
     return _LS_SUMres2;
 }
 function LS_Variance(  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
+    if(1*_LS_n<2) return 0;
     LS_Compute();
     return (_LS_SUMres2 - _LS_SUMres*_LS_SUMres/_LS_n)/(_LS_n-1);
 }

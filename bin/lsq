@@ -4,7 +4,7 @@ EXEDIR=`dirname "$0"`; BASENAME=`basename "$0" .sh`; TAB='	'; NL='
 '
 #################### ADD YOUR USAGE MESSAGE HERE, and the rest of your code after END OF SKELETON ##################
 USAGE="USAGE: no command-line args; space-separated pairs of numbers on stdin; output is
-Res^2	variance	N	slope	y_intercept	x_intercept"
+ResSq	variance	N	slope	y_intercept	x_intercept"
 
 ################## SKELETON: DO NOT TOUCH CODE HERE
 # check that you really did add a usage message above
