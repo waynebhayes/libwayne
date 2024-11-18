@@ -791,47 +791,47 @@ function AUPR_FPR(name,  FP, TN){FP=_AUPR_FP[name];TN=_AUPR_TN[name]; return FP/
 # REVISED: RYL (converted to C, 12/11/96)
 # Converted to awk: Wayne Hayes (2020-March-09)
 
-function LS_Reset() {_LS_valid=_LS_SUMx=_LS_SUMy=_LS_SUMxy=_LS_SUMxx=_LS_n=0; delete _LS_x; delete _LS_y}
-function LS_Sample(x,y) {_LS_valid=0;_LS_SUMx+=x;_LS_SUMy+=y;_LS_SUMxy+=x*y;_LS_SUMxx+=x*x;_LS_x[_LS_n]=x;_LS_y[_LS_n]=y;++_LS_n}
-function LS_Slope(){_LS_slope=(_LS_SUMx*_LS_SUMy - _LS_n*_LS_SUMxy )/( _LS_SUMx*_LS_SUMx - _LS_n*_LS_SUMxx)
-    return _LS_slope
+function LS_Reset(name) {_LS_valid[name]=_LS_SUMx[name]=_LS_SUMy[name]=_LS_SUMxy[name]=_LS_SUMxx[name]=_LS_n[name]=0; delete _LS_x[name]; delete _LS_y[name]}
+function LS_Sample(name,x,y) {_LS_valid[name]=0;_LS_SUMx[name]+=x;_LS_SUMy[name]+=y;_LS_SUMxy[name]+=x*y;_LS_SUMxx[name]+=x*x;_LS_x[name][_LS_n[name]]=x;_LS_y[name][_LS_n[name]]=y;++_LS_n[name]}
+function LS_Slope(name){_LS_slope[name]=(_LS_SUMx[name]*_LS_SUMy[name] - _LS_n[name]*_LS_SUMxy[name] )/( _LS_SUMx[name]*_LS_SUMx[name] - _LS_n[name]*_LS_SUMxx[name])
+    return _LS_slope[name]
 }
-function LS_Yintercept() { return ( _LS_SUMy - LS_Slope()*_LS_SUMx ) / _LS_n}
-function LS_Xintercept() { if(LS_Slope()) return -LS_Yintercept() / LS_Slope(); else return BIGNUM;}
-function LS_Predict(x) {
-    if(_LS_n>0 && (_LS_SUMx*_LS_SUMx - _LS_n*_LS_SUMxx) != 0) {
-	return LS_Slope()*x + LS_Yintercept();
+function LS_Yintercept(name) { return ( _LS_SUMy[name] - LS_Slope(name)*_LS_SUMx[name] ) / _LS_n[name]}
+function LS_Xintercept(name) { if(LS_Slope(name)) return -LS_Yintercept(name) / LS_Slope(name); else return BIGNUM;}
+function LS_Predict(name, x) {
+    if(_LS_n[name]>0 && (_LS_SUMx[name]*_LS_SUMx[name] - _LS_n[name]*_LS_SUMxx[name]) != 0) {
+	return LS_Slope(name)*x + LS_Yintercept(name);
     }
 }
 
-function LS_Compute(   slope,y_intercept,y_estimate,res,i) {
-    if(_LS_n && !_LS_valid) {
-	_LS_SUMres = 0;
-	_LS_SUMres2 = 0;
-	slope = LS_Slope();
-	y_intercept = LS_Yintercept();
-	for (i=0; i<_LS_n; i++) {
-	    y_estimate = slope*_LS_x[i] + y_intercept;
-	    res = _LS_y[i] - y_estimate;
-	    _LS_SUMres += res;
-	    _LS_SUMres2 += res*res;
+function LS_Compute(name,   slope,y_intercept,y_estimate,res,i) {
+    if(_LS_n[name] && !_LS_valid[name]) {
+	_LS_SUMres[name] = 0;
+	_LS_SUMres2[name] = 0;
+	slope = LS_Slope(name);
+	y_intercept = LS_Yintercept(name);
+	for (i=0; i<_LS_n[name]; i++) {
+	    y_estimate = slope*_LS_x[name][i] + y_intercept;
+	    res = _LS_y[name][i] - y_estimate;
+	    _LS_SUMres[name] += res;
+	    _LS_SUMres2[name] += res*res;
 	}
     }
-    return (_LS_valid=_LS_n); # automatically make it invalid if n=0
+    return (_LS_valid[name]=_LS_n[name]); # automatically make it invalid if n=0
 }
 
-function LS_R2(  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
-    LS_Compute();
-    return _LS_SUMres2;
+function LS_R2(name,  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
+    LS_Compute(name);
+    return _LS_SUMres2[name];
 }
-function LS_Variance(  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
-    if(1*_LS_n<2) return 0;
-    LS_Compute();
-    return (_LS_SUMres2 - _LS_SUMres*_LS_SUMres/_LS_n)/(_LS_n-1);
+function LS_Variance(name,  SUMres,SUMres2,slope,y_intercept,y_estimate,res,i) {
+    if(1*_LS_n[name]<2) return 0;
+    LS_Compute(name);
+    return (_LS_SUMres2[name] - _LS_SUMres[name]*_LS_SUMres[name]/_LS_n[name])/(_LS_n[name]-1);
 }
 
-function LS_MSR() {
-  return LS_R2()/_LS_n;
+function LS_MSR(name) {
+  return LS_R2(name)/_LS_n[name];
 }
 
 

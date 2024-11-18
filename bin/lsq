@@ -32,7 +32,7 @@ case "$1" in
 esac
 
 hawk 'BEGIN{OFS="\t"}
-    {LS_Sample($1,$2)}
+    {LS_Sample("",$1,$2)}
     END{
-	print LS_R2(),LS_Variance(), _LS_n, LS_Slope(), LS_Yintercept(), LS_Xintercept();
+	print LS_R2(""),LS_Variance(""), _LS_n[""], LS_Slope(""), LS_Yintercept(""), LS_Xintercept("");
     }' "$@"
