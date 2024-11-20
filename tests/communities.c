@@ -39,11 +39,17 @@ int CommunityEdgesIn(COMMUNITY *C) {
     int i, j, n = SetToArray(memberList, C->nodes);
     assert(n == C->n);
     int numEdges=0;
-    for(i=0; i<n; i++) for(j=i+1; j<n; j++) {
-	int u = memberList[i], v = memberList[j];
-	assert(u < C->G->n && v < C->G->n);
-	if(GraphAreConnected(C->G,u,v)) ++numEdges;
+    printf("CommunityEdgesIn: checking community with %d nodes: ", n);
+    for(i=0; i<n; i++) {
+	//printf("member %d=%d\n", i, memberList[i]);
+	for(j=i+1; j<n; j++) {
+	    int u = memberList[i], v = memberList[j];
+	    assert(u < C->G->n && v < C->G->n);
+	    if(GraphAreConnected(C->G,u,v)) ++numEdges;
+	}
     }
+    Free(memberList);
+    printf("numEdges %d\n", numEdges);
     return numEdges;
 }
 
@@ -70,6 +76,14 @@ double ScorePartition(PARTITION *P) {
 int main(int argc, char *argv[])
 {
     int i, j;
+    srand48(time(0));
+#if 0
+    for(i=0;i<10;i++) {
+	double r = drand48();
+	printf("%g\n", r);
+    }
+#endif
+
     Boolean sparse=false, supportNames = true;
     FILE *fp = Fopen(argv[1], "r"); // edge list file is given on the command line
     GRAPH *G = GraphReadEdgeList(fp, sparse, supportNames, false);
@@ -77,19 +91,19 @@ int main(int argc, char *argv[])
 
     PARTITION *P = PartitionAlloc(G);
 
-    double r = drand48();
-    while((r = drand48() < 10)) printf("%g ",r);
-    int numCommunities = r*G->n; // communities numbered 0 through numCommunities-1 inclusive
+    int numCommunities = 10; // communities numbered 0 through numCommunities-1 inclusive
     printf("Creating %d communities\n", numCommunities);
+
     P->n = numCommunities;
     for(i=0; i<G->n; i++) {
 	int which = (int)(drand48() * numCommunities);
 	CommunityAddNode(P->C[which], i);
-	printf("Node %d added to community %d\n", i, which);
+	// printf("%d->%d, ", i, which);
     }
+    //puts("");
 
-    for(i=0; i<numCommunities; i++)
-	printf("Community %d has %d in-edges\n", i, CommunityEdgesIn(P->C[i]));
+    for(i=0; i<numCommunities; i++) CommunityEdgesIn(P->C[i]);
+    puts("");
     double s = ScorePartition(P);
     printf("Partition score is %g\n", s);
 
