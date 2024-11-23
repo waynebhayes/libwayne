@@ -1,6 +1,8 @@
 #!/bin/bash
 # The options below turn on lots and lots of gcc warnings.
 export CC="gcc -Wno-pointer-sign"
+NL='
+'
 
 # --- you shouldn't need to touch anything below here
 
@@ -37,8 +39,7 @@ fi
 
 STACKSIZE=$(($CC -v 2>&1; uname -a) |
     awk '/CYGWIN/{print "-Wl,--stack,83886080"}/gcc-/{actualGCC=1}actualGCC&&/Darwin/{print "-Wl,-stack_size -Wl,0x5000000"}')
-LIBWAYNE_HOME=${LIBWAYNE_HOME:?"LIBWAYNE_HOME must be set"}
-#LIBWAYNE_HOME="`echo "$0" | sed 's,/[^/]*/[^/]*$,,'`"
+LIBWAYNE_HOME="${LIBWAYNE_HOME:?"LIBWAYNE_HOME must be set; try this:${NL}export LIBWAYNE_HOME=$(cd $(dirname "$0")/.. && pwd)"}"
 LIBWAYNE_COPTS="-I $LIBWAYNE_HOME/include $STACKSIZE $SPEED"
 LIBWAYNE_LINK="-L $LIBWAYNE_HOME -lwayne$LIB_OPT -lm"
 
