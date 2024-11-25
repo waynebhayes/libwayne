@@ -127,20 +127,20 @@ Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
     return true;
 }
 
-static Boolean BinTreeTraverseHelper ( BINTREENODE *p, pFointTraverseFcn f)
+static Boolean BinTreeTraverseHelper ( foint globals, BINTREENODE *p, pFointTraverseFcn f)
 {
     Boolean cont = true;
     if(p) {
-	if(p->left) cont = BinTreeTraverseHelper(p->left, f);
-	if(cont && !p->deleted) cont = f(p->key, p->info);
-	if(cont && p->right) cont = BinTreeTraverseHelper(p->right, f);
+	if(p->left) cont = BinTreeTraverseHelper(globals, p->left, f);
+	if(cont && !p->deleted) cont = f(globals, p->key, p->info);
+	if(cont && p->right) cont = BinTreeTraverseHelper(globals, p->right, f);
     }
     return cont;
 }
 
-Boolean BinTreeTraverse ( BINTREE *tree, pFointTraverseFcn f)
+Boolean BinTreeTraverse ( foint globals, BINTREE *tree, pFointTraverseFcn f)
 {
-    return BinTreeTraverseHelper(tree->root, f);
+    return BinTreeTraverseHelper(globals, tree->root, f);
 }
 
 static int _binTreeSanityNodeCount, _binTreeSanityPhysicalNodeCount;
@@ -220,7 +220,7 @@ static foint *keyArray, *dataArray;
 static int arraySize, currentItem;
 
 // Squirrel away all the items *in sorted order*
-static Boolean TraverseTreeToArray(foint key, foint data) {
+static Boolean TraverseTreeToArray(foint globals, foint key, foint data) {
     assert(currentItem < arraySize);
     keyArray[currentItem] = key;
     dataArray[currentItem] = data;
@@ -250,7 +250,7 @@ void BinTreeRebalance(BINTREE *tree)
 	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
     }
     currentItem = 0;
-    BinTreeTraverse (tree, TraverseTreeToArray);
+    BinTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
     assert(currentItem == tree->n);
     
     BINTREE *newTree = BinTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);

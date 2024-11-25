@@ -28,6 +28,7 @@ extern "C" {
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define ABS(a) ((a)>=0?(a):-(a))
 #define SQR(x) ((x)*(x))
+#define CUBE(x) ((x)*(x)*(x))
 #define SIGN(x) ((x)==0?0:(x)<0?-1:1)
 #define SIGN2(x,y) ((x)*SIGN(y))
 #define IMPLIES(a,b) (!(a)||(b))
@@ -107,7 +108,7 @@ typedef void (*pFointFreeFcn)(foint);
 ** The function type that gets called during a traversal (eg of a binary tree).
 ** It should return true to continue the traversal, or false to stop it.
 */
-typedef Boolean (*pFointTraverseFcn)(foint key, foint data);
+typedef Boolean (*pFointTraverseFcn)(foint globals, foint key, foint data);
 
 /* this is is the general error return value for most abstract data types */
 extern const foint ABSTRACT_ERROR;

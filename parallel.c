@@ -1,4 +1,4 @@
-char USAGE[] = "\
+const char USAGE[] = "\
 USAGE: parallel [-s [shell-name]] {n|auto} \n\
 parallel(1) reads command lines from the standard input, and keeps\n\
 {n} of them running concurrently.  It defaults to using the SHELL\n\
@@ -38,7 +38,7 @@ void SigHandler_changeParallel(int sig)
     signal(SIGUSR2, SigHandler_changeParallel);
 }
 
-void Fatal(char *s)
+void Fatal(const char *s)
 {
     fprintf(stderr, "%s\n", s);
     exit(1);
@@ -60,7 +60,7 @@ int GetLoadAv(double minutes) {
 #endif
 }
 
-int SetParallel(double minutes, char *s)
+int SetParallel(double minutes, const char *s)
 {
     if(minutes < 1) return parallel; // do nothing, too short an interval
     int ourLoad = parallel;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	if(strcmp(argv[1], "-s"))
 	    Fatal(USAGE);
 	n_arg = 2;
-	SHELL = "/bin/sh";
+	SHELL = (char*)"/bin/sh";
 	break;
 
     case 4:	/* parallel -s SHELL n */

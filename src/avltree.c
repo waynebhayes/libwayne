@@ -167,20 +167,20 @@ Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
 }
 
 
-static Boolean AvlTreeTraverseHelper ( AVLTREENODE *p, pFointTraverseFcn f)
+static Boolean AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTraverseFcn f)
 {
     Boolean cont = true;
     if(p) {
-	if(p->left) cont = AvlTreeTraverseHelper(p->left, f);
-	if(cont) cont = f(p->key, p->info);
-	if(cont && p->right) cont = AvlTreeTraverseHelper(p->right, f);
+	if(p->left) cont = AvlTreeTraverseHelper(globals, p->left, f);
+	if(cont) cont = f(globals, p->key, p->info);
+	if(cont && p->right) cont = AvlTreeTraverseHelper(globals, p->right, f);
     }
     return cont;
 }
 
-Boolean AvlTreeTraverse ( AVLTREE *tree, pFointTraverseFcn f)
+Boolean AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
 {
-    return AvlTreeTraverseHelper(tree->root, f);
+    return AvlTreeTraverseHelper(globals, tree->root, f);
 }
 
 static int _avlTreeSanityNodeCount, _avlTreeSanityPhysicalNodeCount;
@@ -258,7 +258,7 @@ static foint *keyArray, *dataArray;
 static int arraySize, currentItem;
 
 // Squirrel away all the items *in sorted order*
-static Boolean TraverseTreeToArray(foint key, foint data) {
+static Boolean TraverseTreeToArray(foint globals, foint key, foint data) {
     assert(currentItem < arraySize);
     keyArray[currentItem] = key;
     dataArray[currentItem] = data;
@@ -287,7 +287,7 @@ void AvlTreeRebalance(AVLTREE *tree)
 	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
     }
     currentItem = 0;
-    AvlTreeTraverse (tree, TraverseTreeToArray);
+    AvlTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
     assert(currentItem == tree->n);
     
     AVLTREE *newTree = AvlTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);

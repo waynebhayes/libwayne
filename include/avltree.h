@@ -45,7 +45,7 @@ Boolean AvlTreeLookDel(AVLTREE *, foint key, foint *pInfo);
 ** AvlTreeTraverse: Traverse an AVL tree, calling your function pointer (pFointTraversalFcn) on each
 ** element, in order.
 */
-Boolean AvlTreeTraverse ( AVLTREE *bt, pFointTraverseFcn);
+Boolean AvlTreeTraverse (foint globals, AVLTREE *bt, pFointTraverseFcn);
 Boolean AvlTreeSanityCheck ( AVLTREE *bt ); // returns true if success, otherwise generates an assertion failure
 
 void AvlTreeFree(AVLTREE *);

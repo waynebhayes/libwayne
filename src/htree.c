@@ -96,31 +96,31 @@ int HTreeSizes(HTREE *h, foint keys[], int sizes[])
 }
 
 
-static void HTreeFreeHelper(HTREE *h, int currentDepth, TREETYPE *tree);
+static void HTreeFreeHelper(foint globals, HTREE *h, int currentDepth, TREETYPE *tree);
 static HTREE *_TraverseH;
 static int _TraverseDepth;
-static void TraverseFree(foint key, foint data) {
+static void TraverseFree(foint globals, foint key, foint data) {
     assert(_TraverseDepth < _TraverseH->depth);
     TREETYPE *t = data.v;
     int depth = _TraverseDepth;
-    HTreeFreeHelper(_TraverseH, _TraverseDepth+1, t);
+    HTreeFreeHelper(globals, _TraverseH, _TraverseDepth+1, t);
     _TraverseDepth = depth;
 }
 
-static void HTreeFreeHelper(HTREE *h, int currentDepth, TREETYPE *tree)
+static void HTreeFreeHelper(foint globals, HTREE *h, int currentDepth, TREETYPE *tree)
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
 	TreeFree(tree);
     else {
 	_TraverseH = h; _TraverseDepth = currentDepth;
-	TreeTraverse(tree, (pFointTraverseFcn) TraverseFree);
+	TreeTraverse(globals, tree, (pFointTraverseFcn) TraverseFree);
     }
 }
 
 void HTreeFree(HTREE *h)
 {
-    HTreeFreeHelper(h, 0, h->tree);
+    HTreeFreeHelper((foint)NULL, h, 0, h->tree);
 }
 #ifdef __cplusplus
 } // end extern "C"

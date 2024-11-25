@@ -43,7 +43,7 @@ Boolean BinTreeLookDel(BINTREE *, foint key, foint *pInfo);
 ** BinTreeTraverse: Traverse a binary tree, calling your function pointer (pFointTraversalFcn) on each
 ** element, in order.
 */
-Boolean BinTreeTraverse ( BINTREE *bt, pFointTraverseFcn);
+Boolean BinTreeTraverse (foint globals, BINTREE *bt, pFointTraverseFcn);
 Boolean BinTreeSanityCheck ( BINTREE *bt ); // returns true if success, otherwise generates an assertion failure
 void BinTreeRebalance(BINTREE *tree);
 

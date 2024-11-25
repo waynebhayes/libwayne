@@ -8,7 +8,7 @@
 
 # The below variables should be set by a parent process
 #CC=$(LIBWAYNE_HOME)/bin/wgcc
-CC=../bin/wgcc -ggdb
+CC=../bin/wgcc -O2
 
 #% : %.c
 #	$(CC) -c $(CFLAGS) %.c
