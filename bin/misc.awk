@@ -160,6 +160,33 @@ function logIncGamma(s,x){
     }
 }
 
+function BinarySearch(dir,array,z, n,i,L,R,m,x) {
+    ASSERT(dir==1 || dir==-1, "BinarySearch: direction must  be +/-1, not "dir);
+    n=length(array);
+    #for(i=1;i<=n;i++) ASSERT(i in array, "BinarySearch: "i" is not in array of length "n);
+    if(dir*(z-array[1])< 0) return 0;
+    if(dir*(z-array[n])>=0) return n;
+    L=1; R=n;
+    while(L < R) {
+        m = int((L + R) / 2);
+	#ASSERT(m>0 && m<=n, "BinarySearch: m "m" is out of bounds for n "n" L "L" R "R);
+	#ASSERT(m in array,"oops, m is "m" out of n="n);
+	x=array[m];
+	     if(dir*(x-z) < 0) L = m + 1
+        else if(dir*(x-z) > 0) R = m - 1
+        else return m
+    }
+    # At this point, the value was not found, so return the m just below z
+    m = int((L + R) / 2);
+    if(m>0 && m<=n) {
+	#ASSERT(m in array,"oops, m is "m" out of n="n);
+	x=array[m];
+	while(m>0 && dir*(array[m]-z) > 0) --m;
+    }
+    #printf "FOUND x %g at m %d from n %d L %d R %d\n", x,m,n,L,R
+    return m;
+}
+
 # Since gawk cannot pass arrays as parameters, we usurp the global array _Chi2_bins[*][*]. The first index of this array
 # is NAME; for a fixed name, the second index is the bins, which are assumed to be equally probable.
 function Chi2_stat(name,   bin,X2,avg) { ASSERT(name in _Chi2_bins && isarray(_Chi2_bins[name]), "Chi2_Stat: _Chi2_bins["name"] must be an array of your bin counts");
@@ -842,7 +869,7 @@ function LS_MSR(name) {
 #Input: edgeList; a single node, u, to start the BFS; and an (optional) "searchNode" to stop at.
 #Output: array dist[] contains shortest paths from u to all nodes reachable from u within maxDist; includes dist[u]=0.
 #        Call with maxDist=n (size of network) to get the BFS distance to everybody
-function BFS(edgeList,u,searchNode,dist,   V,Q,m,M,x,y) {
+function BFS(edge,u,searchNode,dist,   V,Q,m,M,x,y) {
     ASSERT(isarray(edge), "BFS: edgeList must be binary symmetric 2D array");
     delete V; # visited
     delete Q; # queue
@@ -883,6 +910,16 @@ function InducedWeightedEdges(edge,T,D,       u,v,m,all1) { # note you can skip 
     for(u in T) { if(all1) ASSERT(D[u]%2==0, "InducedEdges: D["u"]="D[u]); D[u]/=2; }
     if(all1) ASSERT(m%2==0, "m is not even");
     return m/2;
+}
+
+# Input: the edge list, the degree array, and the node on which to compute local density
+function LocalEdgeDensity(edge,D,u, v,w,n,set){ # crude estimate of local edge density around a node
+    ++set[u];
+    for(v in edge[u]) {
+	++set[v]; n+=D[v]-1;
+	for(w in edge[v])++set[w];
+    }
+    return n/2/choose(length(set),2)
 }
 
 # Note: Possible sort orders are: "@unsorted",
