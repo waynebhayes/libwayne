@@ -137,8 +137,10 @@ static int BinTreeTraverseHelper ( foint globals, BINTREE *t, BINTREENODE *p, pF
     int cont = 1;
     if(p) {
 	if(p->left) cont = BinTreeTraverseHelper(globals, t, p->left, f);
-	if(cont && !p->deleted) cont = f(globals, p->key, p->info);
-	if(cont==-1) BinTreeDelNode(t, p, &p);
+	if(cont && !p->deleted) {
+	    cont = f(globals, p->key, p->info);
+	    if(cont==-1) p->deleted = true; // we can't safely delete it since we're in the midst of a traversal
+	}
 	if(cont && p->right) cont = BinTreeTraverseHelper(globals, t, p->right, f);
     }
     return cont;
