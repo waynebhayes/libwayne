@@ -167,9 +167,9 @@ Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
 }
 
 
-static Boolean AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTraverseFcn f)
+static int AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTraverseFcn f)
 {
-    Boolean cont = true;
+    int cont = 1;
     if(p) {
 	if(p->left) cont = AvlTreeTraverseHelper(globals, p->left, f);
 	if(cont) cont = f(globals, p->key, p->info);
@@ -178,7 +178,7 @@ static Boolean AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTrave
     return cont;
 }
 
-Boolean AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
+int AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
 {
     return AvlTreeTraverseHelper(globals, tree->root, f);
 }
@@ -258,12 +258,12 @@ static foint *keyArray, *dataArray;
 static int arraySize, currentItem;
 
 // Squirrel away all the items *in sorted order*
-static Boolean TraverseTreeToArray(foint globals, foint key, foint data) {
+static int TraverseTreeToArray(foint globals, foint key, foint data) {
     assert(currentItem < arraySize);
     keyArray[currentItem] = key;
     dataArray[currentItem] = data;
     ++currentItem;
-    return true;
+    return 1;
 }
 
 static void AvlTreeInsertMiddleElementOfArray(AVLTREE *tree, int low, int high) // low to high inclusive

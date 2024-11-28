@@ -74,12 +74,33 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
     tree->physical_n++; assert(tree->physical_n);
 
     unsigned oldSum = tree->depthSum;
-    tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
-    ++tree->depthSamples; assert(tree->depthSamples > 0);
+    tree->depthSum += depth;
+    // overflow in any of the stats variables forces a rebalance
+    if(depth && tree->depthSum < oldSum) { BinTreeRebalance(tree); return;}
+    ++tree->depthSamples; if(tree->depthSamples < 0) {BinTreeRebalance(tree); return;}
     double meanDepth = tree->depthSum/(double)tree->depthSamples;
     if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
 }
 
+
+void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P)
+{
+    // p points to the node we want to delete. If either child is NULL, then the other child moves up.
+    if(p->left && p->right) // can't properly delete, so just mark as deleted and it'll go away when rebalance happens
+	p->deleted = true;
+    else if(p->left)  *P = p->left;
+    else if(p->right) *P = p->right;
+    else *P = NULL;
+
+    if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
+	assert(tree->physical_n > 0);
+	tree->physical_n--;
+	tree->freeKey(p->key);
+	tree->freeInfo(p->info);
+	Free(p);
+    }
+    assert(tree->n > 0); tree->n--;
+}
 
 Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 {
@@ -99,48 +120,33 @@ Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
     }
     if(!p) { // element not found, nothing deleted. Check depth.
 	unsigned oldSum = tree->depthSum;
-	tree->depthSum += depth; if(depth) assert(tree->depthSum > oldSum); // protect against overflow
-	++tree->depthSamples; assert(tree->depthSamples > 0);
+	tree->depthSum += depth;
+	if(depth && tree->depthSum < oldSum) {BinTreeRebalance(tree); return false;}
+	++tree->depthSamples; if(tree->depthSamples < 0) {BinTreeRebalance(tree); return false;}
 	double meanDepth = tree->depthSum/(double)tree->depthSamples;
 	if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
 	return false;
     }
-
     // At this point, we know the key has been found.
-    if((long)pInfo == 1) { // delete the element
-	// p points to the node we want to delete. If either child is NULL, then the other child moves up.
-	if(p->left && p->right) // can't properly delete, so just mark as deleted and it'll go away when rebalance happens
-	    p->deleted = true;
-	else if(p->left)  *P = p->left;
-	else if(p->right) *P = p->right;
-	else *P = NULL;
-
-	if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
-	    assert(tree->physical_n > 0);
-	    tree->physical_n--;
-	    tree->freeKey(p->key);
-	    tree->freeInfo(p->info);
-	    Free(p);
-	}
-	assert(tree->n > 0); tree->n--;
-    }
+    if((long)pInfo == 1) BinTreeDelNode(tree, p, P);
     return true;
 }
 
-static Boolean BinTreeTraverseHelper ( foint globals, BINTREENODE *p, pFointTraverseFcn f)
+static int BinTreeTraverseHelper ( foint globals, BINTREE *t, BINTREENODE *p, pFointTraverseFcn f)
 {
-    Boolean cont = true;
+    int cont = 1;
     if(p) {
-	if(p->left) cont = BinTreeTraverseHelper(globals, p->left, f);
+	if(p->left) cont = BinTreeTraverseHelper(globals, t, p->left, f);
 	if(cont && !p->deleted) cont = f(globals, p->key, p->info);
-	if(cont && p->right) cont = BinTreeTraverseHelper(globals, p->right, f);
+	if(cont==-1) BinTreeDelNode(t, p, &p);
+	if(cont && p->right) cont = BinTreeTraverseHelper(globals, t, p->right, f);
     }
     return cont;
 }
 
-Boolean BinTreeTraverse ( foint globals, BINTREE *tree, pFointTraverseFcn f)
+int BinTreeTraverse ( foint globals, BINTREE *tree, pFointTraverseFcn f)
 {
-    return BinTreeTraverseHelper(globals, tree->root, f);
+    return BinTreeTraverseHelper(globals, tree, tree->root, f);
 }
 
 static int _binTreeSanityNodeCount, _binTreeSanityPhysicalNodeCount;
@@ -220,12 +226,12 @@ static foint *keyArray, *dataArray;
 static int arraySize, currentItem;
 
 // Squirrel away all the items *in sorted order*
-static Boolean TraverseTreeToArray(foint globals, foint key, foint data) {
+static int TraverseTreeToArray(foint globals, foint key, foint data) {
     assert(currentItem < arraySize);
     keyArray[currentItem] = key;
     dataArray[currentItem] = data;
     ++currentItem;
-    return true;
+    return 1;
 }
 
 static void BinTreeInsertMiddleElementOfArray(BINTREE *tree, int low, int high) // low to high inclusive

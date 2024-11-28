@@ -105,10 +105,11 @@ typedef foint (*pFointCopyFcn)(foint);
 typedef void (*pFointFreeFcn)(foint);
 
 /*
-** The function type that gets called during a traversal (eg of a binary tree).
-** It should return true to continue the traversal, or false to stop it.
+** The function type that gets called during a traversal (eg of a binary tree). It should
+** return 0 to stop the traversal, and non-zero to continue; -1 means "delete current node".
+**
 */
-typedef Boolean (*pFointTraverseFcn)(foint globals, foint key, foint data);
+typedef int (*pFointTraverseFcn)(foint globals, foint key, foint data);
 
 /* this is is the general error return value for most abstract data types */
 extern const foint ABSTRACT_ERROR;

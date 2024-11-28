@@ -38,12 +38,14 @@ void BinTreeInsert(BINTREE *, foint key, foint info); // replaces info if the ke
 Boolean BinTreeLookDel(BINTREE *, foint key, foint *pInfo);
 #define BinTreeLookup(t,k,p) BinTreeLookDel((t),(k),(p))
 #define BinTreeDelete(t,k)   BinTreeLookDel((t),(k),(foint*)1)
+void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P); // O(1): delete exactly one node
 
 /*
 ** BinTreeTraverse: Traverse a binary tree, calling your function pointer (pFointTraversalFcn) on each
-** element, in order.
+** element, in order. Your tree should return 1 to continue, 0 to stop, and -1 to DELETE the current node.
+** BinTreeTraverse will return -k if k elements were deleted, otherwise 0 or 1 as returned by your functions.
 */
-Boolean BinTreeTraverse (foint globals, BINTREE *bt, pFointTraverseFcn);
+int BinTreeTraverse (foint globals, BINTREE *bt, pFointTraverseFcn);
 Boolean BinTreeSanityCheck ( BINTREE *bt ); // returns true if success, otherwise generates an assertion failure
 void BinTreeRebalance(BINTREE *tree);
 

@@ -42,10 +42,10 @@ Boolean AvlTreeLookDel(AVLTREE *, foint key, foint *pInfo);
 #define AvlTreeLookup(T,k,f) AvlTreeLookDel((T),(k), (f))
 
 /*
-** AvlTreeTraverse: Traverse an AVL tree, calling your function pointer (pFointTraversalFcn) on each
-** element, in order.
+** AvlTreeTraverse: Traverse an AVL tree, calling your function pointer (pFointTraversalFcn) on each element,
+** in order. It will return -k if k elements were deleted, otherwise 0 or 1 as returned by your function.
 */
-Boolean AvlTreeTraverse (foint globals, AVLTREE *bt, pFointTraverseFcn);
+int AvlTreeTraverse (foint globals, AVLTREE *bt, pFointTraverseFcn);
 Boolean AvlTreeSanityCheck ( AVLTREE *bt ); // returns true if success, otherwise generates an assertion failure
 
 void AvlTreeFree(AVLTREE *);

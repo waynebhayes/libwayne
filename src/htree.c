@@ -99,12 +99,13 @@ int HTreeSizes(HTREE *h, foint keys[], int sizes[])
 static void HTreeFreeHelper(foint globals, HTREE *h, int currentDepth, TREETYPE *tree);
 static HTREE *_TraverseH;
 static int _TraverseDepth;
-static void TraverseFree(foint globals, foint key, foint data) {
+static int TraverseFree(foint globals, foint key, foint data) {
     assert(_TraverseDepth < _TraverseH->depth);
     TREETYPE *t = data.v;
     int depth = _TraverseDepth;
     HTreeFreeHelper(globals, _TraverseH, _TraverseDepth+1, t);
     _TraverseDepth = depth;
+    return 1;
 }
 
 static void HTreeFreeHelper(foint globals, HTREE *h, int currentDepth, TREETYPE *tree)
