@@ -26,7 +26,6 @@ static void FreeInt(foint i) {}
 
 static int CmpInt(foint i, foint j) { return i.i - j.i; }
 
-
 BINTREE *BinTreeAlloc(pCmpFcn cmpKey,
     pFointCopyFcn copyKey, pFointFreeFcn freeKey,
     pFointCopyFcn copyInfo, pFointFreeFcn freeInfo)
@@ -38,14 +37,14 @@ BINTREE *BinTreeAlloc(pCmpFcn cmpKey,
     tree->freeKey = freeKey ? freeKey : FreeInt;
     tree->copyInfo = copyInfo ? copyInfo : CopyInt;
     tree->freeInfo = freeInfo ? freeInfo : FreeInt;
-    tree->physical_n = tree->n = tree->depthSum = tree->depthSamples = 0;
+    tree->physical_n = tree->n = tree->maxDepth = tree->depthSum = tree->depthSamples = 0;
     return tree;
 }
 
 
 #define AssignLocative(P,p,q) (((P)=&(q)),((p)=(q)))
 
-void BinTreeRebalance(BINTREE *tree);
+void BinTreeRebalance(BINTREE *tree, Boolean force);
 void BinTreeInsert(BINTREE *tree, foint key, foint info)
 {
     int depth = 0;
@@ -59,11 +58,13 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
 	    tree->freeInfo(p->info);
 	    p->info = tree->copyInfo(info);
 	    if(p->deleted) { p->deleted = false; tree->n++; assert(tree->n); } // n==0 means overflow...
+	    tree->maxDepth = MAX(tree->maxDepth, depth); 
 	    return;
 	}
 	else if(cmp < 0) AssignLocative(P,p,p->left);
 	else AssignLocative(P,p,p->right);
     }
+    tree->maxDepth = MAX(tree->maxDepth, depth); 
 
     p = (BINTREENODE*) Calloc(1,sizeof(BINTREENODE));
     p->key = tree->copyKey(key);
@@ -73,13 +74,11 @@ void BinTreeInsert(BINTREE *tree, foint key, foint info)
     tree->n++; assert(tree->n);
     tree->physical_n++; assert(tree->physical_n);
 
+    // overflow in any of the stats variables forces a rebalance
     unsigned oldSum = tree->depthSum;
     tree->depthSum += depth;
-    // overflow in any of the stats variables forces a rebalance
-    if(depth && tree->depthSum < oldSum) { BinTreeRebalance(tree); return;}
-    ++tree->depthSamples; if(tree->depthSamples < 0) {BinTreeRebalance(tree); return;}
-    double meanDepth = tree->depthSum/(double)tree->depthSamples;
-    if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
+    ++tree->depthSamples;
+    BinTreeRebalance(tree, ((depth && tree->depthSum < oldSum) || tree->depthSamples < 0));
 }
 
 
@@ -92,11 +91,12 @@ void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P)
     else if(p->right) *P = p->right;
     else *P = NULL;
 
-    if(!p->deleted) { // if it was marked as deleted, everything needs to remain; otherwise we can nuke everything.
+    // if the node remains (marked deleted), its key needs to stay so traversal past it still works
+    if(!p->deleted) { // it's not MARKED as deleted, so we can PHYSICALLY delete it
+	tree->freeInfo(p->info);
+	tree->freeKey(p->key);
 	assert(tree->physical_n > 0);
 	tree->physical_n--;
-	tree->freeKey(p->key);
-	tree->freeInfo(p->info);
 	Free(p);
     }
     assert(tree->n > 0); tree->n--;
@@ -111,6 +111,8 @@ Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 	++depth;
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0) {
+	    tree->maxDepth = MAX(tree->maxDepth, depth);
+	    if(p->deleted) return false;
 	    if((long)pInfo==1) break; // delete the element
 	    if(pInfo) *pInfo = p->info; // lookup with assign
 	    return true;
@@ -118,13 +120,12 @@ Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 	else if(cmp < 0) AssignLocative(P,p,p->left);
 	else             AssignLocative(P,p,p->right);
     }
-    if(!p) { // element not found, nothing deleted. Check depth.
+    tree->maxDepth = MAX(tree->maxDepth, depth);
+    if(p==NULL) { // element not found, nothing deleted. Check depth.
 	unsigned oldSum = tree->depthSum;
 	tree->depthSum += depth;
-	if(depth && tree->depthSum < oldSum) {BinTreeRebalance(tree); return false;}
-	++tree->depthSamples; if(tree->depthSamples < 0) {BinTreeRebalance(tree); return false;}
-	double meanDepth = tree->depthSum/(double)tree->depthSamples;
-	if(tree->physical_n > 30 && tree->depthSamples > 100 && meanDepth > 3*log(tree->physical_n)) BinTreeRebalance(tree);
+	++tree->depthSamples;
+	BinTreeRebalance(tree, (tree->depthSamples < 0 || (depth && tree->depthSum < oldSum)));
 	return false;
     }
     // At this point, we know the key has been found.
@@ -136,12 +137,15 @@ static int BinTreeTraverseHelper ( foint globals, BINTREE *t, BINTREENODE *p, pF
 {
     int cont = 1;
     if(p) {
-	if(p->left) cont = BinTreeTraverseHelper(globals, t, p->left, f);
-	if(cont && !p->deleted) {
-	    cont = f(globals, p->key, p->info);
-	    if(cont==-1) p->deleted = true; // we can't safely delete it since we're in the midst of a traversal
+	cont = BinTreeTraverseHelper(globals, t, p->left, f);
+	if(cont) {
+	    if(!p->deleted) {
+		cont = f(globals, p->key, p->info);
+		// we can't safely delete it since we're in the midst of a traversal:
+		if(cont==-1) {p->deleted = true; assert(t->n >0); t->n--;}
+	    }
 	}
-	if(cont && p->right) cont = BinTreeTraverseHelper(globals, t, p->right, f);
+	if(cont) cont = BinTreeTraverseHelper(globals, t, p->right, f);
     }
     return cont;
 }
@@ -200,16 +204,16 @@ foint BinTreeLookupKey(BINTREE *tree, foint info)
 #endif
 
 
-static void BinTreeFreeHelper(BINTREE *tree, BINTREENODE *t)
+static void BinTreeFreeHelper(BINTREE *tree, BINTREENODE *p)
 {
-    if(t)
+    if(p)
     {
-	BinTreeFreeHelper(tree, t->left);
-	BinTreeFreeHelper(tree, t->right);
-	tree->freeKey(t->key);
-	tree->freeInfo(t->info);
-	if(!t->deleted) {assert(tree->n > 0); tree->n--; }
-	free(t);
+	BinTreeFreeHelper(tree, p->left);
+	BinTreeFreeHelper(tree, p->right);
+	tree->freeKey(p->key);
+	tree->freeInfo(p->info);
+	if(!p->deleted) {assert(tree->n > 0); tree->n--; }
+	Free(p);
 	assert(tree->physical_n > 0);
 	tree->physical_n--;
     }
@@ -217,9 +221,10 @@ static void BinTreeFreeHelper(BINTREE *tree, BINTREENODE *t)
 
 void BinTreeFree(BINTREE *tree)
 {
+    assert(tree->n >= 0 && tree->physical_n > 0);
     BinTreeFreeHelper(tree, tree->root);
     assert(tree->n == 0 && tree->physical_n == 0);
-    free(tree);
+    Free(tree);
 }
 
 
@@ -246,8 +251,15 @@ static void BinTreeInsertMiddleElementOfArray(BINTREE *tree, int low, int high) 
     }
 }
 
-void BinTreeRebalance(BINTREE *tree)
+void BinTreeRebalance(BINTREE *tree, Boolean force)
 {
+    if(!force) {
+	if(tree->n < 50) return; // || tree->depthSamples < 100) return;
+	//double meanDepth = tree->depthSum/(double)tree->depthSamples;
+	//if(tree->physical_n/tree->n < 2 && meanDepth < 4*log2(tree->physical_n)) return;
+	if(tree->physical_n/tree->n < 3 || tree->maxDepth < 5*log2(tree->physical_n)) return;
+    }
+    fprintf(stderr,"R");
     static Boolean inRebalance; // only allow one tree to be rebalanced concurrently
     if(inRebalance) return; // even without threading, the BinTreeTraverse below may trigger the rebalance of another tree
     //Warning("inRebalance tree %x size %d mean depth %g", tree, tree->n, tree->depthSum/(double)tree->depthSamples);
@@ -258,18 +270,25 @@ void BinTreeRebalance(BINTREE *tree)
 	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
     }
     currentItem = 0;
+    BinTreeSanityCheck(tree);
     BinTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
-    assert(currentItem == tree->n);
-    
+    BinTreeSanityCheck(tree);
+    if(currentItem != tree->n) Fatal("BinTreeRebalance: tree->n = %d but currentItem = %d", tree->n, currentItem);
     BINTREE *newTree = BinTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);
     // Now re-insert the items in *perfectly balanced* order.
-    assert(tree->n > 0);
+    assert(tree->n >= 0);
     BinTreeInsertMiddleElementOfArray(newTree, 0, tree->n - 1);
-    assert(tree->n == newTree->n);
+    BinTreeSanityCheck(newTree);
+    assert(newTree->n == tree->n);
     assert(newTree->n == newTree->physical_n);
-    // Swap the roots, record new depth.
-    BINTREENODE *tmp = tree->root; tree->root = newTree->root; newTree->root = tmp;
+    BinTreeSanityCheck(tree);
+    BinTreeSanityCheck(newTree);
+    // Swap the roots and physical_n values
+    int       tmpN = tree->physical_n; tree->physical_n = newTree->physical_n; newTree->physical_n = tmpN;
+    BINTREENODE *p = tree->root;       tree->root       = newTree->root;       newTree->root       = p;
+    BinTreeSanityCheck(newTree);
     BinTreeFree(newTree);
+    BinTreeSanityCheck(tree);
     inRebalance = false;
 }
 #ifdef __cplusplus

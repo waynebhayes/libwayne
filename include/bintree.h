@@ -20,7 +20,7 @@ typedef struct _binTreeNode
 
 typedef struct _binTree
 {
-    unsigned n, physical_n, depthSum, depthSamples; // number of entries & tree depth stats which can be averaged anytime.
+    unsigned n, physical_n, maxDepth, depthSum, depthSamples; // number of entries & tree depth stats which can be averaged anytime.
     BINTREENODE *root;
     pCmpFcn cmpKey;
     pFointCopyFcn copyKey, copyInfo;
@@ -47,8 +47,7 @@ void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P); // O(1): de
 */
 int BinTreeTraverse (foint globals, BINTREE *bt, pFointTraverseFcn);
 Boolean BinTreeSanityCheck ( BINTREE *bt ); // returns true if success, otherwise generates an assertion failure
-void BinTreeRebalance(BINTREE *tree);
-
+void BinTreeRebalance(BINTREE *tree, Boolean force);
 
 void BinTreeFree(BINTREE *);
 

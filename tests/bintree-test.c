@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
     }
     fclose(fp);
     BinTreeSanityCheck(tree);
-    BinTreeRebalance(tree);
+    BinTreeRebalance(tree, true);
     BinTreeSanityCheck(tree);
 
     while(scanf("%s", buf) == 1)
