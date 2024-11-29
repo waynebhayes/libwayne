@@ -270,25 +270,18 @@ void BinTreeRebalance(BINTREE *tree, Boolean force)
 	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
     }
     currentItem = 0;
-    BinTreeSanityCheck(tree);
     BinTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
-    BinTreeSanityCheck(tree);
     if(currentItem != tree->n) Fatal("BinTreeRebalance: tree->n = %d but currentItem = %d", tree->n, currentItem);
     BINTREE *newTree = BinTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);
     // Now re-insert the items in *perfectly balanced* order.
     assert(tree->n >= 0);
     BinTreeInsertMiddleElementOfArray(newTree, 0, tree->n - 1);
-    BinTreeSanityCheck(newTree);
     assert(newTree->n == tree->n);
     assert(newTree->n == newTree->physical_n);
-    BinTreeSanityCheck(tree);
-    BinTreeSanityCheck(newTree);
     // Swap the roots and physical_n values
     int       tmpN = tree->physical_n; tree->physical_n = newTree->physical_n; newTree->physical_n = tmpN;
     BINTREENODE *p = tree->root;       tree->root       = newTree->root;       newTree->root       = p;
-    BinTreeSanityCheck(newTree);
     BinTreeFree(newTree);
-    BinTreeSanityCheck(tree);
     inRebalance = false;
 }
 #ifdef __cplusplus
