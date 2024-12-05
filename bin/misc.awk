@@ -435,6 +435,39 @@ function StatMedian(name) { return StatQuantile(name,0.5);}
 function StatLowerQuartile(name) { return StatQuantile(name,0.25);}
 function StatUpperQuartile(name) { return StatQuantile(name,0.75);}
 
+function CircBufReset(name) {
+    delete _cBuf[name]; delete _cBufLen[name]; delete _cBufIn[name]; delete _cBufOut[name]; delete _cBufUsed[name];
+}
+function CircBufPut(name,len,x) {
+    if(!(name in _cBuf)) {
+	ASSERT(len>0, "CircBufPut["name"] called first time with invalid length "len);
+	_cBufLen[name]=len;
+	_cBufIn[name]=_cBufOut[name]=_cBufUsed[name]=0;
+    }
+    if(_cBufUsed[name] == _cBufLen[name]) Fatal("CircBufPut["name"]: overflow! Buffer already has "_cBufLen[name]" elements!");
+    _cBuf[name][_cBufIn[name]] = x;
+    _cBufIn[name] = (_cBufIn[name] + 1) % _cBufLen[name];
+    ++_cBufUsed[name];
+}
+function CircBufPeek(name) {
+    if(_cBufUsed[name] == 0) Fatal("CircBufPeek["name"]: nothing to see!");
+    return _cBuf[name][_cBufOut[name]];
+}
+function CircBufGet(name,    val) {
+    if(_cBufUsed[name] == 0) Fatal("CircBufGet["name"]: underflow!");
+    val = _cBuf[name][_cBufOut[name]];
+    _cBufOut[name] = (_cBufOut[name] + 1) % _cBufLen[name];
+    --_cBufUsed[name];
+    return val;
+}
+
+function CircBufMean(name,N,x) {
+    if((name in _cBuf) && _cBufUsed[name] == _cBufLen[name]) _cSum[name] -= CircBufGet(name);
+    CircBufPut(name,N,x);
+    _cSum[name] += x;
+    return _cSum[name]/_cBufUsed[name];
+}
+
 function StatAddSample(name, x) {
     if(1*_statN[name]==0 && !_statQuantiles[name])StatReset(name);
     _statN[name]++;
@@ -822,9 +855,8 @@ function AUPR_FPR(name,  FP, TN){FP=_AUPR_FP[name];TN=_AUPR_TN[name]; return FP/
 
 function LS_Reset(name) {_LS_valid[name]=_LS_SUMx[name]=_LS_SUMy[name]=_LS_SUMxy[name]=_LS_SUMxx[name]=_LS_n[name]=0; delete _LS_x[name]; delete _LS_y[name]}
 function LS_Sample(name,x,y) {_LS_valid[name]=0;_LS_SUMx[name]+=x;_LS_SUMy[name]+=y;_LS_SUMxy[name]+=x*y;_LS_SUMxx[name]+=x*x;_LS_x[name][_LS_n[name]]=x;_LS_y[name][_LS_n[name]]=y;++_LS_n[name]}
-function LS_Slope(name){_LS_slope[name]=(_LS_SUMx[name]*_LS_SUMy[name] - _LS_n[name]*_LS_SUMxy[name] )/( _LS_SUMx[name]*_LS_SUMx[name] - _LS_n[name]*_LS_SUMxx[name])
-    return _LS_slope[name]
-}
+function LS_Slope(name, denom){ denom=( _LS_SUMx[name]*_LS_SUMx[name] - _LS_n[name]*_LS_SUMxx[name]); if(!denom) return 0;
+    return _LS_slope[name]=(_LS_SUMx[name]*_LS_SUMy[name] - _LS_n[name]*_LS_SUMxy[name])/denom}
 function LS_Yintercept(name) { return ( _LS_SUMy[name] - LS_Slope(name)*_LS_SUMx[name] ) / _LS_n[name]}
 function LS_Xintercept(name) { if(LS_Slope(name)) return -LS_Yintercept(name) / LS_Slope(name); else return BIGNUM;}
 function LS_Predict(name, x) {
