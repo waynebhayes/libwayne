@@ -174,13 +174,7 @@ double HayesScore(COMMUNITY *C, int inEdges){
 double ScorePartition(PARTITION *P) {
     int i, gDegree = 0; 
     double total = 0.0;
-    GRAPH *G = P->C[0]->G;
-    if(G->degree){
-        printf("Hurray\n"); 
-    } 
-    else
-        printf("Oh no\n"); 
-    printf("G->n = %d\n\n", G->n); 
+    GRAPH *G = P->C[0]->G; 
     for(i = 0; i < G->n; i++){
         gDegree += G->degree[i];  
     }
