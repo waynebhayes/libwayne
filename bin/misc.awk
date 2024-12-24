@@ -438,11 +438,26 @@ function StatUpperQuartile(name) { return StatQuantile(name,0.75);}
 function CircBufReset(name) {
     delete _cBuf[name]; delete _cBufLen[name]; delete _cBufIn[name]; delete _cBufOut[name]; delete _cBufUsed[name];
 }
-function CircBufPut(name,len,x) {
+function CircBufPut(name,len,x,   n) {
     if(!(name in _cBuf)) {
 	ASSERT(len>0, "CircBufPut["name"] called first time with invalid length "len);
 	_cBufLen[name]=len;
 	_cBufIn[name]=_cBufOut[name]=_cBufUsed[name]=0;
+    }
+    if(len != _cBufLen[name]) { # resize the buffer
+	Warn("CircBufPut: resizing buf "name" from "_cBufLen[name]" to "len);
+	while(_cBufUsed[name]>=len) CircBufGet(name); # discard extra elements if buffer is shrinking
+	ASSERT(!isarray(_cBuf["newBuf"]));
+	CircBufReset("newBuf");
+	while(_cBufUsed[name]>0) CircBufPut("newBuf",len,CircBufGet(name));
+	n=asort(_cBuf["newBuf"], _cBuf[name]); # a side-effect of asort is to copy _cBuf["newBuf"] to _cBuf[name]
+	ASSERT(n<len, "asort copied wrong number of elements "n" in CircBufPut with new length "len);
+	_cBufLen[name]=_cBufLen["newBuf"];
+	_cBufIn[name]=_cBufIn["newBuf"];
+	_cBufOut[name]=_cBufOut["newBuf"];
+	_cBufUsed[name]=_cBufUsed["newBuf"];
+	delete _cBuf["newBuf"]; delete _cBufLen["newBuf"]; delete _cBufIn["newBuf"];
+	delete _cBufOut["newBuf"]; delete _cBufUsed["newBuf"];
     }
     if(_cBufUsed[name] == _cBufLen[name]) Fatal("CircBufPut["name"]: overflow! Buffer already has "_cBufLen[name]" elements!");
     _cBuf[name][_cBufIn[name]] = x;
@@ -461,10 +476,15 @@ function CircBufGet(name,    val) {
     return val;
 }
 
-function CircBufMean(name,N,x) {
+function CircBufMean(name,N,x,   oldN,i) {
+    oldN = _cBufLen[name];
     if((name in _cBuf) && _cBufUsed[name] == _cBufLen[name]) _cSum[name] -= CircBufGet(name);
     CircBufPut(name,N,x);
-    _cSum[name] += x;
+    if(N==oldN) _cSum[name] += x;
+    else { # buffer changed length, recompute sum
+	_cSum[name]=0;
+	for(i in _cBuf[name]) _cSum[name] += _cBuf[name][i];
+    }
     return _cSum[name]/_cBufUsed[name];
 }
 
