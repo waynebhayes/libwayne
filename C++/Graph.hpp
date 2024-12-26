@@ -161,8 +161,6 @@ private:
     vector<string> colorNames; //color index to color name
     unordered_map<string, uint> colorNameToId; //color name to color index
     vector<vector<uint>> nodeGroupsByColor; //color index to list of node indices
-    
-    friend class SANA; //for convenience and speed(maybe?)
 }; 
 
 #endif /* GRAPH_H */
