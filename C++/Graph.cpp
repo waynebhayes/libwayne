@@ -16,10 +16,6 @@
 #include <unistd.h>
 #include <regex>
 
-#ifdef MULTI_MPI 
-#include "Alignment.hpp" // alignment needed for pruning
-#endif
-
 using namespace std;
 
 //static attributes
@@ -133,37 +129,6 @@ void Graph::initColorDataStructs(const vector<array<string, 2>>& partialNodeColo
         nodeGroupsByColor[nodeColors[i]].push_back(i);
     }    
 }
-
-#ifdef MULTI_MPI
-EDGE_T Graph::getEdgeWeight(uint node1, uint node2) const
-{
-    // if (*this is G2, then we're going to need the Alignment of G1 to G2, so we can query
-    // if there's an edge in G1 aligned over the node1 and node2 given as parameters)
-    //     hasEdge = 1;
-    // return adjMatrix.get(node1, node2) - hasEdge;
-
-    if (this->hasWeights)
-    {
-        // will be 1 if we discover G1 has an aligned edge above (node1,node2)
-        int hasEdge = 0;
-
-        // A[(peg/G1 nodeNumber)] = (hole/G2 nodeNumber)
-        Alignment *A = this->otherGraph->alignment;
-
-        vector<uint> aligVect = A->asVector();
-        // inefficient ok for now
-        int g1Node1 = find(aligVect.begin(), aligVect.end(), node1) - aligVect.begin();
-        int g1Node2 = find(aligVect.begin(), aligVect.end(), node2) - aligVect.begin();
-
-        if (this->otherGraph->hasEdge(g1Node1, g1Node2))
-        {
-            hasEdge = 1;
-        }
-        return adjMatrix.get(node1, node2) - hasEdge;
-    }
-    return adjMatrix.get(node1, node2);
-}
-#endif
 
 Graph Graph::nodeInducedSubgraph(const vector<uint>& nodes) const {
     uint oldN = getNumNodes();
