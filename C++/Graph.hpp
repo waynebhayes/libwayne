@@ -16,26 +16,13 @@
 #include "computeGraphlets.hpp"
 #include "utils/Matrix.hpp"
 
-#ifdef MULTI_MPI
-class Alignment;
-#endif
-
 using namespace std;
 
 //EDGE_T: macro specifying the type of the edge weights
-#if defined(MULTI_PAIRWISE) || defined(MULTI_MPI)
-  #ifdef WEIGHT
-    #define EDGE_T float
-    #error currently, MULTI_* is not designed for float edges
-  #else
-    #define EDGE_T unsigned char //change to unsigned short for >256 networks
-  #endif
+#ifdef WEIGHT
+  #define EDGE_T float
 #else
-  #ifdef WEIGHT
-    #define EDGE_T float
-  #else
-    #define EDGE_T bool //unweighted graphs -- the normal/traditional setting
-  #endif
+  #define EDGE_T bool //unweighted graphs -- the normal/traditional setting
 #endif
 
 class Graph {
@@ -88,11 +75,7 @@ public:
     //note: edges with weight 0 are not supported
     bool hasEdge(uint node1, uint node2) const { return adjMatrix.get(node1, node2) != 0; }
     //returns 0 if there is no edge; the order of the arguments is irrelevant
-#ifdef MULTI_MPI
-    EDGE_T getEdgeWeight(uint node1, uint node2) const;
-#else
     EDGE_T getEdgeWeight(uint node1, uint node2) const { return adjMatrix.get(node1, node2); }
-#endif
     bool hasNodeName(const string& nodeName) const { return nodeNameToIndexMap.count(nodeName); }
     string getNodeName(uint node) const { return nodeNames.at(node); }
     uint getNameIndex(const string& nodeName) const { return nodeNameToIndexMap.at(nodeName); } //reverse of getNodeName
@@ -157,12 +140,6 @@ public:
     //after constructing or modifying a graph
     bool isWellDefined() const;
     void debugPrint() const; //print info about the internal state of graph
-
-#ifdef MULTI_MPI
-    bool hasWeights;
-    Graph *otherGraph;
-    Alignment *alignment;
-#endif
 
 private:
     string name, filePath;
