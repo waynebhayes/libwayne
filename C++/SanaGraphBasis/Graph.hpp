@@ -13,7 +13,7 @@
 #include <random>
 #include "utils/utils.hpp"
 #include "utils/Timer.hpp"
-#include "computeGraphlets.hpp"
+#include "utils/computeGraphlets.hpp"
 #include "utils/Matrix.hpp"
 
 using namespace std;
