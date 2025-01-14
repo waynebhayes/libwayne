@@ -5,6 +5,7 @@
 #include <ostream>
 #include <unordered_map>
 #include "templateUtils.cpp"
+#include <stdint.h>
 
 using namespace std;
 
