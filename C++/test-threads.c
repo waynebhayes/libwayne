@@ -25,6 +25,7 @@ static int _nCPUs;
   static double GetRandDouble(int stream) { Stream48(stream); return drand48(); }
 #endif
 
+// The only parameter we get is which thread  we are, stored in the integer part of the foint union (ie., in f.i)
 foint ThreadTest(const foint f) {
     //static char _race[COUNT+1]; // who got there first?
     assert(f.i < _nCPUs);
