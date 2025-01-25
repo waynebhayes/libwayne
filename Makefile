@@ -48,7 +48,7 @@ parallel: parallel.c
 	$(CC) -o bin/parallel parallel.c
 
 testlib:
-	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity graph-weighted communities; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; if [ -f $$x.in ]; then cat $$x.in | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; fi; /bin/rm -f /tmp/$$x.test$$$$); done
+	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity graph-weighted communities circ_buf; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; if [ -f $$x.in ]; then cat $$x.in | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; fi; /bin/rm -f /tmp/$$x.test$$$$); done
 
 opt:
 	$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' libwayne
