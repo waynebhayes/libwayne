@@ -1,6 +1,6 @@
 #!/bin/bash
 # The options below turn on lots and lots of gcc warnings.
-export CC="gcc -Wno-pointer-sign"
+export CC="gcc$GCC_VER -Wno-pointer-sign"
 NL='
 '
 
