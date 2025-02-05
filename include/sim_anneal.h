@@ -14,20 +14,23 @@ typedef double (*pScoreFunc)(const foint); // user-provided function pointer tha
 // In the former case, a new solution should be generated iff moveOrAccept is actually true, and return the resulting solution.
 // In the latter case, moveOrAccept is true iff the move was accepted, and the user's code should act accordingly and return
 // either the unchanged solution or the newly accepted one.
-typedef foint (*pSolutionFunc)(Boolean moveOrAccept, const foint solution);
+typedef double (*pMoveFunc)(const foint solution);
+typedef foint  (*pAcceptFunc)(const Boolean accept, const foint solution);
 
 #define PBAD_CIRC_BUF 1000
 
 typedef struct _sim_anneal {
-    int iter, maxIters, direction, pBadBufPos, pBadBufLen;
-    double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum;
+    unsigned long iter, maxIters;
+    int direction, pBadBufPos, pBadBufLen;
+    double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum, currentScore;
     foint currentSolution;
-    pSolutionFunc Move, Accept;
+    pMoveFunc Move;
+    pAcceptFunc Accept;
     pScoreFunc Score;
 } SIM_ANNEAL;
 
 // direction < 0 to minimize, > 0 to maximize
-SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pSolutionFunc Move, pScoreFunc, pSolutionFunc Accept, int maxIters);
+SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc, pAcceptFunc Accept, unsigned long maxIters);
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay);
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa); // to automatically create schedule
 int SimAnnealRun(SIM_ANNEAL *sa); // returns >0 if success, 0 if not done and can continue, <0 if error

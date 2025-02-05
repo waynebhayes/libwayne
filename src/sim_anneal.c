@@ -1,6 +1,6 @@
 #include "sim_anneal.h"
 
-SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pSolutionFunc Move, pScoreFunc Score, pSolutionFunc Accept, int maxIters) {
+SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc Score, pAcceptFunc Accept, unsigned long maxIters) {
     SIM_ANNEAL *sa = Calloc(sizeof(SIM_ANNEAL),1);
     sa->maxIters = maxIters;
     sa->iter = 0;
@@ -15,6 +15,7 @@ SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pSolutionFunc Move, 
     sa->Score = Score;
     sa->Accept = Accept;
     sa->currentSolution = initSol;
+    sa->currentScore = Score(initSol);
     return sa;
 }
 
@@ -48,27 +49,21 @@ static double PbadMean(SIM_ANNEAL *sa) {
     return sa->pBadSum / sa->pBadBufLen;
 }
 
-foint _bestSolution;
-
 static void Iteration(SIM_ANNEAL *sa) {
-    double oldScore = sa->Score(sa->currentSolution);
-    foint newSol = sa->Move(true, sa->currentSolution);
-    double newScore = sa->Score(newSol);
+    double delta = sa->Move(sa->currentSolution), pBad=0;
     Boolean accept;
     // always accept good (technically non-bad) moves... note we accept even if the score is the same... THIS IS IMPORTANT
     // because otherwise it's recorded as a "bad" move and adds a pBad=1 to the circular buffer, which we don't want.
-    if(sa->direction*(newScore - oldScore) >= 0) {
+    if(sa->direction*(delta) >= 0)
 	accept = true;
-	_bestSolution = newSol; // store best solution ever seen
-    }
     else {
-	double diff = fabs(newScore - oldScore); // don't need direction any more, we know it's a bad move
-	double pBad = exp(-diff / sa->temperature);
-	//Note("oldScore %g newScore %g |diff| %g temperature %g pBad %g\n", oldScore, newScore, diff, sa->temperature, pBad);
+	pBad = exp(-fabs(delta) / sa->temperature);
 	PbadRecord(sa, pBad);
-	accept = (drand48() <= pBad);
+	accept = (drand48() < pBad);
     }
-    sa->currentSolution = sa->Accept(accept, newSol);
+    //Note("Iter: score %g (%g) T %g pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
+    if(accept) sa->currentScore += delta;
+    sa->currentSolution = sa->Accept(accept, sa->currentSolution);
 }
 
 static double findPbad(SIM_ANNEAL *sa, double temperature) {
@@ -81,16 +76,16 @@ static double findPbad(SIM_ANNEAL *sa, double temperature) {
 	mean = PbadMean(sa);
 	prevSumPbad = sumPbad;
 	sumPbad += mean;
-	//Note("findPbad(t=%g) iter %d mean pBad = %g", i, mean);
+	//Note("findPbad(t=%g) iter %d mean pBad = %g", temperature, i, mean);
 	++i;
 	// below, we compute the previous and current average and demand they agree to some precision
-    } while (i < 30 || fabs(prevSumPbad/(i-1) / (sumPbad/i) - 1) > 1e-3); // stabilize to at least this relative precision
-    //Note("temperature %g gives pBad %g after %d iterations", temperature, mean, i);
+    } while (i < 30 || fabs(prevSumPbad/(i-1) / (sumPbad/i) - 1) > 1e-4); // stabilize to at least this relative precision
+    Note("temperature %g gives pBad %g after %d iterations", temperature, mean, i);
     return mean;
 }
 
-#define TARGET_PBAD_START 0.9
-#define TARGET_PBAD_END 1e-3
+#define TARGET_PBAD_START 0.99
+#define TARGET_PBAD_END 1e-9
 
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay) {
     sa->tInitial = tInitial;
@@ -116,9 +111,19 @@ void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
 int SimAnnealRun(SIM_ANNEAL *sa) {
     if(sa->tInitial < 0 || sa->tDecay < 0) SimAnnealAutoSchedule(sa);
     sa->temperature = sa->tInitial;
+    sa->currentScore = sa->Score(sa->currentSolution);
     for(sa->iter = 0; sa->iter < sa->maxIters; sa->iter++) {
 	SetIterTemperature(sa);
 	Iteration(sa);
+	static int prevPctDone;
+	int pctDone = 100.0*sa->iter/sa->maxIters;
+	if(pctDone > prevPctDone) {
+	    double realScore = sa->Score(sa->currentSolution);
+	    Note("%d%%, incScore %g realScore %g (error %g) pBad %g", pctDone, sa->currentScore, realScore, 
+		sa->currentScore-realScore, PbadMean(sa));
+	    sa->currentScore=realScore;
+	    prevPctDone=pctDone;
+	}
     }
     //sa->currentSolution = sa->Accept(true, _bestSolution); // return the best solution seen, not the last one seen
     return 1;

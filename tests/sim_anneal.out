@@ -1,0 +1,148 @@
+688
+Note: temperature 1 gives pBad 0.00539612 after 273 iterations
+Note: temperature 2 gives pBad 0.0246671 after 1881 iterations
+Note: temperature 4 gives pBad 0.0545227 after 79 iterations
+Note: temperature 8 gives pBad 0.0678689 after 65 iterations
+Note: temperature 16 gives pBad 0.168613 after 53 iterations
+Note: temperature 32 gives pBad 0.28059 after 429 iterations
+Note: temperature 64 gives pBad 0.417087 after 143 iterations
+Note: temperature 128 gives pBad 0.556736 after 116 iterations
+Note: temperature 256 gives pBad 0.739048 after 113 iterations
+Note: temperature 512 gives pBad 0.901341 after 44 iterations
+Note: temperature 1024 gives pBad 0.922116 after 160 iterations
+Note: temperature 2048 gives pBad 0.955279 after 45 iterations
+Note: temperature 4096 gives pBad 0.98064 after 118 iterations
+Note: temperature 8192 gives pBad 0.990516 after 82 iterations
+Note: temperature 8192 gives pBad 0.993284 after 30 iterations
+Note: temperature 4096 gives pBad 0.985472 after 69 iterations
+Note: temperature 4096 gives pBad 0.984197 after 64 iterations
+Note: temperature 4915.2 gives pBad 0.983239 after 65 iterations
+Note: temperature 5898.24 gives pBad 0.986382 after 69 iterations
+Note: temperature 7077.89 gives pBad 0.989031 after 30 iterations
+Note: temperature 8493.47 gives pBad 0.992694 after 30 iterations
+Note: temperature 8493.47 gives pBad 0.991117 after 30 iterations
+Note: temperature 4246.73 gives pBad 0.981447 after 61 iterations
+Note: temperature 2123.37 gives pBad 0.956781 after 66 iterations
+Note: temperature 1061.68 gives pBad 0.944936 after 35 iterations
+Note: temperature 530.842 gives pBad 0.868129 after 220 iterations
+Note: temperature 265.421 gives pBad 0.724209 after 59 iterations
+Note: temperature 132.71 gives pBad 0.561903 after 42 iterations
+Note: temperature 66.3552 gives pBad 0.470719 after 63 iterations
+Note: temperature 33.1776 gives pBad 0.299633 after 759 iterations
+Note: temperature 16.5888 gives pBad 0.174222 after 918 iterations
+Note: temperature 8.2944 gives pBad 0.105778 after 405 iterations
+Note: temperature 4.1472 gives pBad 0.0425436 after 199 iterations
+Note: temperature 2.0736 gives pBad 0.0213728 after 150 iterations
+Note: temperature 1.0368 gives pBad 0.00696467 after 61 iterations
+Note: temperature 0.5184 gives pBad 0.00173583 after 125 iterations
+Note: temperature 0.2592 gives pBad 4.69073e-05 after 45 iterations
+Note: temperature 0.1296 gives pBad 1.54917e-08 after 660 iterations
+Note: temperature 0.0648 gives pBad 6.79863e-15 after 32 iterations
+Note: temperature 0.0648 gives pBad 2.88527e-15 after 95 iterations
+Note: temperature 0.07776 gives pBad 2.8162e-13 after 80 iterations
+Note: temperature 0.093312 gives pBad 3.64106e-11 after 65 iterations
+Note: temperature 0.111974 gives pBad 9.20905e-10 after 41 iterations
+Note: temperature 0.134369 gives pBad 3.21942e-08 after 72 iterations
+Note: tInitial 8493.47 tDecay 11.0542
+Note: 1%, incScore 169 realScore 248 (error -79) pBad 0.989923
+Note: 2%, incScore 288 realScore 314 (error -26) pBad 0.989127
+Note: 3%, incScore 555 realScore 722 (error -167) pBad 0.987437
+Note: 4%, incScore 367 realScore 130 (error 237) pBad 0.986458
+Note: 5%, incScore 552 realScore 832 (error -280) pBad 0.984464
+Note: 6%, incScore 495 realScore 274 (error 221) pBad 0.982091
+Note: 7%, incScore 263 realScore 252 (error 11) pBad 0.980733
+Note: 8%, incScore 655 realScore 930 (error -275) pBad 0.97771
+Note: 9%, incScore 462 realScore 152 (error 310) pBad 0.975942
+Note: 10%, incScore 296 realScore 374 (error -78) pBad 0.97311
+Note: 11%, incScore 270 realScore 208 (error 62) pBad 0.970381
+Note: 12%, incScore 219 realScore 234 (error -15) pBad 0.966707
+Note: 13%, incScore 522 realScore 712 (error -190) pBad 0.962485
+Note: 14%, incScore 583 realScore 492 (error 91) pBad 0.958247
+Note: 15%, incScore 584 realScore 648 (error -64) pBad 0.952308
+Note: 16%, incScore 764 realScore 842 (error -78) pBad 0.945698
+Note: 17%, incScore 536 realScore 332 (error 204) pBad 0.944193
+Note: 18%, incScore 284 realScore 250 (error 34) pBad 0.934673
+Note: 19%, incScore 528 realScore 720 (error -192) pBad 0.929972
+Note: 20%, incScore 621 realScore 540 (error 81) pBad 0.924046
+Note: 21%, incScore 453 realScore 404 (error 49) pBad 0.915534
+Note: 22%, incScore 293 realScore 218 (error 75) pBad 0.907578
+Note: 23%, incScore 123 realScore 78 (error 45) pBad 0.898467
+Note: 24%, incScore 372 realScore 540 (error -168) pBad 0.881677
+Note: 25%, incScore 529 realScore 524 (error 5) pBad 0.864507
+Note: 26%, incScore 492 realScore 472 (error 20) pBad 0.854334
+Note: 27%, incScore 328 realScore 240 (error 88) pBad 0.839053
+Note: 28%, incScore 395 realScore 492 (error -97) pBad 0.828821
+Note: 29%, incScore 425 realScore 376 (error 49) pBad 0.811168
+Note: 30%, incScore 313 realScore 282 (error 31) pBad 0.791686
+Note: 31%, incScore 497 realScore 634 (error -137) pBad 0.775148
+Note: 32%, incScore 341 realScore 154 (error 187) pBad 0.74917
+Note: 33%, incScore 262 realScore 336 (error -74) pBad 0.724878
+Note: 34%, incScore 289 realScore 244 (error 45) pBad 0.694469
+Note: 35%, incScore 267 realScore 300 (error -33) pBad 0.687275
+Note: 36%, incScore 419 realScore 478 (error -59) pBad 0.658631
+Note: 37%, incScore 396 realScore 352 (error 44) pBad 0.625694
+Note: 38%, incScore 388 realScore 408 (error -20) pBad 0.601202
+Note: 39%, incScore 732 realScore 962 (error -230) pBad 0.582507
+Note: 40%, incScore 449 realScore 104 (error 345) pBad 0.538607
+Note: 41%, incScore 237 realScore 326 (error -89) pBad 0.523538
+Note: 42%, incScore 335 realScore 336 (error -1) pBad 0.489423
+Note: 43%, incScore 402 realScore 434 (error -32) pBad 0.465358
+Note: 44%, incScore 220 realScore 94 (error 126) pBad 0.433934
+Note: 45%, incScore 84 realScore 86 (error -2) pBad 0.407508
+Note: 46%, incScore 57 realScore 38 (error 19) pBad 0.3875
+Note: 47%, incScore 77 realScore 92 (error -15) pBad 0.366334
+Note: 48%, incScore 85 realScore 86 (error -1) pBad 0.327921
+Note: 49%, incScore 75 realScore 70 (error 5) pBad 0.320307
+Note: 50%, incScore 124 realScore 154 (error -30) pBad 0.2925
+Note: 51%, incScore 166 realScore 166 (error 0) pBad 0.282087
+Note: 52%, incScore 60 realScore 14 (error 46) pBad 0.261473
+Note: 53%, incScore 24 realScore 26 (error -2) pBad 0.233224
+Note: 54%, incScore 93 realScore 124 (error -31) pBad 0.225988
+Note: 55%, incScore 52 realScore 20 (error 32) pBad 0.203019
+Note: 56%, incScore 28 realScore 32 (error -4) pBad 0.188594
+Note: 57%, incScore 55 realScore 62 (error -7) pBad 0.186282
+Note: 58%, incScore 19 realScore 6 (error 13) pBad 0.158199
+Note: 59%, incScore 34 realScore 44 (error -10) pBad 0.14391
+Note: 60%, incScore 51 realScore 50 (error 1) pBad 0.137587
+Note: 61%, incScore 51 realScore 52 (error -1) pBad 0.135553
+Note: 62%, incScore 25 realScore 16 (error 9) pBad 0.132469
+Note: 63%, incScore 6 realScore 4 (error 2) pBad 0.112623
+Note: 64%, incScore 2 realScore 2 (error 0) pBad 0.100151
+Note: 65%, incScore 12 realScore 14 (error -2) pBad 0.0797252
+Note: 66%, incScore 20 realScore 20 (error 0) pBad 0.0860896
+Note: 67%, incScore 6 realScore 4 (error 2) pBad 0.0749605
+Note: 68%, incScore 9 realScore 10 (error -1) pBad 0.0668758
+Note: 69%, incScore 3 realScore 2 (error 1) pBad 0.0534787
+Note: 70%, incScore 6 realScore 6 (error 0) pBad 0.0589908
+Note: 71%, incScore 2 realScore 2 (error 0) pBad 0.0480015
+Note: 72%, incScore 2 realScore 2 (error 0) pBad 0.0393607
+Note: 73%, incScore 2 realScore 2 (error 0) pBad 0.0378373
+Note: 74%, incScore 0 realScore 0 (error 0) pBad 0.0341479
+Note: 75%, incScore 0 realScore 0 (error 0) pBad 0.0282522
+Note: 76%, incScore 0 realScore 0 (error 0) pBad 0.0207719
+Note: 77%, incScore 0 realScore 0 (error 0) pBad 0.0224182
+Note: 78%, incScore 0 realScore 0 (error 0) pBad 0.0205706
+Note: 79%, incScore 0 realScore 0 (error 0) pBad 0.0150819
+Note: 80%, incScore 2 realScore 2 (error 0) pBad 0.0141245
+Note: 81%, incScore 0 realScore 0 (error 0) pBad 0.0125782
+Note: 82%, incScore 0 realScore 0 (error 0) pBad 0.0104245
+Note: 83%, incScore 0 realScore 0 (error 0) pBad 0.00882685
+Note: 84%, incScore 0 realScore 0 (error 0) pBad 0.0052617
+Note: 85%, incScore 0 realScore 0 (error 0) pBad 0.00416876
+Note: 86%, incScore 0 realScore 0 (error 0) pBad 0.00366595
+Note: 87%, incScore 0 realScore 0 (error 0) pBad 0.00256884
+Note: 88%, incScore 0 realScore 0 (error 0) pBad 0.00164872
+Note: 89%, incScore 0 realScore 0 (error 0) pBad 0.000755235
+Note: 90%, incScore 0 realScore 0 (error 0) pBad 0.000594684
+Note: 91%, incScore 0 realScore 0 (error 0) pBad 0.000321188
+Note: 92%, incScore 0 realScore 0 (error 0) pBad 0.000146591
+Note: 93%, incScore 0 realScore 0 (error 0) pBad 9.8344e-05
+Note: 94%, incScore 0 realScore 0 (error 0) pBad 3.96318e-05
+Note: 95%, incScore 0 realScore 0 (error 0) pBad 1.37081e-05
+Note: 96%, incScore 0 realScore 0 (error 0) pBad 6.1233e-06
+Note: 97%, incScore 0 realScore 0 (error 0) pBad 1.80144e-06
+Note: 98%, incScore 0 realScore 0 (error 0) pBad 5.05482e-07
+Note: 99%, incScore 0 realScore 0 (error 0) pBad 1.21948e-07
+SimAnnealRun returned 1
+0
+1
