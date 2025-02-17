@@ -670,7 +670,7 @@ function logHyperGeomPMF(k,n,K,N) {
 function HyperGeomTail(k,n,K,N, sum,term,i,logTerm) {
     #print "HyperGeomTail",k,n,K,N
     # 166 1113 2141 3436
-    ASSERT(k<=K && k<=n && K<=N && n<=N && n-k<=N-K && K-k<=N-n,"HyperGeomTail: impossible values "k"/"K","n"/"N)
+    ASSERT(k<=K && k<=n && K<=N && n<=N && n-k<=N-K && K-k<=N-n,"HyperGeomTail: impossible (k,n,K,N)=("k","n","K","N")")
     if(k==0 && K>0) return 1;
     if(k in _hyperGeomMem && n in _hyperGeomMem[k] && K in _hyperGeomMem[k][n] && N in _hyperGeomMem[k][n][K])
 	return _hyperGeomMem[k][n][K][N]
@@ -690,7 +690,7 @@ function HyperGeomTail(k,n,K,N, sum,term,i,logTerm) {
 
 function logHyperGeomTail(k,n,K,N, logSum,logTerm,i) {
     #print "logHyperGeomTail",k,n,K,N
-    ASSERT(k<=K && k<=n && K<=N && n<=N && n-k<=N-K && K-k<=N-n,"logHyperGeomTail: impossible values "k"/"K","n"/"N)
+    ASSERT(k<=K && k<=n && K<=N && n<=N && n-k<=N-K && K-k<=N-n,"HyperGeomTail: impossible (k,n,K,N)=("k","n","K","N")")
     if(k==0 && K>0) return 0;
     if(k in _logHyperGeomMem && n in _logHyperGeomMem[k] && K in _logHyperGeomMem[k][n] && N in _logHyperGeomMem[k][n][K])
 	return _logHyperGeomMem[k][n][K][N]
