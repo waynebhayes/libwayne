@@ -164,7 +164,7 @@ void MoveNode(PARTITION *P, int u, int newCom){
     CommunityAddNode(P->C[newCom], u); 
     P->where[u] = newCom; 
 }
-
+							  // Make this a set?
 COMMUNITY *MergeCommunities(PARTITION *P, int c1, int c2, int * moved){
     // Merges C1 and C2 into just C1
     // moved records which nodes were merged in case merge is rejected
@@ -175,7 +175,7 @@ COMMUNITY *MergeCommunities(PARTITION *P, int c1, int c2, int * moved){
     //printf("Merge c1 = %d, c2 = %d, c1 size = %d, c2 size = %d\n", c1, c2, C1->n, C2->n);
     SetUnion(C1->nodeSet, C2->nodeSet, C1->nodeSet);
     int *memberList = Calloc(sizeof(int), C2->n) ;
-    i, j, n = SetToArray(memberList, C2->nodeSet);
+    int i, j, n = SetToArray(memberList, C2->nodeSet);
     for(i = 0; i < C2->n; i++){
 	int u = memberList[i]; 
 	P->where[u] = c1;
@@ -248,32 +248,6 @@ double ScorePartitionHayes(PARTITION *P) {
 }
 */
 
-/************************ CommunitySimAnneal (SimAnneal adapted for communities) ****************************/
-
-typedef struct _communitiesSimAnneal{
-    PARTITION *P;
-    SIM_ANNEAL *sa;   
-};COMMUNITYSA 
-
-COMMUNITYSA * CommunitySAAlloc(PARTITION *in_P, double base, int tries){
-    COMMUNITYSA *csa = Calloc(sizeof(COMMUNITYSA), 1); 
-    csa->P = in_P; // Assume P is allocated elsewhere
-    csa->sa = SimAnnealAlloc(1, base, MoveNode, HayesScore, MoveNode, tries);
-    return csa; 
-}
-
-COMMUNITYSA * ChangeFunction(COMMUNITYSA * csa, pMoveFunc Move, pAcceptFunc Accept){
-    csa->sa->Move = Move;
-    csa->sa->Accept = Accept; 
-    return csa;
-}
-
-void CommunitySAFree(COMMUNITYSA * sa){ 
-    P = NULL; // Assume the user will properly free the partition elsewhere
-    SimAnnealFree(sa); 
-}
-
-
 /*
 
     Measures
@@ -307,6 +281,51 @@ double HayesScore(COMMUNITY *C, int inEdges){
         return 0;
     return inEdges * inEdges / ((C->n * C->n-1)/2.0);
 }
+
+
+/************************ CommunitySimAnneal (SimAnneal adapted for communities) ****************************/
+
+// Move this to a new file????
+
+typedef struct _communitiesSimAnneal{
+    PARTITION *P;
+    SIM_ANNEAL *sa;   
+}COMMUNITYSA; 
+
+						//foint??
+COMMUNITYSA * CommunitySAAlloc(PARTITION *in_P, double base, int tries){
+    COMMUNITYSA *csa = Calloc(sizeof(COMMUNITYSA), 1);
+ 
+    // Pointer to Partition to modify 
+    csa->P = in_P; // Assume P is allocated elsewhere
+									    
+    csa->sa = SimAnnealAlloc(1, (foint)(void *)P->C, MoveNode, HayesScore, , tries);
+    return csa; 
+}
+
+COMMUNITYSA * ChangeFunction(COMMUNITYSA * csa, pMoveFunc Move, pAcceptFunc Accept){
+    csa->sa->Move = Move;
+    csa->sa->Accept = Accept; 
+    return csa;
+}
+
+void CommunitySAFree(COMMUNITYSA * sa){ 
+    P = NULL; // Assume the user will properly free the partition elsewhere
+    SimAnnealFree(sa); 
+}
+
+foint MoveAR(Boolean accept, const foint f){
+   
+    //global variable for P? 
+
+    return f;
+}
+
+
+
+
+
+
 
 
 double ScorePartition(PARTITION *P) {
@@ -350,7 +369,7 @@ double ScorePartition(PARTITION *P) {
 double SimAnneal(PARTITION *P, int tries){
     double best = 0; 
     for(int i = 0; i < P->n; ++i)
-	best += HayesScore(P->C[j], CommunityEdgeCount(P->C[j])); 
+	best += HayesScore(P->C[i], CommunityEdgeCount(P->C[i])); 
     printf("Base score = %g, tries = %d\n", best, tries); 
 
     COMMUNITYSA *csa = CommunitySAAlloc(P, best, tries);  
@@ -362,9 +381,7 @@ double SimAnneal(PARTITION *P, int tries){
 
 /*
 double HillClimbing(PARTITION *P, int tries){
-
-    	
-    HILLCLIMBING WILL NO LONGER RUN BECAUSE I CHANGED THE MOVE FUNCTIONS
+        
     
 
     int i, j;
