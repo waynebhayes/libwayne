@@ -221,7 +221,7 @@ static void BinTreeFreeHelper(BINTREE *tree, BINTREENODE *p)
 
 void BinTreeFree(BINTREE *tree)
 {
-    assert(tree->n >= 0 && tree->physical_n > 0);
+    assert(0 <= tree->n && tree->n <= tree->physical_n);
     BinTreeFreeHelper(tree, tree->root);
     assert(tree->n == 0 && tree->physical_n == 0);
     Free(tree);
