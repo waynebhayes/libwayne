@@ -24,8 +24,8 @@ static double ScoreLocal(const int i) {
     }
     return sum;
 }
-double ScoreGlobal(const foint f) {
-    //printf("G"); fflush(stdout);
+double Score(Boolean global, const foint f) {
+    assert(global);
     int i;
     double sum=0;
     for(i=0;i<N;i++) sum+= ScoreLocal(i);
@@ -64,31 +64,11 @@ int main(void) {
     for(i=0;i<N;i++) _array[i] = drand48()*N;
 
     const unsigned long maxIters = SQR(N)*SQR(N*N);
-    printf("%g\n", ScoreGlobal(f));
-    SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)_array, SwapElements, ScoreGlobal, AcceptReject, maxIters);
+    printf("%g\n", Score(true, f));
+    SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)_array, SwapElements, Score, AcceptReject, maxIters);
     SimAnnealAutoSchedule(sa);
     int result = SimAnnealRun(sa);
     printf("SimAnnealRun returned %d\n", result);
-    printf("%g\n", ScoreGlobal(f));
+    printf("%g\n", Score(true, f));
 }
-
-#if 0
-// direction < 0 to minimize, > 0 to maximize
-SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pSolutionFunc Move, pScoreFunc, pSolutionFunc Accept, int maxIters);
-Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay);
-void SimAnnealAutoSchedule(SIM_ANNEAL *sa); // to automatically create schedule
-int SimAnnealRun(SIM_ANNEAL *sa); // returns >0 if success, 0 if not done and can continue, <0 if error
-foint SimAnnealSol(SIM_ANNEAL *sa);
-void SimAnnealFree(SIM_ANNEAL *sa);
-
------------------------------------
-int main(void) {
-    SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)(&_g), SA_GenMove, SA_Score, SA_Accept, SQR(_k));
-    SimAnnealAutoSchedule(sa, _tInitials[_k], _tDecays[_k]);
-    int result = SimAnnealRun(sa);
-    if(result <= 0) Fatal("SimAnnealRun returned %d", result);
-    foint solution = SimAnnealSol(sa);
-    SimAnnealFree(sa);
-}
-#endif
 

@@ -7,7 +7,7 @@ extern "C" {
 #include <math.h>
 #include "misc.h"
 
-typedef double (*pScoreFunc)(const foint); // user-provided function pointer that scores a solution
+typedef double (*pScoreFunc)(Boolean global, const foint); // user-provided function pointer that scores a solution
 
 // User-provided functions of this type are called both to incrementally change the current solution to a new one,
 // and later to indicate whether the new solution was accepted.

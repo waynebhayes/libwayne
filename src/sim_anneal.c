@@ -15,7 +15,7 @@ SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pSco
     sa->Score = Score;
     sa->Accept = Accept;
     sa->currentSolution = initSol;
-    sa->currentScore = Score(initSol);
+    sa->currentScore = Score(true, initSol);
     return sa;
 }
 
@@ -111,14 +111,14 @@ void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
 int SimAnnealRun(SIM_ANNEAL *sa) {
     if(sa->tInitial < 0 || sa->tDecay < 0) SimAnnealAutoSchedule(sa);
     sa->temperature = sa->tInitial;
-    sa->currentScore = sa->Score(sa->currentSolution);
+    sa->currentScore = sa->Score(true, sa->currentSolution);
     for(sa->iter = 0; sa->iter < sa->maxIters; sa->iter++) {
 	SetIterTemperature(sa);
 	Iteration(sa);
 	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
 	if(pctDone > prevPctDone) {
-	    double realScore = sa->Score(sa->currentSolution);
+	    double realScore = sa->Score(true, sa->currentSolution);
 	    Note("%d%%, incScore %g realScore %g (error %g) pBad %g", pctDone, sa->currentScore, realScore, 
 		sa->currentScore-realScore, PbadMean(sa));
 	    sa->currentScore=realScore;
