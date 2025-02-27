@@ -1,6 +1,7 @@
 #include "sim_anneal.h"
 
-SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc Score, pAcceptFunc Accept, unsigned long maxIters) {
+SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc Score, pAcceptFunc Accept,
+    unsigned long maxIters, double pBadStart, double pBadEnd, pReportFunc Report) {
     SIM_ANNEAL *sa = Calloc(sizeof(SIM_ANNEAL),1);
     sa->maxIters = maxIters;
     sa->iter = 0;
@@ -14,8 +15,11 @@ SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pSco
     sa->Move = Move;
     sa->Score = Score;
     sa->Accept = Accept;
+    sa->Report = Report;
     sa->currentSolution = initSol;
     sa->currentScore = Score(true, initSol);
+    sa->pBadStart = pBadStart ? pBadStart : 0.99;
+    sa->pBadEnd = pBadEnd ? pBadEnd : 1e-8;
     return sa;
 }
 
@@ -84,9 +88,6 @@ static double findPbad(SIM_ANNEAL *sa, double temperature) {
     return mean;
 }
 
-#define TARGET_PBAD_START 0.99
-#define TARGET_PBAD_END 1e-9
-
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay) {
     sa->tInitial = tInitial;
     sa->tDecay = tDecay;
@@ -95,12 +96,12 @@ Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay) {
 
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
     double tInitial = 1;
-    while (findPbad(sa, tInitial) < TARGET_PBAD_START) tInitial *= 2;
-    while (findPbad(sa, tInitial) > TARGET_PBAD_START) tInitial /= 2;
-    while (findPbad(sa, tInitial) < TARGET_PBAD_START) tInitial *= 1.2;
+    while (findPbad(sa, tInitial) < sa->pBadStart) tInitial *= 2;
+    while (findPbad(sa, tInitial) > sa->pBadStart) tInitial /= 2;
+    while (findPbad(sa, tInitial) < sa->pBadStart) tInitial *= 1.2;
     double tEnd = tInitial;
-    while (findPbad(sa, tEnd) > TARGET_PBAD_END) tEnd /= 2;
-    while (findPbad(sa, tEnd) < TARGET_PBAD_END) tEnd *= 1.2;
+    while (findPbad(sa, tEnd) > sa->pBadEnd) tEnd /= 2;
+    while (findPbad(sa, tEnd) < sa->pBadEnd) tEnd *= 1.2;
     sa->tInitial = tInitial;
     sa->tDecay = -log(tEnd / tInitial);
     Note("tInitial %g tDecay %g", tInitial, sa->tDecay);
@@ -118,11 +119,15 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
 	if(pctDone > prevPctDone) {
+	    printf("%d%% pBad %g ", pctDone, PbadMean(sa));
+	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
+	    puts("");
 	    double realScore = sa->Score(true, sa->currentSolution);
-	    Note("%d%%, incScore %g realScore %g (error %g) pBad %g", pctDone, sa->currentScore, realScore, 
-		sa->currentScore-realScore, PbadMean(sa));
+	    double error = sa->currentScore-realScore;
+	    if(error>0) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
 	    sa->currentScore=realScore;
 	    prevPctDone=pctDone;
+
 	}
     }
     //sa->currentSolution = sa->Accept(true, _bestSolution); // return the best solution seen, not the last one seen

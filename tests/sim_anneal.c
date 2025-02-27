@@ -65,7 +65,7 @@ int main(void) {
 
     const unsigned long maxIters = SQR(N)*SQR(N*N);
     printf("%g\n", Score(true, f));
-    SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)_array, SwapElements, Score, AcceptReject, maxIters);
+    SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)_array, SwapElements, Score, AcceptReject, maxIters, 0,0,NULL);
     SimAnnealAutoSchedule(sa);
     int result = SimAnnealRun(sa);
     printf("SimAnnealRun returned %d\n", result);

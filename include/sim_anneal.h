@@ -16,21 +16,25 @@ typedef double (*pScoreFunc)(Boolean global, const foint); // user-provided func
 // either the unchanged solution or the newly accepted one.
 typedef double (*pMoveFunc)(const foint solution);
 typedef foint  (*pAcceptFunc)(const Boolean accept, const foint solution);
+typedef void  (*pReportFunc)(int iter, foint f);
+
 
 #define PBAD_CIRC_BUF 1000
 
 typedef struct _sim_anneal {
     unsigned long iter, maxIters;
     int direction, pBadBufPos, pBadBufLen;
-    double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum, currentScore;
+    double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum, currentScore, pBadStart, pBadEnd;
     foint currentSolution;
     pMoveFunc Move;
     pAcceptFunc Accept;
     pScoreFunc Score;
+    pReportFunc Report;
 } SIM_ANNEAL;
 
 // direction < 0 to minimize, > 0 to maximize
-SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc, pAcceptFunc Accept, unsigned long maxIters);
+SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc, pAcceptFunc Accept,
+    unsigned long maxIters, double pBadStart, double pBadEnd, pReportFunc Report);
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay);
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa); // to automatically create schedule
 int SimAnnealRun(SIM_ANNEAL *sa); // returns >0 if success, 0 if not done and can continue, <0 if error
