@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <assert.h>
 
+/* Usage: ./htree-test htree-test.in
+Enter 3 keys per line to lookup; EOF to exit*/
+
 #define DEPTH 3
 int main(int argc, char *argv[])
 {

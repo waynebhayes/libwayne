@@ -12,7 +12,7 @@ extern "C" {
 // Both keys and data are foints; the user is responsible for knowing what's actually stored.
 
 #ifndef HTREE_USES_AVL
-#define HTREE_USES_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
+#define HTREE_USES_AVL 1 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
 #endif
 
 #if HTREE_USES_AVL
