@@ -15,6 +15,11 @@ HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFc
     // Be nice and create the top-level tree.
     h->cmpKey = cmpKey; h->copyKey = copyKey; h->freeKey = freeKey;
     h->copyInfo = copyInfo; h->freeInfo = freeInfo;
+
+	// Intermediary trees only store pointers, default copy and free should be used
+	if (depth != 1)
+		copyInfo = NULL; freeInfo = NULL;
+
     h->tree = TreeAlloc(cmpKey, copyKey, freeKey, copyInfo, freeInfo);
     return h;
 }
@@ -30,7 +35,14 @@ static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint 
 	foint nextLevel;
 	TREETYPE *nextTree;
 	if(!TreeLookup(tree, keys[currentDepth], &nextLevel)) {
-	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, h->copyInfo, h->freeInfo);
+		pFointCopyFcn copyInfo = h->copyInfo;
+		pFointFreeFcn freeInfo = h->freeInfo;
+
+		// Intermediary trees only store pointers, default copy and free should be used
+		if (currentDepth < (h->depth-2))
+			copyInfo = NULL; freeInfo = NULL;
+
+	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, copyInfo, freeInfo);
 	    nextLevel.v = nextTree;
 	    TreeInsert(tree, keys[currentDepth], nextLevel);
 	}
