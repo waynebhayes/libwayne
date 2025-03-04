@@ -15,7 +15,7 @@ typedef double (*pScoreFunc)(Boolean global, const foint); // user-provided func
 // In the latter case, moveOrAccept is true iff the move was accepted, and the user's code should act accordingly and return
 // either the unchanged solution or the newly accepted one.
 typedef double (*pMoveFunc)(const foint solution);
-typedef foint  (*pAcceptFunc)(const Boolean accept, const foint solution);
+typedef Boolean  (*pAcceptFunc)(const Boolean accept, const foint solution); // returns whether it ACTUALLY accepted
 typedef void  (*pReportFunc)(int iter, foint f);
 
 

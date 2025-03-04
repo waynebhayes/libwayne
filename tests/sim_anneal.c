@@ -46,14 +46,14 @@ double SwapElements(const foint f) {
 }
 
 
-foint AcceptReject(Boolean accept, const foint f) {
+Boolean AcceptReject(Boolean accept, const foint f) {
     //printf("%c", accept?'A':'R'); fflush(stdout);
     assert(_swap1>=0 && _swap2>=0);
     if(!accept) { // swap them back
 	int tmp = _array[_swap1]; _array[_swap1]=_array[_swap2]; _array[_swap2]=tmp;
     }
     _swap1 = _swap2 = -1;
-    return f;
+    return accept;
 }
 
 

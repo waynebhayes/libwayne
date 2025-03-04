@@ -67,7 +67,7 @@ static void Iteration(SIM_ANNEAL *sa) {
     }
     //Note("Iter: score %g (%g) T %g pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
     if(accept) sa->currentScore += delta;
-    sa->currentSolution = sa->Accept(accept, sa->currentSolution);
+    Boolean didAccept = sa->Accept(accept, sa->currentSolution);
 }
 
 static double findPbad(SIM_ANNEAL *sa, double temperature) {
