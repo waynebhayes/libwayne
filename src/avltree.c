@@ -252,53 +252,6 @@ void AvlTreeFree(AVLTREE *tree)
     free(tree);
 }
 
-
-//////////////////// REBALANCING CODE
-static foint *keyArray, *dataArray;
-static int arraySize, currentItem;
-
-// Squirrel away all the items *in sorted order*
-static int TraverseTreeToArray(foint globals, foint key, foint data) {
-    assert(currentItem < arraySize);
-    keyArray[currentItem] = key;
-    dataArray[currentItem] = data;
-    ++currentItem;
-    return 1;
-}
-
-static void AvlTreeInsertMiddleElementOfArray(AVLTREE *tree, int low, int high) // low to high inclusive
-{
-    if(low <= high) { // we're using low though high *inclusive* so = is a valid case.
-	int mid = (low+high)/2;
-	AvlTreeInsert(tree, keyArray[mid], dataArray[mid]);
-	AvlTreeInsertMiddleElementOfArray(tree, low, mid-1);
-	AvlTreeInsertMiddleElementOfArray(tree, mid+1,high);
-    }
-}
-
-void AvlTreeRebalance(AVLTREE *tree)
-{
-    static Boolean inRebalance; // only allow one tree to be rebalanced concurrently
-    if(inRebalance) return; // even without threading, the AvlTreeTraverse below may trigger the rebalance of another tree
-    inRebalance = true;
-    if(tree->n > arraySize){
-	arraySize = tree->n;
-	keyArray = Realloc(keyArray, arraySize*sizeof(foint));
-	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
-    }
-    currentItem = 0;
-    AvlTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
-    assert(currentItem == tree->n);
-    
-    AVLTREE *newTree = AvlTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);
-    // Now re-insert the items in *perfectly balanced* order.
-    assert(tree->n > 0);
-    AvlTreeInsertMiddleElementOfArray(newTree, 0, tree->n - 1);
-    assert(tree->n == newTree->n);
-    AVLTREENODE *tmp = tree->root; tree->root = newTree->root; newTree->root = tmp;
-    AvlTreeFree(newTree);
-    inRebalance = false;
-}
 #ifdef __cplusplus
 } // end extern "C"
 #endif
