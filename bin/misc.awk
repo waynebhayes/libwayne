@@ -498,7 +498,7 @@ function StatAddSample(name, x) {
     _statMax[name]=MAX(_statMax[name],x);
     if(_statQuantiles[name]) ++_statValue[name][x];
 }
-function StatAddWeightedSample(name, x, w) {
+function StatAddSampleWeighted(name, x, w) {
     if(1*_statN[name]==0)StatReset(name);
     _statN[name]+=w;
     _statNunWtd[name]++;
