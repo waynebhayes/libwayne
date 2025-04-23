@@ -47,7 +47,7 @@ fi
 #echo '$AWK='"$AWK $PROF_OUT" >&2
 
 $AWK 'BEGIN{++edge[0][0]}' </dev/null ||
-    die "Sorry, $AWK cannot handle multi-dimensional arrays, which is needed for hawk to work"
+    die "Sorry, you need to install GNU awk version 4 or higher; hawk needs multi-dimensional arrays but $AWK does not appear to support them"
 
 if $AWK $PROF_OUT -F "$FIELD_SEP" -f "$TMPDIR/PROG" "$@"; then : # do nothing, just exit
     trap "/bin/rm -rf $TMPDIR; exit" 0 1 2 3 15
