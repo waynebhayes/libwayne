@@ -83,7 +83,7 @@ static double findPbad(SIM_ANNEAL *sa, double temperature) {
 	//Note("findPbad(t=%g) iter %d mean pBad = %g", temperature, i, mean);
 	++i;
 	// below, we compute the previous and current average and demand they agree to some precision
-    } while (i < 30 || fabs(prevSumPbad/(i-1) / (sumPbad/i) - 1) > 1e-4); // stabilize to at least this relative precision
+    } while (i < 3000 || fabs(prevSumPbad/(i-1) / (sumPbad/i) - 1) > 1e-4); // stabilize to at least this relative precision
     Note("temperature %g gives pBad %g after %d iterations", temperature, mean, i);
     return mean;
 }
