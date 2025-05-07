@@ -6,15 +6,19 @@ NL='
 
 # --- you shouldn't need to touch anything below here
 
+die(){ echo "ERROR: " "$@" >&2; exit 1; }
+
 libList=
 everythingElse=
 doLink=true    # boolean
 DEBUG=false
+NDEBUG=false
 PROFILE=false
 while [ $# -gt 0 ]; do
     case $1 in
     -l*) libList="$libList $1" ;;
     -c) doLink=false ;;
+    -nd) NDEBUG=true ;;
     -g*) DEBUG=true; everythingElse="$everythingElse $1" ;;
     -p*) PROFILE=true; everythingElse="$everythingElse $1" ;;
     *) everythingElse="$everythingElse $1" ;;
@@ -22,20 +26,21 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+$DEBUG && $NDEBUG && die "can't have both DEBUG and NDEBUG"
+
+# defaults
 LIB_OPT=
+SPEED=-O3
+
+# The order of these MUST be the following: check pg, then g, then nd
+$PROFILE && LIB_OPT=${LIB_OPT}-pg
 if $DEBUG; then
     SPEED="-O0 -ggdb"
-    if $PROFILE; then
-        LIB_OPT=-g-pg
-    else
-        LIB_OPT=-g
-    fi
-else
-    SPEED=-O3
-    if $PROFILE; then
-        LIB_OPT=-pg
-    fi
+    LIB_OPT=${LIB_OPT}-g
 fi
+$NDEBUG && LIB_OPT=${LIB_OPT}-nd
+
+[ -f $LIBWAYNE_HOME/libwayne$LIB_OPT.a ] || die "can't find $LIBWAYNE_HOME/libwayne$LIB_OPT"
 
 STACKSIZE=$(($CC -v 2>&1; uname -a) |
     awk '/CYGWIN/{print "-Wl,--stack,83886080"}/gcc-/{actualGCC=1}actualGCC&&/Darwin/{print "-Wl,-stack_size -Wl,0x5000000"}')

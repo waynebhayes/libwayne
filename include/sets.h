@@ -81,7 +81,6 @@ SET *SetDelete(SET *set, unsigned element); /* delete a single element */
 Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
-// Note we do not check here if e is < set->maxElem, which is dangerous
 #define SetIn(set,e) ( (set)->bitvec ? BitvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
 #else
 #define SetIn SetInSafe
@@ -114,7 +113,7 @@ SET *SetPrimes(long n); /* return the set of all primes between 0 and n */
 void SetPrint(SET *A); /* space-separated elements of the set, no newline */
 
 // returns pointer array of set members using either s->list or SetToArray into array YOU pre-allocate
-unsigned *SetSmartArray(const SET *const s, unsigned *array, const unsigned maxSize);
+unsigned *SetSmartArray(unsigned *array, const SET *const s, const unsigned maxSize);
 
 // These macros loop through members of a set. You must pre-declare both the member variable (an unsigned int),
 // and the SET* variable. If you need the loop only once, just use FOREACH. However, note that there potentially

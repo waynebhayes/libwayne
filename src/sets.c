@@ -138,7 +138,8 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
 	// bsearch sometimes FAILS to find an element that exists! So search from ZERO rather than set->numSorted.... Grrrr!
 #if PARANOID_ASSERTS
 	for(i=1; i<set->numSorted; i++) assert(set->list[i-1] < set->list[i]); // ensure it's sorted
-	for(i=0; i<set->numSorted; i++) if(element == set->list[i]) Fatal("bsearch failed: element %d, position %d", element, i);
+	for(i=0; i<set->numSorted; i++) if(element == set->list[i])
+	    Fatal("bsearch failed even though element %d exists at position %d", element, i);
 #endif
     }
     for(i=set->numSorted; i<set->cardinality; i++) if(element == set->list[i]) return true;
@@ -539,7 +540,7 @@ unsigned SetToArray(unsigned int *array, const SET *set)
     return pos;
 }
 
-unsigned *SetSmartArray(const SET *const s, unsigned *array, const unsigned maxSize)
+unsigned *SetSmartArray(unsigned *array, const SET *const s, const unsigned maxSize)
 {
     assert(maxSize >= SetCardinality(s));
     if(s->list) return s->list;
