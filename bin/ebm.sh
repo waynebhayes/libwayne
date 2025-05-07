@@ -52,8 +52,10 @@ while true; do
 done
 
 export VERBOSE
-DIRNAME=`dirname "$0"`
-EBM_EXE=`(/bin/which ebm || /usr/bin/which ebm) 2>/dev/null | head -1`
+SCRIPT="$0"
+while [ -h "$SCRIPT" ]; do SCRIPT=`ls -l $SCRIPT | awk '/ ->/{print $NF}'`; done
+DIRNAME=`dirname "$SCRIPT"`
+EBM_EXE=`(/bin/ls "$DIRNAME/ebm" || /bin/which ebm || /usr/bin/which ebm) 2>/dev/null | head -1`
 if $ALLOW_EXE && [ -x "$EBM_EXE" ] && VERBOSE=1 "$EBM_EXE" <"$DIRNAME/ebm.test.in" 2>/dev/null | cmp - "$DIRNAME/ebm.test.out" >/dev/null 2>&1; then
     if [ "$EBM_SH_TRYING_EXECUTABLE" = "" ]; then
 	[ "$VERBOSE" -gt 1 ] && echo "exec'ing $EBM_EXE" >&2
