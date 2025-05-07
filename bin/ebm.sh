@@ -30,6 +30,7 @@ warn(){ (echo "WARNING: $@")>&2; }
 not(){ if eval "$@"; then return 1; else return 0; fi; }
 newlines(){ awk '{for(i=1; i<=NF;i++)print $i}' "$@"; }
 parse(){ awk "BEGIN{print $*}" </dev/null; }
+HardPath(){ if [ -h "$1" ]; then link=`cd $(dirname "$1") && /bin/ls -l $(basename "$1") | awk '/ -> /{print $NF}'`; (cd $(dirname "$1") && HardPath "$link"); else echo $(cd $(dirname "$1")&&/bin/pwd)/$(basename "$1"); fi;}
 
 # Temporary Filename + Directory (both, you can use either, note they'll have different random stuff in the XXXXXX part)
 TMPDIR=`mktemp -d /tmp/$BASENAME.XXXXXX`
@@ -52,11 +53,9 @@ while true; do
 done
 
 export VERBOSE
-SCRIPT="$0"
-while [ -h "$SCRIPT" ]; do SCRIPT=`ls -l $SCRIPT | awk '/ ->/{print $NF}'`; done
-DIRNAME=$(cd $(dirname "$SCRIPT") && /bin/pwd)
-EBM_EXE=`(/bin/ls "$DIRNAME/ebm" || /bin/which ebm || /usr/bin/which ebm) 2>/dev/null | head -1`
-if $ALLOW_EXE && [ -x "$EBM_EXE" ] && VERBOSE=1 "$EBM_EXE" <"$DIRNAME/ebm.test.in" 2>/dev/null | cmp - "$DIRNAME/ebm.test.out" >/dev/null 2>&1; then
+EBM_PATH=`HardPath "$0" | sed 's/\.sh$//'`
+EBM_EXE=`(/bin/ls "$EBM_PATH" || /bin/which ebm || /usr/bin/which ebm) 2>/dev/null | head -1`
+if $ALLOW_EXE && [ -x "$EBM_EXE" ] && VERBOSE=1 "$EBM_EXE" <"$EBM_PATH.test.in" 2>/dev/null | cmp - "$EBM_PATH.test.out" >/dev/null 2>&1; then
     if [ "$EBM_SH_TRYING_EXECUTABLE" = "" ]; then
 	[ "$VERBOSE" -gt 1 ] && echo "exec'ing $EBM_EXE" >&2
 	EBM_SH_TRYING_EXECUTABLE=true; export EBM_SH_TRYING_EXECUTABLE
