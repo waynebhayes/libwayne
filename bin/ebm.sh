@@ -37,7 +37,7 @@ TMPDIR=`mktemp -d /tmp/$BASENAME.XXXXXX`
 
 #################### END OF SKELETON, ADD YOUR CODE BELOW THIS LINE
 
-[ $# = 0 ] && isatty && warn "reading stdin from tty; press ^D to finish, or ^C to exit"
+[ $# = 0 ] && tty -s && warn "reading stdin from tty; press ^D to finish, or ^C to exit"
 
 VERBOSE=0
 ALLOW_EXE=true
