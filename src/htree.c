@@ -112,16 +112,19 @@ static void HTreeFreeHelper(foint globals, HTREE *h, int currentDepth, TREETYPE 
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-	TreeFree(tree);
-    else {
-	_TraverseH = h; _TraverseDepth = currentDepth;
-	TreeTraverse(globals, tree, (pFointTraverseFcn) TraverseFree);
+		TreeFree(tree);
+    else
+	{
+		_TraverseH = h; _TraverseDepth = currentDepth;
+		TreeTraverse(globals, tree, (pFointTraverseFcn) TraverseFree);
+		TreeFree(tree);
     }
 }
 
 void HTreeFree(HTREE *h)
 {
     HTreeFreeHelper((foint)NULL, h, 0, h->tree);
+	free(h);
 }
 #ifdef __cplusplus
 } // end extern "C"
