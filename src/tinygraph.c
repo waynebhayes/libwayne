@@ -89,7 +89,7 @@ void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G)
     {
     //fprintf(fp, "%d", !!TinyGraphAreConnected(G,i,0));
     for(j=0; j<G->n; j++)
-        fprintf(fp, " %d", !!TinyGraphAreConnected(G,i,j));
+	fprintf(fp, " %d", !!TinyGraphAreConnected(G,i,j));
     fprintf(fp, "\n");
     }
 }
@@ -105,9 +105,9 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed)
     {
     int connected;
     if(fscanf(fp, "%d", &connected) != 1)
-        Fatal("too few vertices listed in file");
+	Fatal("too few vertices listed in file");
     if(connected)
-        TinyGraphConnect(G,i,j);
+	TinyGraphConnect(G,i,j);
     }
     return G;
 }
@@ -122,9 +122,9 @@ TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
     assert(Gbar != G); // can't handle complementing a graph to itself
 
     for(i=0; i < G->n; i++) for(j=0;j<G->n;j++){
-        if(i==j&&!G->selfLoops) continue;
-        if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
-        else TinyGraphConnect(Gbar,i,j);
+	if(i==j&&!G->selfLoops) continue;
+	if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
+	else TinyGraphConnect(Gbar,i,j);
     }
     return Gbar;
 }
@@ -195,9 +195,9 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
 
     if(distance == 0) /* We could let the rest of the routine run, but why bother? */
     {
-        nodeArray[0] = root;
-        distArray[root] = 0;
-        return 1;
+	nodeArray[0] = root;
+	distArray[root] = 0;
+	return 1;
     }
 
     for(i=0; i<G->n; i++)
@@ -208,33 +208,33 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
     QueuePut(BFSQ, (foint)root);
     while(QueueSize(BFSQ) > 0)
     {
-        int v = QueueGet(BFSQ).i;
+	int v = QueueGet(BFSQ).i;
 
-        /* At this point, distArray[v] should be assigned (when v was appended
-        * onto the queue), but v hasn't been "visited" or "counted" yet.
-        */
+	/* At this point, distArray[v] should be assigned (when v was appended
+	* onto the queue), but v hasn't been "visited" or "counted" yet.
+	*/
 
-        assert(0 <= v && v < G->n);
-        assert(0 <= distArray[v] && distArray[v] < G->n);
+	assert(0 <= v && v < G->n);
+	assert(0 <= distArray[v] && distArray[v] < G->n);
 
-        assert(nodeArray[count] == -1);
-        nodeArray[count] = v;
-        count++;
+	assert(nodeArray[count] == -1);
+	nodeArray[count] = v;
+	count++;
 
-        if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
-        {
-            unsigned int neighbor[MAX_TSET];
-            int j, numNeighbors = TSetToArray(neighbor, G->A[v]); /* This is the slow part, O(n) */
-            for(j=0; j < numNeighbors; j++) {
-            if(neighbor[j]==v) {
-                assert(G->selfLoops); // nothing to do, don't add self in a BFS
-            } else if(distArray[neighbor[j]] == -1) /* some of the neighbors might have already been visited */
-            {
-                distArray[neighbor[j]] = distArray[v] + 1;
-                QueuePut(BFSQ, (foint)neighbor[j]);
-            }
-            }
-        }
+	if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
+	{
+	    unsigned int neighbor[MAX_TSET];
+	    int j, numNeighbors = TSetToArray(neighbor, G->A[v]); /* This is the slow part, O(n) */
+	    for(j=0; j < numNeighbors; j++) {
+	    if(neighbor[j]==v) {
+		assert(G->selfLoops); // nothing to do, don't add self in a BFS
+	    } else if(distArray[neighbor[j]] == -1) /* some of the neighbors might have already been visited */
+	    {
+		distArray[neighbor[j]] = distArray[v] + 1;
+		QueuePut(BFSQ, (foint)neighbor[j]);
+	    }
+	    }
+	}
     }
     QueueFree(BFSQ);
     return count;
@@ -254,10 +254,10 @@ void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
     int i;
     for (i = 0; i < numNeighbors; i++) {
     if(neighbor[i]==seed) {
-        assert(G->selfLoops); // nothing to do, don't add self in a DFS
+	assert(G->selfLoops); // nothing to do, don't add self in a DFS
     } else if (!TSetIn(*visited, neighbor[i])) {
-            TinyGraphDFSConnectedHelper(G, neighbor[i], visited);
-        }
+	    TinyGraphDFSConnectedHelper(G, neighbor[i], visited);
+	}
     }
 }
 
@@ -270,7 +270,7 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
     if(Gv)
     {
     if(Gv == G) /* be careful, destination is same as source */
-        Gv = &GGv;
+	Gv = &GGv;
     Gv->n = nV;
     TinyGraphEdgesAllDelete(Gv);
     }
@@ -280,10 +280,10 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
     if(TinyGraphAreConnected(G, array[i], array[j]))
-        TinyGraphConnect(Gv, i, j);
+	TinyGraphConnect(Gv, i, j);
     if(G->selfLoops) for(i=0; i < nV; i++)
     if(TinyGraphAreConnected(G, array[i], array[i]))
-        TinyGraphConnect(Gv, i, i);
+	TinyGraphConnect(Gv, i, i);
 
     if(Gv == &GGv)
     *(Gv = G) = GGv;
@@ -299,7 +299,7 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
     if(Gv)
     {
     if(Gv == G) /* be careful, destination is same as source */
-        Gv = &GGv;
+	Gv = &GGv;
     Gv->n = G->n;
     TinyGraphEdgesAllDelete(Gv);
     }
@@ -309,10 +309,10 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
     if(TinyGraphAreConnected(G, array[i], array[j]))
-        TinyGraphConnect(Gv, array[i], array[j]);
+	TinyGraphConnect(Gv, array[i], array[j]);
     if(G->selfLoops) for(i=0; i < nV; i++)
     if(TinyGraphAreConnected(G, array[i], array[i]))
-        TinyGraphConnect(Gv, array[i], array[i]);
+	TinyGraphConnect(Gv, array[i], array[i]);
     if(Gv == &GGv)
     *(Gv = G) = GGv;
     return Gv;
@@ -328,14 +328,14 @@ static int TinyGraphContainsK3(TINY_GRAPH *G)
     int i,j;
     for(i=0; i < G->n; i++)
     for(j=i+1; j < G->n; j++)
-        if(TinyGraphAreConnected(G,i,j) && TinyGraphConnectingCausesK3(G,i,j))
-        {
-        int k;
-        for(k=0; k < G->n; k++)
-            if(TSetIn(TSetIntersect(G->A[i], G->A[j]), k))
-            break;
-        return (TSET1<<i)|(TSET1<<j)|(TSET1<<k);
-        }
+	if(TinyGraphAreConnected(G,i,j) && TinyGraphConnectingCausesK3(G,i,j))
+	{
+	int k;
+	for(k=0; k < G->n; k++)
+	    if(TSetIn(TSetIntersect(G->A[i], G->A[j]), k))
+	    break;
+	return (TSET1<<i)|(TSET1<<j)|(TSET1<<k);
+	}
     return 0;
 }
 #endif
@@ -355,18 +355,18 @@ static Boolean _permutationIdentical(int n, int perm[n])
     int i, j;
     for(i=0; i<n; i++)
     if(isoG1->degree[i] != isoG2->degree[perm[i]])
-        return 0;
+	return 0;
 
     for(i=0; i<n; i++) for(j=i+1; j<n; j++)
     /* The !GraphAreConnected is just to turn a bitstring into a boolean */
     if(!TinyGraphAreConnected(isoG1, i,j) !=
-        !TinyGraphAreConnected(isoG2, perm[i], perm[j]))
-        return 0;   /* non-isomorphic */
+	!TinyGraphAreConnected(isoG2, perm[i], perm[j]))
+	return 0;   /* non-isomorphic */
     // Note they don't both have to ALLOW self loops, but if one does, then both need to have or not the same loops
     if(isoG1->selfLoops || isoG2->selfLoops) for(i=0; i<n; i++)
     if(!TinyGraphAreConnected(isoG1, i,i) !=
-        !TinyGraphAreConnected(isoG2, perm[i], perm[i]))
-        return 0;   /* non-isomorphic */
+	!TinyGraphAreConnected(isoG2, perm[i], perm[i]))
+	return 0;   /* non-isomorphic */
     return 1;   /* isomorphic! */
 }
 
@@ -403,7 +403,7 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
     }
     for(i=0; i<n+self; i++)
     if(degreeCount1[i] != degreeCount2[i])
-        {--recursionDepth; return false;}
+	{--recursionDepth; return false;}
 
     /*
     ** Let degree d appear only once.  Then there is exactly one vertex
@@ -414,46 +414,46 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
     TSetEmpty(degreeOnce);
     for(i=0; i<n+self; i++)
     if(degreeCount1[i] == 1)
-        TSetAdd(degreeOnce, i);
+	TSetAdd(degreeOnce, i);
 
     for(i=0; i<n; i++)
     {
     /* Find out if the degree of vertex i in G1 appears only once */
     if(TSetIn(degreeOnce, G1->degree[i]))
     {
-        int j, degree = G1->degree[i];
+	int j, degree = G1->degree[i];
 	TINY_GRAPH neighG1i, neighG2j, restG1i, restG2j;
 
-        /* find the (unique) vertex in G2 that has the same degree */
-        for(j=0; j < n; j++)
-        if(G2->degree[j] == degree)
-            break;
-        assert(j < n);
+	/* find the (unique) vertex in G2 that has the same degree */
+	for(j=0; j < n; j++)
+	if(G2->degree[j] == degree)
+	    break;
+	assert(j < n);
 
-        // remove self-loops from the set to induce on...
-        TSET G1Ai = G1->A[i], G2Aj = G2->A[j];
-        TSetDelete(G1Ai, i); TinyGraphInduced(&neighG1i, G1, G1Ai);
-        TSetDelete(G2Aj, j); TinyGraphInduced(&neighG2j, G2, G2Aj);
+	// remove self-loops from the set to induce on...
+	TSET G1Ai = G1->A[i], G2Aj = G2->A[j];
+	TSetDelete(G1Ai, i); TinyGraphInduced(&neighG1i, G1, G1Ai);
+	TSetDelete(G2Aj, j); TinyGraphInduced(&neighG2j, G2, G2Aj);
 
-        /*
-        ** Note: this recursion works only as long as _permutationIdentical doesn't call *GraphsIsomorphic.
-        ** (if it does, isoG1 and isoG2 get messed up). Also, notice that it's fine that we re-use the perm[]
-        ** array on this recursion since the array doesn't actually get used until the bottom of this function
-        ** when calling CombinAllPermutatiotns().
-        */
+	/*
+	** Note: this recursion works only as long as _permutationIdentical doesn't call *GraphsIsomorphic.
+	** (if it does, isoG1 and isoG2 get messed up). Also, notice that it's fine that we re-use the perm[]
+	** array on this recursion since the array doesn't actually get used until the bottom of this function
+	** when calling CombinAllPermutatiotns().
+	*/
 
-        Boolean subTest;
-        subTest = TinyGraphsIsomorphic(perm, &neighG1i, &neighG2j);
-        if(!subTest) {--recursionDepth; return false; }
+	Boolean subTest;
+	subTest = TinyGraphsIsomorphic(perm, &neighG1i, &neighG2j);
+	if(!subTest) {--recursionDepth; return false; }
 
-        /* Now ask if the remainder of the graphs are isomorphic */
-        TSET all;
-        all = ((TSET)(-1)) >> (MAX_TSET-G1->n);
-        TinyGraphInduced(&restG1i, G1, TSetDelete(all, i));
-        all = ((TSET)(-1)) >> (MAX_TSET-G2->n);
-        TinyGraphInduced(&restG2j, G2, TSetDelete(all, j));
-        subTest = TinyGraphsIsomorphic(perm, &restG1i, &restG2j);
-        if(!subTest) {--recursionDepth; return false; }
+	/* Now ask if the remainder of the graphs are isomorphic */
+	TSET all;
+	all = ((TSET)(-1)) >> (MAX_TSET-G1->n);
+	TinyGraphInduced(&restG1i, G1, TSetDelete(all, i));
+	all = ((TSET)(-1)) >> (MAX_TSET-G2->n);
+	TinyGraphInduced(&restG2j, G2, TSetDelete(all, j));
+	subTest = TinyGraphsIsomorphic(perm, &restG1i, &restG2j);
+	if(!subTest) {--recursionDepth; return false; }
     }
     }
 
