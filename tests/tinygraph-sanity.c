@@ -52,14 +52,14 @@ int main(int argc, char *argv[])
     TinyGraphPrintAdjMatrix(stderr,G);
     while(!feof(stdin))
     {
-    int root, distance, nodeArray[MAX_TSET], distArray[MAX_TSET];
-    printf("enter BFS start node, distance: "); fflush(stdout);
-    if(scanf("%d%d", &root, &distance) != 2)
-	 break;
-    BFSsize = TinyGraphBFS(G, root, distance, nodeArray, distArray);
-    for(i=0; i<BFSsize; i++)
-	printf("%d(%d) ", nodeArray[i], distArray[nodeArray[i]]);
-    printf("\n");
+	int root, distance, nodeArray[MAX_TSET], distArray[MAX_TSET];
+	printf("enter BFS start node, distance: "); fflush(stdout);
+	if(scanf("%d%d", &root, &distance) != 2)
+	    break;
+	BFSsize = TinyGraphBFS(G, root, distance, nodeArray, distArray);
+	for(i=0; i<BFSsize; i++)
+	    printf("%d(%d) ", nodeArray[i], distArray[nodeArray[i]]);
+	printf("\n");
     }
     return 0;
 }
