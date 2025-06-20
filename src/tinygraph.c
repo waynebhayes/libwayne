@@ -10,7 +10,7 @@ extern "C" {
 **
 *************************************************************************/
 
-TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
+TINY_GRAPH *TinyGraphAlloc(unsigned int n)
 {
     static Boolean startup = 1;
     TINY_GRAPH *G = Calloc(1, sizeof(TINY_GRAPH));
@@ -22,8 +22,13 @@ TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
 	SetStartup();
     }
     G->n = n;
-    G->directed = directed;
-    G->selfLoops = selfLoops;
+    return G;
+}
+
+TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n)
+{
+    TINY_GRAPH *G = TinyGraphAlloc(n);
+    G->selfLoops=true;
     return G;
 }
 
@@ -32,9 +37,12 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
     if(TinyGraphAreConnected(G, i, j))
 	return G;
     TSetAdd(G->A[i], j);
-    if(!G->directed) TSetAdd(G->A[j],i);
     ++G->degree[i];
     if(i==j) assert(G->selfLoops);
+    else {
+	TSetAdd(G->A[j], i);
+	++G->degree[j];
+    }
     return G;
 }
 
@@ -44,13 +52,11 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
     // TODO FIXME: there's probably a more efficient way to do this than constructing the whole TINY_GRAPH from scratch...
     static TINY_GRAPH H; // note this is NOT a pointer
     H.n = G->n;
-    H.selfLoops = G->selfLoops;
-    H.directed = G->directed;
     TinyGraphEdgesAllDelete(&H);
     int i,j, perm[MAX_TSET];
     for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
     perm[u]=v; perm[v]=u;  // swap u and v
-    for(i=0; i<G->n; i++) for(j=0; j<G->n;j++) if(TinyGraphAreConnected(G,i,j)) TinyGraphConnect(&H, perm[i], perm[j]);
+    for(i=0; i<G->n; i++) for(j=i+1; j<G->n;j++) if(TinyGraphAreConnected(G,i,j)) TinyGraphConnect(&H, perm[i], perm[j]);
     TinyGraphCopy(G, &H);
     return G;
 }
@@ -72,35 +78,49 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 	return G;
     TSetDelete(G->A[i], j);
     G->degree[i]--;
-    if(!G->directed) TSetDelete(G->A[j],i);
     if(j==i) assert(G->selfLoops);
+    else {
+	TSetDelete(G->A[j], i);
+	G->degree[j]--;
+    }
     return G;
 }
 
+#ifndef TinyGraphAreConnected
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j)
 {
-    return TSetIn(G->A[i],j);
+    if(TSetIn(G->A[i],j))
+    {
+#if PARANOID_ASSERTS
+	if(i==j) assert(G->selfLoops);
+	else assert(TSetIn(G->A[j],i));
+#endif
+	return true;
+    }
+    else
+	return false;
 }
+#endif
 
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G)
 {
     int i, j;
     for(i=0; i<G->n; i++)
     {
-	//fprintf(fp, "%d", !!TinyGraphAreConnected(G,i,0));
-	for(j=0; j<G->n; j++)
+	fprintf(fp, "%d", !!TinyGraphAreConnected(G,i,0));
+	for(j=1; j<G->n; j++)
 	    fprintf(fp, " %d", !!TinyGraphAreConnected(G,i,j));
 	fprintf(fp, "\n");
     }
 }
 
 
-TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed)
+TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp)
 {
     int i,j,n=-1;
     TINY_GRAPH *G;
     assert(1==fscanf(fp, "%d", &n) && n>=0);
-    G = TinyGraphAlloc(n,0,directed);
+    G = TinyGraphAlloc(n);
     for(i=0; i<n; i++) for(j=0; j<n; j++)
     {
 	int connected;
@@ -116,16 +136,19 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed)
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
 {
     int i,j;
-    if(!Gbar) Gbar = TinyGraphAlloc(G->n,G->selfLoops,G->directed);
-    
-    Gbar->selfLoops = G->selfLoops;
     assert(Gbar != G); // can't handle complementing a graph to itself
+    if(!Gbar)
+	Gbar = TinyGraphAlloc(G->n);
+    Gbar->selfLoops = G->selfLoops;
 
-    for(i=0; i < G->n; i++) for(j=0;j<G->n;j++){
-        if(i==j&&!G->selfLoops) continue;
-        if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
-        else TinyGraphConnect(Gbar,i,j);
+    for(i=0; i < G->n; i++) for(j=i+1;j<G->n;j++)
+	if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
+	else TinyGraphConnect(Gbar,i,j);
+    if(G->selfLoops) for(i=0; i < G->n; i++) {
+	if(TinyGraphAreConnected(G,i,i)) TinyGraphDisconnect(Gbar,i,i);
+	else TinyGraphConnect(Gbar,i,i);
     }
+
     return Gbar;
 }
 
@@ -133,13 +156,14 @@ TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
 TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *dest, TINY_GRAPH *G1, TINY_GRAPH *G2)
 {
     int i;
+
     if(G1->n != G2->n)
 	return NULL;
 
     if(dest)
 	dest->n = G1->n;
     else
-	dest = TinyGraphAlloc(G1->n,G1->selfLoops||G2->selfLoops,G1->directed);
+	dest = TinyGraphAlloc(G1->n);
 
     for(i=0; i < G1->n; i++)
     {
@@ -158,7 +182,7 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
     if(dest)
 	dest->n = G1->n;
     else
-	dest = TinyGraphAlloc(G1->n,G1->selfLoops,G1->directed);
+	dest = TinyGraphAlloc(G1->n);
 
     for(i=0; i < G1->n; i++)
     {
@@ -176,11 +200,13 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 
 int TinyGraphNumEdges(TINY_GRAPH *G)
 {
-    int total=0, i;
+    int total=0, i, selfLoops=0;
     for(i=0; i<G->n; i++) {
 	total += G->degree[i];
+	if(G->selfLoops && TinyGraphAreConnected(G,i,i)) ++selfLoops;
     }
-    return total/(2-G->directed);
+    assert((total-selfLoops) % 2 == 0); // should be divisible by 2
+    return (total-selfLoops)/2 + selfLoops;
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
@@ -195,9 +221,9 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
 
     if(distance == 0) /* We could let the rest of the routine run, but why bother? */
     {
-        nodeArray[0] = root;
-        distArray[root] = 0;
-        return 1;
+	nodeArray[0] = root;
+	distArray[root] = 0;
+	return 1;
     }
 
     for(i=0; i<G->n; i++)
@@ -208,46 +234,45 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
     QueuePut(BFSQ, (foint)root);
     while(QueueSize(BFSQ) > 0)
     {
-        int v = QueueGet(BFSQ).i;
+	int v = QueueGet(BFSQ).i;
 
-        /* At this point, distArray[v] should be assigned (when v was appended
-        * onto the queue), but v hasn't been "visited" or "counted" yet.
-        */
+	/* At this point, distArray[v] should be assigned (when v was appended
+	 * onto the queue), but v hasn't been "visited" or "counted" yet.
+	 */
 
-        assert(0 <= v && v < G->n);
-        assert(0 <= distArray[v] && distArray[v] < G->n);
+	assert(0 <= v && v < G->n);
+	assert(0 <= distArray[v] && distArray[v] < G->n);
 
-        assert(nodeArray[count] == -1);
-        nodeArray[count] = v;
-        count++;
+	assert(nodeArray[count] == -1);
+	nodeArray[count] = v;
+	count++;
 
-        if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
-        {
-            unsigned int neighbor[MAX_TSET];
-            int j, numNeighbors = TSetToArray(neighbor, G->A[v]); /* This is the slow part, O(n) */
-            for(j=0; j < numNeighbors; j++) {
-            if(neighbor[j]==v) {
-                assert(G->selfLoops); // nothing to do, don't add self in a BFS
-            } else if(distArray[neighbor[j]] == -1) /* some of the neighbors might have already been visited */
-            {
-                distArray[neighbor[j]] = distArray[v] + 1;
-                QueuePut(BFSQ, (foint)neighbor[j]);
-            }
-            }
-        }
+	if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
+	{
+	    unsigned int neighbor[MAX_TSET];
+	    int j, numNeighbors = TSetToArray(neighbor, G->A[v]); /* This is the slow part, O(n) */
+	    for(j=0; j < numNeighbors; j++) {
+		if(neighbor[j]==v) {
+		    assert(G->selfLoops); // nothing to do, don't add self in a BFS
+		} else if(distArray[neighbor[j]] == -1) /* some of the neighbors might have already been visited */
+		{
+		    distArray[neighbor[j]] = distArray[v] + 1;
+		    QueuePut(BFSQ, (foint)neighbor[j]);
+		}
+	    }
+	}
     }
     QueueFree(BFSQ);
     return count;
 }
+
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed) {
-    assert(!G->directed);
     TSET visited = TSET_NULLSET;
     TinyGraphDFSConnectedHelper(G, seed, &visited);
     return (G->n == TSetCardinality(visited));
 }
 
 void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
-    assert(!G->directed);
     TSetAdd(*visited, seed);
     unsigned int neighbor[MAX_TSET];
     int numNeighbors = TSetToArray(neighbor, G->A[seed]);
@@ -264,7 +289,6 @@ void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
 
 TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -275,7 +299,7 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 	TinyGraphEdgesAllDelete(Gv);
     }
     else
-	Gv = TinyGraphAlloc(nV,0,0);
+	Gv = TinyGraphAlloc(nV);
     Gv->selfLoops = G->selfLoops;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
@@ -293,7 +317,6 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 
 TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -304,7 +327,7 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 	TinyGraphEdgesAllDelete(Gv);
     }
     else
-	Gv = TinyGraphAlloc(G->n,0,0);
+	Gv = TinyGraphAlloc(G->n);
     Gv->selfLoops = G->selfLoops;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
@@ -351,7 +374,6 @@ static TINY_GRAPH *isoG1, *isoG2;
 
 static Boolean _permutationIdentical(int n, int perm[n])
 {
-    assert(!isoG1->directed&&!isoG2->directed);
     int i, j;
     for(i=0; i<n; i++)
 	if(isoG1->degree[i] != isoG2->degree[perm[i]])
@@ -375,7 +397,6 @@ static Boolean _permutationIdentical(int n, int perm[n])
 */
 Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
 {
-    assert(!G1->directed&&!G2->directed);
     static int recursionDepth;
     ++recursionDepth;
     assert(recursionDepth <= MAX_TSET+1);
@@ -469,12 +490,6 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
     --recursionDepth;
     return !!CombinAllPermutations(n, perm, _permutationIdentical);
 }
-#ifdef __cplusplus
-} // end extern "C"
-#endif
-
-
-
 #ifdef __cplusplus
 } // end extern "C"
 #endif
