@@ -22,7 +22,7 @@ typedef struct _tinyGraph {
     TSET A[MAX_TSET];   /* Adjacency Matrix */
 } TINY_GRAPH;
 
-TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed); // does not allow self-loops
+TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed);
 #define TinyGraphFree Free
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
@@ -31,24 +31,6 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v); // this changes G
 TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j);
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *destination, TINY_GRAPH *G1, TINY_GRAPH *G2);
-Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed);
-void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited);
-/*
-** TinyGraphInduced_NoVertexDelete doesn't delete any vertices, it only deletes
-** edges whose ends don't both appear in V.  TinyGraphInduced builds an entirely
-** new graph in which also the vertices not in V are deleted; vertices
-** are renumbered but ordering is conserved.
-*/
-TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
-TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
-/*
-** Isomorphism algorithm for general graphs G1, G2.
-** This algorithm uses some simple tests in an attempt to avoid the
-** exponential algorithm.  It checks the number of nodes, the number of
-** times each degree appears, and then kranks up the exponential time
-** algorithm.
-*/
-Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2);
 int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of the degrees / 2.
 #define TinyGraphDegree(G,v) ((G)->degree[v])
 
@@ -63,6 +45,16 @@ int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of 
  * Also, worst-case runtime is O(n^2)... very bad, yes.. :-(
  */
 int TinyGraphBFS(TINY_GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
+Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed);
+void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited);
+/*
+** TinyGraphInduced_NoVertexDelete doesn't delete any vertices, it only deletes
+** edges whose ends don't both appear in V.  TinyGraphInduced builds an entirely
+** new graph in which also the vertices not in V are deleted; vertices
+** are renumbered but ordering is conserved.
+*/
+TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
+TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
 
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed);
@@ -75,6 +67,14 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed);
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
 #endif
 
+/*
+** Isomorphism algorithm for general graphs G1, G2.
+** This algorithm uses some simple tests in an attempt to avoid the
+** exponential algorithm.  It checks the number of nodes, the number of
+** times each degree appears, and then kranks up the exponential time
+** algorithm.
+*/
+Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2);
 
 #endif /* _TINYGRAPH_H */
 #ifdef __cplusplus
