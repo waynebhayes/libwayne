@@ -31,10 +31,13 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
 	return G;
-    TSetAdd(G->A[i], j);
-    if(!G->directed) TSetAdd(G->A[j],i);
-    ++G->degree[i];
     if(i==j) assert(G->selfLoops);
+    TSetAdd(G->A[i], j);
+    ++G->degree[i];
+    if(!G->directed){
+	TSetAdd(G->A[j],i);
+	++G->degree[j];
+    }
     return G;
 }
 
@@ -73,10 +76,13 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 {
     if(!TinyGraphAreConnected(G, i, j))
 	return G;
+    if(i==j) assert(G->selfLoops);
     TSetDelete(G->A[i], j);
     G->degree[i]--;
-    if(!G->directed) TSetDelete(G->A[j],i);
-    if(j==i) assert(G->selfLoops);
+    if(!G->directed) {
+	TSetDelete(G->A[j],i);
+	G->degree[j]--;
+    }
     return G;
 }
 
@@ -119,11 +125,8 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed)
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
 {
     int i,j;
-    if(!Gbar) Gbar = TinyGraphAlloc(G->n,G->selfLoops,G->directed);
-    
-    Gbar->selfLoops = G->selfLoops;
     assert(Gbar != G); // can't handle complementing a graph to itself
-
+    if(!Gbar) Gbar = TinyGraphAlloc(G->n,G->selfLoops,G->directed);
     for(i=0; i < G->n; i++) for(j=0;j<G->n;j++){
 	if(i==j&&!G->selfLoops) continue;
 	if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
@@ -183,6 +186,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     for(i=0; i<G->n; i++) {
 	total += G->degree[i];
     }
+    assert(!G->selfLoops); // Alan: the below formula doesn't work if there are self-loops
     return total/(2-G->directed);
 }
 
@@ -244,6 +248,7 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
     QueueFree(BFSQ);
     return count;
 }
+
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed) {
     assert(!G->directed);
     TSET visited = TSET_NULLSET;
