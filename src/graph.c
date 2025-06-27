@@ -355,7 +355,10 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	} while(fgets(line, sizeof(line), fp));
 	// After all that, we finally have numNodes. Go back and read the edges.
 	assert(numNodes == nameDict->n);
-	rewind(fp);
+	if(fseek(fp, 0L, SEEK_SET) != 0) { // rewind(fp);
+	    perror("rewind/fseek(0):");
+	    Apology("input must be a file on disk, not a pipe");
+	}
     }
     // At this point, we definitely have numNodes, and numEdges is nonzero iff we read the file
 
