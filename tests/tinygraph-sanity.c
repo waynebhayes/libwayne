@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     srand48(time(NULL));
     for(testNum=0;testNum<10000;testNum++)
     {
-	n = 6 + lrand48() % 3; // ensure G->n is at least 2
+	n = 3 + lrand48() % (TINY_SET_SIZE-2); // ensure G->n is at least 3, up to TINY_SET_SIZE
 	if(drand48() < 0.5)
 	    G = TinyGraphAlloc(n);
 	else
