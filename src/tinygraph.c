@@ -33,9 +33,8 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 	return G;
     if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
-
     ++G->degree[i];
-    if(!G->directed){
+    if(!G->directed&&i!=j){
 	TSetAdd(G->A[j],i);
 	++G->degree[j];
     }
@@ -80,7 +79,7 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
     if(i==j) assert(G->selfLoops);
     TSetDelete(G->A[i], j);
     G->degree[i]--;
-    if(!G->directed) {
+    if(!G->directed&&i!=j) {
 	TSetDelete(G->A[j],i);
 	G->degree[j]--;
     }
@@ -250,6 +249,7 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
     QueueFree(BFSQ);
     return count;
 }
+
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed) {
     assert(!G->directed);
     TSET visited = TSET_NULLSET;
@@ -484,8 +484,3 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
 } // end extern "C"
 #endif
 
-
-
-#ifdef __cplusplus
-} // end extern "C"
-#endif
