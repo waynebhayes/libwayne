@@ -7,8 +7,8 @@ int main(int argc, char *argv[])
 {
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
-    Boolean sparse=false, supportNames = true;
-    GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames,false);
+    Boolean self=false, supportNames = true;
+    GRAPH *G = GraphReadEdgeList(stdin, self, false, false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
     GraphFree(Gbar);
@@ -16,10 +16,8 @@ int main(int argc, char *argv[])
     assert(GG->n == G->n);
     for(i=0; i<G->n; i++)
     {
-	assert(GG->degree[i] == G->degree[i]);
-	if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
-	else for(j=0;j<G->n; j++)
-	    assert(GG->neighbor[i][j] == G->neighbor[i][j]);
+	assert(GraphDegree(GG,i) == GraphDegree(G,i));
+	assert(SetEq(GG->A[i], G->A[i]));
     }
     puts("passed!");
     printf("Now count connected components via BFS:");

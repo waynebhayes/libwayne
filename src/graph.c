@@ -13,15 +13,13 @@ extern "C" {
 #include <string.h>
 #include "mem-debug.h"
 
-#define MIN_EDGELIST 1024
-
 /*************************************************************************
 **
 **                            The Basics
 **
 *************************************************************************/
 
-GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
+GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted)
 {
     static Boolean needStartup = 1;
     int i;
@@ -31,75 +29,21 @@ GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 	needStartup = 0;
 	SetStartup();
     }
-    G->sparse = sparse;
     G->n = n;
-    G->A = NULL;
-    G->degree = Calloc(n, sizeof(G->degree[0]));
-    G->maxEdges = MIN_EDGELIST;
-    if(sparse>=true) // >=true means "both"
-    {
-	G->edgeList = Malloc(2*G->maxEdges*sizeof(int));
-	G->numEdges = 0;
-	G->neighbor = Calloc(n, sizeof(G->neighbor[0]));
-#if SORT_NEIGHBORS
-	G->sorted = SetAlloc(G->n);
-#endif
-    }
-    if(sparse==both || sparse == false)
-    {
-	G->A = Calloc(n, sizeof(G->A[0]));
-	for(i=0; i<n; i++)
-	    G->A[i] = SetAlloc(n);
-    }
-    G->supportNodeNames = supportNodeNames;
+    G->self = self;
+    G->directed = directed;
+    if(weighted) Apology("sorry no weighted graphs yet in libwayne/graph.c");
+    G->m = 0;
+    G->A = Calloc(n, sizeof(G->A[0]));
+    for(i=0; i<n; i++)
+	G->A[i] = SetAlloc(n);
     return G;
 }
-
-GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
-{
-    GRAPH *G = GraphAlloc(n, sparse, supportNodeNames);
-    G->selfAllowed=true;
-    return G;
-}
-
-GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegree) // YANG
-{
-    // go through all the nodes and pre-allocate the correct length neighbor lists, and set G->maxDegree[i] for each
-    // to be the same as the parameter above maxDegree[i]
-    return (GRAPH*) NULL;
-}
-
-GRAPH *GraphMakeWeighted(GRAPH *G)
-{
-    assert(G);
-    assert(!SORT_NEIGHBORS);
-    assert(G->sparse>=true); // >=true means "both"
-    G->weight = Calloc(G->n, sizeof(G->weight[0]));
-    return G;
-}
-
 
 void GraphFree(GRAPH *G)
 {
     int i;
-    for(i=0; i<G->n; i++)
-    {
-	if(G->sparse>=true) {
-	    Free(G->neighbor[i]);
-	    if(G->weight && G->weight[i]) Free(G->weight[i]);
-	}
-	if(!G->sparse||G->sparse==both)
-	    SetFree(G->A[i]);
-    }
-    Free(G->degree);
-    if(G->sparse >= true)
-    {
-	Free(G->edgeList);
-	Free(G->neighbor);
-	if(G->weight) Free(G->weight);
-    }
-    if(!G->sparse||G->sparse==both)
-	Free(G->A);
+    if(G->weight) Free(G->weight);
     if(G->name) {
 	for(i=0;i<G->n;i++) Free(G->name[i]);
 	Free(G->name);
@@ -108,287 +52,123 @@ void GraphFree(GRAPH *G)
     Free(G);
 }
 
-static void GraphNameWarn(const char *s) {
-    static char warned;
-    if(!warned) Warning("%s called on graph with names; not copying names", s);
-    warned=1;
+GRAPH *GraphConnect(GRAPH *G, int i, int j)
+{
+    if(G->useComplement) Apology("Sorry haven't implemented useComplement yet");
+    assert(0 <= i && i < G->n && 0 <= j && j < G->n);
+    if(i==j) assert(G->self);
+    if(GraphAreConnected(G, i, j))
+    {
+	if(!G->directed) assert(GraphAreConnected(G, j, i));
+	return G;
+    }
+    SetAdd(G->A[i], j);
+    G->m++;
+    if(!G->directed) SetAdd(G->A[j], i);
+    return G;
+}
+
+Boolean GraphAreConnect(GRAPH *G, unsigned i, unsigned j)
+{
+    return (SetIn(G->A[i], j) != G->useComplement);
+}
+
+GRAPH *GraphDisconnect(GRAPH *G, int i, int j)
+{
+    if(G->useComplement) Apology("Sorry haven't implemented useComplement yet");
+    assert(0 <= i && i < G->n && 0 <= j && j < G->n);
+    if(i==j) assert(G->self);
+    if(SetIn(G->A[i], j))
+    {
+	if(!G->directed) {
+	    assert(SetIn(G->A[j], i));
+	    SetDelete(G->A[j], i);
+	}
+	SetDelete(G->A[i], j);
+	G->m--;
+    }
+    return G;
 }
 
 GRAPH *GraphCopy(GRAPH *G)
 {
+    Apology("no GraphCopy yet");
     int i;
-    if(G->supportNodeNames) GraphNameWarn("GraphCopy");
-    GRAPH *Gc = GraphAlloc(G->n, G->sparse, false);
-    Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
-    for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
-
+    GRAPH *Gc = GraphAlloc(G->n, G->self, G->directed, !!G->weight);
     Gc->useComplement = G->useComplement;
-    Gc->sparse = G->sparse;
-    if(G->sparse >= true)
-    {
-	Gc->A = NULL;
-	if(G->weight) Apology("Sorry GraphCopy not yet implemented for weighted graphs");
-	for(i=0;i<G->n;i++) { int j;
-	    Gc->neighbor[i] = Calloc(G->degree[i] , sizeof(Gc->neighbor[i][0]));
-	    for(j=0; j<G->degree[i];j++) Gc->neighbor[i][j]=G->neighbor[i][j];
-	}
-	Gc->numEdges = G->numEdges;
-	Gc->maxEdges = G->maxEdges;
-	Gc->edgeList = Calloc(2,G->maxEdges*sizeof(int));
-	for(i=0;i < G->numEdges; i++)
-	{
-	    Gc->edgeList[2*i] = G->edgeList[2*i];
-	    Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
-	}
-    }
-    if(!G->sparse || G->sparse==both) {
-	Gc->A = Calloc(G->n , sizeof(Gc->A[0]));
-	for(i=0;i<G->n;i++) Gc->A[i] = SetCopy(NULL, G->A[i]);
-    }
-
+    Gc->m = G->m;
     Gc->n = G->n;
     return Gc;
 }
 
-#if SORT_NEIGHBORS
-// Used when qsort'ing the neighbors when graph is sparse.
 static int IntCmp(const void *a, const void *b)
 {
     const int *i = (const int*)a, *j = (const int*)b;
     return (*i)-(*j);
 }
 
-static GRAPH *GraphSort(GRAPH *G)
-{
-    if(G->weight) Apology("Sorry GraphSort not yet implemented for weighted graphs");
-    if(G->sparse>=true)
-    {
-	int v;
-	for(v=0; v<G->n; v++) if(!SetIn(G->sorted, v))
-	{
-	    qsort(G->neighbor[v], G->degree[v], sizeof(G->degree[0]), IntCmp);
-	    SetAdd(G->sorted, v);
-	}
-    }
-    return G;
-}
-#else
-#define GraphSort(x)
-#endif
-
-GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j)
-{
-    assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    if(i==j) assert(G->selfAllowed);
-    if(GraphAreConnected(G, i, j))
-    {
-	assert(GraphAreConnected(G, j, i));
-	return G;
-    }
-    if(G->sparse>=true)
-    {
-	// YANG: change this to only realloc if necessary, and just add 1, don't double the size since this should be rare.
-	G->neighbor[i] = Realloc(G->neighbor[i], (G->degree[i]+1)*sizeof(G->neighbor[i][0]));
-	if(j!=i) G->neighbor[j] = Realloc(G->neighbor[j], (G->degree[j]+1)*sizeof(G->neighbor[j][0]));
-	if(G->weight) {
-	    G->weight[i] = Realloc(G->weight[i], (G->degree[i]+1)*sizeof(G->weight[i][0]));
-	    if(j!=i) G->weight[j] = Realloc(G->weight[j], (G->degree[j]+1)*sizeof(G->weight[j][0]));
-	}
-	assert(G->neighbor[i]);
-	assert(G->neighbor[j]);
-	G->neighbor[i][G->degree[i]] = j;
-	G->neighbor[j][G->degree[j]] = i;
-	if(G->weight) { // should we increment? Set to 1 if zero? Leave it the same if nonzero???
-	    G->weight[i][G->degree[i]] = 1;
-	    G->weight[j][G->degree[j]] = 1;
-	}
-#if SORT_NEIGHBORS
-	SetDelete(G->sorted, i);
-	SetDelete(G->sorted, j);
-#endif
-	assert(G->numEdges <= G->maxEdges);
-	if(G->numEdges == G->maxEdges)
-	{
-	    G->maxEdges = 2*G->maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
-	    G->edgeList = Realloc(G->edgeList, 2*G->maxEdges*sizeof(G->edgeList[0]));
-	    assert(G->edgeList);
-	}
-	G->edgeList[2*G->numEdges] = MIN(i,j);
-	G->edgeList[2*G->numEdges+1] = MAX(i,j);
-	G->numEdges++;
-    }
-    if(!G->sparse || G->sparse==both)
-    {
-	SetAdd(G->A[i], j);
-	SetAdd(G->A[j], i);
-    }
-    ++G->degree[i];
-    if(j!=i) ++G->degree[j];
-    return G;
-}
-
-double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w)
-{
-    assert(w>0);
-    GraphConnect(G,i,j); // this will allocate G->weight[i] and G->weight[j] if necessary.
-    assert(G->weight);
-
-    int k=0;
-    double oldWeight;
-
-    while(G->neighbor[i][k] != j) k++;
-    assert(k < G->degree[i] && G->neighbor[i][k] == j);
-    oldWeight = G->weight[i][k];
-    G->weight[i][k] = w;
-
-    if(j!=i) {
-	k=0;
-	while(G->neighbor[j][k] != i) k++;
-	assert(k < G->degree[j] && G->neighbor[j][k] == i);
-	assert(oldWeight == G->weight[j][k]);
-	G->weight[j][k] = w;
-    }
-    return oldWeight;
-}
-
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 {
-    if(!GraphAreConnected(G,i,j)) return 0;
-    int k=0;
-    assert(G->weight);
-
-    while(G->neighbor[i][k] != j) k++;
-    assert(k < G->degree[i] && G->neighbor[i][k] == j);
-    double w = G->weight[i][k];
-    assert(w>0);
-
-    if(j!=i) {
-	k=0;
-	while(G->neighbor[j][k] != i) k++;
-	assert(k < G->degree[j] && G->neighbor[j][k] == i);
-	assert(G->weight[j][k] == w);
-    }
-    return w;
+    Apology("no weights yet");
+    return 0.0;
 }
 
 GRAPH *GraphEdgesAllDelete(GRAPH *G)
 {
     int i;
-    for(i=0; i < G->n; i++)
-    {
-	if(!G->sparse||G->sparse==both) SetEmpty(G->A[i]);
-	G->degree[i] = 0;
-#if SORT_NEIGHBORS
-	SetDelete(G->sorted, i);
-#endif
-	/* Don't need to realloc/free neighbors, it'll happen automatically once we start re-adding edges */
-    }
-    G->numEdges = 0;
-    G->maxEdges = MIN_EDGELIST;
-    if(G->sparse>=true) G->edgeList = Realloc(G->edgeList, 2*G->maxEdges*sizeof(G->edgeList[0]));
+    for(i=0; i < G->n; i++) SetEmpty(G->A[i]);
+    G->m = 0;
     return G;
 }
 
-GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
+
+#if GRAPH_USES_ONLY_EDGELIST
+// Used when qsort'ing the neighbors when graph is sparse.
+static unsigned _searchNode; // 0 or 1 to sort by first or second node in the pair
+static Boolean _G_directed, _G_self;
+static int EdgeCmp(const void *a, const void *b)
 {
-    int k;
-    if(i==j) assert(G->selfAllowed);
-    assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    if(!GraphAreConnected(G, i, j))
-	return G;
-    --G->degree[i];
-    if(j!=i) --G->degree[j];
-
-    if(!G->sparse||G->sparse==both)
-    {
-	SetDelete(G->A[i], j);
-	SetDelete(G->A[j], i);
-	return G;
+    assert(_searchNode == 0 || _searchNode == 1);
+    const EDGE *e = (const EDGE*)a, *f = (const EDGE*)b;
+    if(!_G_directed) {
+	assert(e->v[0] <= e->v[1]);
+	assert(f->v[0] <= f->v[1]);
     }
+    return (int)e->v[_searchNode]-(int)f->v[_searchNode];
+}
 
-    assert(G->sparse>=true);
-    if(j < i)
-    {
-	int tmp = i; i=j; j=tmp;
+static GRAPH *GraphSort(GRAPH *G)
+{
+    if(G->weight) Apology("Sorry GraphSort not yet implemented for weighted graphs");
+    if(G->m == 0) return G;
+
+    // Sort the edgeList by the first node of the EDGE
+    _searchNode = 0; qsort(G->edgeList, G->m, sizeof(EDGE), EdgeCmp);
+
+    // Now sort each sub-list by the second node
+    unsigned bottom=0;
+    while(bottom < G->m) {
+	unsigned top=bottom, v0 = G->edgeList[bottom].v[0];
+	while(top < G->m && G->edgeList[top].v[0] == v0) ++top; // find the index of the next node in the edgeList
+	_searchNode = 1; qsort(G->edgeList+bottom, top-bottom, sizeof(EDGE), EdgeCmp);
+	bottom=top;
     }
-
-    Boolean found=false;
-    for(k=0; k < G->numEdges; k++)
-    {
-	if(G->edgeList[2*k] == i && G->edgeList[2*k+1]==j)
-	{
-	    G->numEdges--;
-	    G->edgeList[2*k] = G->edgeList[2*G->numEdges];
-	    G->edgeList[2*k+1] = G->edgeList[2*G->numEdges+1];
-	    found=true;
-	    break;
-	}
-    }
-    assert(found);
-
-    /* now find and delete each other's neighbors--they MUST exist since we checked above */
-    k=0;
-    while(G->neighbor[i][k] != j) k++; // this MUST halt since (i,j) are neighbors (checked above)
-    assert(k <= G->degree[i] && G->neighbor[i][k] == j); /* this is the new degree, so using "<=" is correct */
-    G->neighbor[i][k] = G->neighbor[i][G->degree[i]];
-    if(G->weight) G->weight[i][k] = G->weight[i][G->degree[i]];
-
-    if(j!=i) {
-	k=0;
-	while(G->neighbor[j][k] != i) k++;
-	assert(k <= G->degree[j] && G->neighbor[j][k] == i);
-	G->neighbor[j][k] = G->neighbor[j][G->degree[j]];
-	if(G->weight) G->weight[j][k] = G->weight[j][G->degree[j]];
-    }
-#if SORT_NEIGHBORS
-    SetDelete(G->sorted, i);
-    SetDelete(G->sorted, j);
-#endif
     return G;
 }
 
-static Boolean _rawConnected(GRAPH *G, int i, int j)
+static Boolean _rawConnectedViaEdgeListSearch(GRAPH *G, int i, int j)
 {
 #if PARANOID_ASSERTS
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
 #endif
-    if(G->sparse>=true)
-    {
-#if SORT_NEIGHBORS
-	if(SetIn(G->sorted, i))
-	    return !!bsearch(&j, G->neighbor[i], G->degree[i], sizeof(G->neighbor[0]), IntCmp);
-	else if(j!=i && SetIn(G->sorted, j))
-	    return !!bsearch(&i, G->neighbor[j], G->degree[j], sizeof(G->neighbor[0]), IntCmp);
-	else
-#endif
-	{
-	    int k, n, me, other;
-	    unsigned *neighbors;
-	    // Check through the shorter list; works even if selfAllowed
-	    if(G->degree[i] < G->degree[j]) { me = i; other = j; }
-	    else { me = j; other = i; }
-	    n = G->degree[me];
-	    neighbors = G->neighbor[me];
-	    for(k=0; k<n; k++)
-		if(neighbors[k] == other)
-		    return true;
-	    return false;
-	}
-    }
-    if(!G->sparse||G->sparse==both)
-    {
-	if(SetIn(G->A[i],j))
-	{
-#if PARANOID_ASSERTS
-	    if(j!=i && !SetIn(G->A[j],i))
-		Fatal("SetIn(%d,%d)=%ld, SetIn(%d,%d)=%ld\n", i,j,SetIn(G->A[i],j), j,i,SetIn(G->A[j],i));
-#endif
-	    return true;
-	}
-	else
-	    return false;
-    }
-    return false;
+    if(i > j) {int tmp=i; i=j; j=tmp;} // swap them
+    _searchNode=0;
+    EDGE *i_e = bsearch(&i, G->edgeList, G->m, sizeof(EDGE), EdgeCmp);
+    assert(i_e); // this node had better exist...
+    // bsearch might return any element of the edgeList with i as the first element; now find the bottom
+    while(i_e > G->edgeList && (i_e-1)->v[0] == i) --i_e;
+    _searchNode=1;
+    return !!bsearch(&j, i_e, GraphDegree(G,i), sizeof(EDGE), EdgeCmp);
 }
 
 Boolean GraphAreConnected(GRAPH *G, int i, int j)
@@ -396,43 +176,37 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
     if(G->useComplement) return !_rawConnected(G,i,j);
     else		 return  _rawConnected(G,i,j);
 }
+#endif
 
 void GraphRandomEdge(GRAPH *G, int *u, int *v)
 {
-    if(G->useComplement) {
-	do { *u=G->n*drand48(); *v=G->n*drand48(); } while((*u==*v && !G->selfAllowed) || _rawConnected(G,*u,*v));
-    } else {
-	int e = G->numEdges*drand48();
-	*u=G->edgeList[2*e]; *v=G->edgeList[2*e+1];
-    }
+    do { *u=G->n*drand48(); *v=G->n*drand48(); } while((*u==*v && !G->self) || !GraphAreConnected(G,*u,*v));
 }
 
 int GraphRandomNeighbor(GRAPH *G, int u)
 {
-    if(G->useComplement) {
-	assert(G->degree[u] < G->n);
-	int v;
-	do { v = G->n * drand48(); } while((u==v && !G->selfAllowed) || _rawConnected(G,u,v));
-	return v;
-    } else {
-	assert(G->degree[u] > 0);
-	return G->neighbor[u][(int)(G->degree[u] * drand48())];
-    }
+    assert(GraphDegree(G,u)>0);
+    int v;
+    do { v = G->n * drand48(); } while((u==v && !G->self) || !GraphAreConnected(G,u,v));
+    return v;
 }
 
 int GraphNextNeighbor(GRAPH *G, int u, int *buf)
 {
+    Apology("Sorry, no GraphNextNeighbor yet");
     assert(0 <= *buf && *buf <= G->n);
     if(G->useComplement) {
-	while(*buf < G->n && _rawConnected(G,u,*buf)) (*buf)++;
+	while(*buf < G->n && GraphAreConnected(G,u,*buf)) (*buf)++;
 	if(*buf == G->n) return -1;
 	else return (*buf)++;
     } else {
-	if(*buf == G->degree[u]) return -1;
-	else return G->neighbor[u][(*buf)++];
+	if(*buf == GraphDegree(G,u)) return -1;
+	//else return G->neighbor[u][(*buf)++];
     }
+    return 0;
 }
 
+#if 0
 // Basic idea: loop through ALL neighbors v of i, increment count if j is also connected to v (including self-loops)
 // This works even if self-loops are allowed, because if (u,u) and (u,v) both exist, then u is neighbor to both
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
@@ -440,27 +214,27 @@ unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
     int numCommon1 = 0, numCommon2 = 0; // for G', these are actually the number of NON-common
     if(i==j) {
-	if(G->useComplement) numCommon1 = G->n - G->degree[i];
-	else numCommon1 = G->degree[i]; // it's the same node, so number of common neighbors is all neighbors
+	if(G->useComplement) numCommon1 = G->n - GraphDegree(G,i);
+	else numCommon1 = GraphDegree(G,i); // it's the same node, so number of common neighbors is all neighbors
     }
     if(G->sparse>=true) // loop version is MUCH faster on large sparse graphs, so use it if possible
     {
 	unsigned k, n;
 	// ensure i has the shorter list, j has the larger
-	if(G->degree[i] > G->degree[j]) { int tmp=j; j=i; i=tmp; }
-	n = G->degree[i];
+	if(GraphDegree(G,i) > GraphDegree(G,j)) { int tmp=j; j=i; i=tmp; }
+	n = GraphDegree(G,i);
 	for(k=0; k<n; k++)
-	    if(_rawConnected(G, G->neighbor[i][k], j)) ++numCommon1;
+	    Apology("noCN"); // if(GraphAreConnected(G, G->neighbor[i][k], j)) ++numCommon1;
 	// for G complement, we need to check neighbors of BOTH i and j, and then subtract the sum from G->n
 	if(G->useComplement) {
-	    n = G->degree[j];
+	    n = GraphDegree(G,j);
 	    for(k=0; k<n; k++)
-		if(_rawConnected(G, G->neighbor[j][k], i)) ++numCommon1;
+		Apology("noCN"); //if(GraphAreConnected(G, G->neighbor[j][k], i)) ++numCommon1;
 	    // Inverting it is a bit tricky: if self-loops are ALLOWED, then max possible value is G->n, and any
 	    // self-loops that actually exist above become non-connnected in G', so they SHOULD be subtracted.
 	    numCommon1 = G->n - numCommon1;
 	    // However, if self-loops are NOT allowed, then max possible value is (G->n - 2), so bump it down by 2 below
-	    // if(!G->selfAllowed) numCommon1 -= 2;
+	    // if(!G->self) numCommon1 -= 2;
 	}
     }
     if(G->sparse != true) // ie, if it's 0 or 2
@@ -483,19 +257,20 @@ unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
 	numCommon2=0;
     }
     assert(numCommon1 == 0 || numCommon2 == 0);
-    if(G->useComplement) return numCommon1 + numCommon2 - 2*G->selfAllowed;
+    if(G->useComplement) return numCommon1 + numCommon2 - 2*G->self;
     else return numCommon1 + numCommon2;
 }
+#endif
 
 #ifndef GraphNumEdges
 int GraphNumEdges(GRAPH *G)
 {
     int total=0, i;
     for(i=0; i<G->n; i++)
-	total += G->degree[i];
+	total += GraphDegree(G,i);
     assert(total % 2 == 0); // should be divisible by 2
-    assert(G->numEdges == total/2);
-    return G->numEdges;
+    assert(G->m == total/2);
+    return G->m;
 }
 #endif
 
@@ -513,109 +288,6 @@ void GraphPrintAdjMatrix(FILE *fp, GRAPH *G)
 }
 
 
-GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse)
-{
-    int i,j,n;
-    GRAPH *G;
-    if(fscanf(fp, "%d", &n) != 1)
-	Fatal("GraphReadAdjMatrix: reading 'n' failed");
-    assert(n >= 0);
-    G = GraphAlloc(n, sparse, false); // no SUPPORT_NODE_NAMES at the moment
-    for(i=0; i<n; i++) for(j=0; j<n; j++)
-    {
-	int connected;
-	if(fscanf(fp, "%d", &connected) != 1)
-	    Fatal("GraphReadAdjMatrix: reading entry(%d,%d) failed", i, j);
-	if(connected) {
-	    if(i==j) {
-		static Boolean warned;
-		if(!warned) Warning("GraphReadAdjMatrix: node %d has a self-loop; assuming they are allowed",i);
-		warned = G->selfAllowed = true;
-	    }
-	    GraphConnect(G,i,j);
-	}
-    }
-    GraphSort(G);
-    return G;
-}
-
-
-void GraphPrintAdjList(FILE *fp, GRAPH *G)
-{
-    int i, j;
-    assert(G->sparse>=true);
-    fprintf(fp, "%d\n", G->n);
-    for(i=0; i<G->n; i++)
-    {
-	fprintf(fp, "%d ", G->degree[i]);
-	for(j=0; j<G->degree[i] - 1; j++)
-	    fprintf(fp, "%d ", G->neighbor[i][j]);
-	fprintf(fp, "%d\n", G->neighbor[i][j]);
-    }
-}
-
-
-GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
-{
-    GRAPH *G;
-    int n, i, j, d;
-    if(fscanf(fp, "%d", &n) != 1)
-	Fatal("GraphReadAdjList: failed to read 'n'");
-    assert(n >= 0);
-    G = GraphAlloc(n, sparse, false); // no SUPPORT_NODE_NAMES at the moment
-    for(i=0; i<n; i++)
-    {
-	if(fscanf(fp, "%d", &d) != 1)
-	    Fatal("node %d: expecting degree, but couldn't find an integer", i);
-	for(j=0; j<d; j++)
-	{
-	    int neigh;
-	    if(fscanf(fp, "%d", &neigh) != 1)
-		Fatal("node %d, degree %d, ran out of integers on neighbor #%d", i, d, j);
-	    else
-	    {
-		assert(0 <= neigh && neigh < n);
-		if(neigh == i) {
-		    static Boolean warned;
-		    if(!warned) Warning("GraphReadAdjList: node %d has a self-loop; assuming they are allowed", i);
-		    warned = G->selfAllowed = true;
-		}
-		GraphConnect(G, i, neigh);
-	    }
-	}
-    }
-    GraphSort(G);
-    return G;
-}
-
-GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
-{
-    int i;
-    GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
-    if(weights) GraphMakeWeighted(G);
-    assert(n == G->n);
-    assert(G->degree);
-    if(G->weight) assert(weights);
-    if(sparse>=true)
-	for(i=0;i<n;i++)
-	    assert(!G->neighbor[i]);
-    for(i=0; i<m; i++) {
-	if(pairs[2*i] == pairs[2*i+1] && !G->selfAllowed) {
-	    static Boolean warned;
-	    if(!warned) Warning("GraphFromEdgeList: node %d has a self-loop; assuming they are allowed", pairs[2*i]);
-	    warned = G->selfAllowed = true;
-	}
-	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
-	if(weights) {assert(weights[i]!=0.0); GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);}
-    }
-    if(sparse>=true)
-    {
-	assert(G->neighbor);
-	GraphSort(G);
-    }
-    return G;
-}
-
 // Returns a *constant* string; you need to dup it if you want to keep it
 char *HashString(char *s)
 {
@@ -630,125 +302,111 @@ char *HashString(char *s)
     return hash;
 }
 
-GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted)
+GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weighted)
 {
-    unsigned numNodes=0;
-    unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
-    unsigned *pairs = Malloc(2*maxEdges*sizeof(pairs[0]));
-    float *fweight = NULL;
-    if(weighted) fweight=Malloc(maxEdges*sizeof(fweight[0]));
-
-    // SUPPORT_NODE_NAMES
-    unsigned maxNodes=MIN_EDGELIST;
-    char **names = NULL;
-    BINTREE *nameDict = NULL;
-    if(supportNodeNames)
-    {
-	names = Malloc(maxNodes*sizeof(char*));
-	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
-    }
-
-    char line[BUFSIZ];
+    char line[BUFSIZ], *s;
+    unsigned numNodes=0, numEdges=0; // these will be increased as necessary during reading
     static Boolean selfWarned;
-    while(fgets(line, sizeof(line), fp))
-    {
-	// nuke all whitespace, including DOS carriage returns, from the end of the line
-	int len = strlen(line);
-	while(isspace(line[len-1])) line[--len]='\0';
-	float w;
-	assert(numEdges <= maxEdges);
-	if(numEdges >= maxEdges)
-	{
-	    maxEdges = 2*maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
-	    pairs = Realloc(pairs, 2*maxEdges*sizeof(pairs[0]));
-	    if(weighted) fweight = Realloc(fweight, maxEdges*sizeof(fweight[0]));
-	}
-	const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
-	    *fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
-	// name and foints are used only if supportNodeNames is true
-	union {int i; char name[BUFSIZ];} v1, v2;
-	foint f1, f2;
-	if(supportNodeNames)
-	{
-	    assert(numNodes <= maxNodes);
-	    if(numNodes+2 >= maxNodes) // -2 for a bit of extra space
-	    {
-		maxNodes *=2;
-		names = Realloc(names, maxNodes*sizeof(names[0]));
+
+    BINTREE *nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
+    const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
+	*fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
+    const Boolean supportNodeNames = true;
+    // name and foints are used for supportNodeNames
+    union {int i; char name[BUFSIZ];} v1, v2;
+    foint f1, f2;
+
+    // Check to see if the first line has an integer on it, in which case it's the number of nodes
+    s=fgets(line, sizeof(line), fp);
+    assert(s);
+    // Nuke leading whitespace
+    while(*s && isspace(*s)) ++s;
+    int len = strlen(s), numDigits=0, i;
+    // nuke all whitespace, including DOS carriage returns, from the end of the line
+    while(isspace(s[len-1])) s[--len]='\0';
+    assert(len == strlen(s));
+    for(i=0;i<len;i++) if(isdigit(s[i])) ++numDigits;
+    if(numDigits == len) numNodes = atol(s); // the first line is the number of nodes
+    else {
+	do { // read through the file to get the names and number of nodes.
+	    // FIRST LINE IS ALREADY READ... copy reading code here, get names + numNodes, then rewind
+	    // to connect all the actual node pairs.
+	    // Note: if !supportNodeNames, a binary integer will be written into the name unions
+	    float w;
+	    if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
+		Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges+1,
+		    (supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
+	    if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
+		Warning("GraphReadEdgeList: self-loop on line %d (%s); assuming they are allowed", numEdges+1, v1.name);
+		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
+		selfWarned = true;
 	    }
-	}
-	// Note: if !supportNodeNames, a binary integer will be written into the name unions
-	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
-	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges,
-		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
-	if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
-	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", numEdges, v1.name);
-	    Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
-	    selfWarned = true;
-	}
-	if(supportNodeNames) {
 	    if(!BinTreeLookup(nameDict, (foint)v1.name, &f1))
 	    {
-		names[numNodes] = Strdup(v1.name);
 		f1.i = numNodes++;
 		BinTreeInsert(nameDict, (foint)v1.name, f1);
 	    }
 	    if(!BinTreeLookup(nameDict, (foint)v2.name, &f2))
 	    {
-		names[numNodes] = Strdup(v2.name);
 		f2.i = numNodes++;
 		BinTreeInsert(nameDict, (foint)v2.name, f2);
 	    }
-	    v1.i = f1.i; v2.i = f2.i;
-	}
-	else {
-	    // if !supportNodeNames, fscanf wrote the integers into the char* pointers
-	    numNodes = MAX(numNodes, v1.i);
-	    numNodes = MAX(numNodes, v2.i);
-	}
-	pairs[2*numEdges] = v1.i;
-	pairs[2*numEdges+1] = v2.i;
-	if(weighted) { assert(w>0.0); fweight[numEdges] = w;}
-	if(pairs[2*numEdges] > pairs[2*numEdges+1])
-	{
-	    unsigned tmp = pairs[2*numEdges];
-	    pairs[2*numEdges] = pairs[2*numEdges+1];
-	    pairs[2*numEdges+1] = tmp;
-	}
-	assert(pairs[2*numEdges] < pairs[2*numEdges+1]+selfWarned);
-	numEdges++;
+	    ++numEdges;
+	} while(fgets(line, sizeof(line), fp));
+	// After all that, we finally have numNodes. Go back and read the edges.
+	assert(numNodes == nameDict->n);
+	rewind(fp);
     }
-    if(supportNodeNames)
-    {
-	//printf("BINTREE Dictionary Dump\n");
-	unsigned i;
-	for(i=0; i<numNodes;i++)
-	{
-	    foint info;
-	    if(!BinTreeLookup(nameDict, (foint)names[i], &info))
-		Fatal("couldn't find int for name '%s'", names[i]);
-	    assert(i == info.i);
-	    //printf("%d is %s which in turn is %d\n", i, names[i], info.i);
-	}
-    }
-    else
-	numNodes++;	// increase it by one since so far it's simply been the biggest integer seen on the input.
+    // At this point, we definitely have numNodes, and numEdges is nonzero iff we read the file
 
-    GRAPH *G = GraphFromEdgeList(numNodes, numEdges, pairs, sparse, fweight);
-    G->supportNodeNames = supportNodeNames;
-    if(supportNodeNames) {
-	G->nameDict = nameDict;
-	G->name = names;
-    }
-    Free(pairs);
-    if(weighted) Free(fweight);
-    assert(G->maxEdges <= maxEdges);
-    assert(G->numEdges <= numEdges);
-    if(sparse>=true)
+    GRAPH *G = GraphAlloc(numNodes, self, directed, weighted);
+    G->name = Calloc(numNodes, sizeof(char*));
+
+    int lineNum=0, nodeNum=0; // use different variables than the first read-through.
+    while(fgets(line, sizeof(line), fp))
     {
-	assert(G->neighbor);
-	GraphSort(G);
+	// nuke all whitespace, including DOS carriage returns, from the end of the line
+	float w;
+	len = strlen(line);
+	while(isspace(line[len-1])) line[--len]='\0';
+	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
+	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", lineNum+1,
+		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
+	if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
+	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", lineNum+1, v1.name);
+	    Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
+	    selfWarned = true;
+	}
+	Boolean found = BinTreeLookup(nameDict, (foint)v1.name, &f1);
+	if(numEdges) assert(found);
+	else if(!found) {
+	    f1.i = nodeNum++;
+	    BinTreeInsert(nameDict, (foint)v1.name, f1);
+	}
+	G->name[f1.i] = Strdup(v1.name);
+	found = BinTreeLookup(nameDict, (foint)v2.name, &f2);
+	if(numEdges) assert(found);
+	else if(!found) {
+	    f2.i = nodeNum++;
+	    BinTreeInsert(nameDict, (foint)v2.name, f2);
+	}
+	G->name[f2.i] = Strdup(v2.name);
+	v1.i = f1.i; v2.i = f2.i;
+	GraphConnect(G, v1.i, v2.i);
+	++lineNum;
     }
+    assert(G->m == numEdges);
+
+    //printf("BINTREE Dictionary Dump\n");
+    for(i=0; i<numNodes;i++)
+    {
+	foint info;
+	if(!BinTreeLookup(nameDict, (foint)G->name[i], &info))
+	    Fatal("couldn't find int for name '%s'", G->name[i]);
+	assert(i == info.i);
+	//printf("%d is %s which in turn is %d\n", i, G->name[i], info.i);
+    }
+    assert(G->m <= numEdges);
     return G;
 }
 
@@ -761,62 +419,18 @@ int GraphNodeName2Int(GRAPH *G, char *name)
 }
 
 
-void GraphPrintConnections(FILE *fp, GRAPH *G)
-{
-    int i, j;
-    assert(G->sparse>=true);
-    fprintf(fp, "%d\n", G->n);
-    for(i=0; i<G->n; i++) for(j=0; j<G->degree[i]; j++)
-	fprintf(fp, "%d %d\n", i, G->neighbor[i][j]);
-}
-
-
-GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
-{
-    GRAPH *G;
-    int n, i, j, d;
-    if(fscanf(fp, "%d", &n) != 1)
-	Fatal("GraphReadConnections: failed to read 'n'");
-    assert(n >= 0);
-    G = GraphAlloc(n, sparse, false);
-
-    while((d=fscanf(fp, "%d %d", &i, &j)) == 2)
-    {
-	if(i==-1 && j==-1)
-	{
-	    d=0;
-	    break;
-	}
-	assert(0 <= i && i < G->n);
-	assert(0 <= j && j < G->n);
-	if(i==j) {
-	    static Boolean warned;
-	    if(!warned) Warning("GraphReadConnections: node %d has a self-loop; assuming they are allowed", i);
-	    warned = G->selfAllowed = true;
-	}
-	GraphConnect(G, i, j);
-    }
-    if(d > 0)
-	Fatal("expecting no more integers, but got %d integers", d);
-    GraphSort(G);
-    return G;
-}
-
-
 GRAPH *GraphComplement(GRAPH *G)
 {
     int i, j;
-    if(G->supportNodeNames) GraphNameWarn("GraphComplement");
-    GRAPH *Gbar = GraphAlloc(G->n, G->sparse, false);
-    Gbar->selfAllowed = G->selfAllowed;
+    GRAPH *Gbar = GraphAlloc(G->n, G->self, G->directed, !!G->weight);
+    Gbar->self = G->self;
 
     assert(Gbar->n == G->n);
 
     for(i=0; i < G->n; i++) for(j=i+1; j < G->n; j++)
 	if(!GraphAreConnected(G, i, j))
 	    GraphConnect(Gbar, i, j);
-    if(G->selfAllowed) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
-    GraphSort(Gbar);
+    if(G->self) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
     return Gbar;
 }
 
@@ -828,18 +442,16 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
     if(G1->n != G2->n)
 	return NULL;
 
-    assert(G1->sparse == G2->sparse);
-    assert(G1->selfAllowed == G2->selfAllowed);
+    assert(G1->directed == G2->directed);
+    assert(G1->self == G2->self);
 
-    GRAPH *dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
-    if(G1->supportNodeNames || G2->supportNodeNames) GraphNameWarn("GraphUnion");
+    GRAPH *dest = GraphAlloc(n, G1->self, G1->directed, !!G1->weight);
 
     for(i=0; i < n; i++) for(j=i+1; j < n; j++)
 	if(GraphAreConnected(G1, i, j) || GraphAreConnected(G2, i, j))
 	    GraphConnect(dest, i ,j);
-    if(G1->selfAllowed)
+    if(G1->self)
 	for(i=0; i < G1->n; i++) if(GraphAreConnected(G1, i, i) || GraphAreConnected(G2, i, i)) GraphConnect(dest, i ,i);
-    GraphSort(dest);
     return dest;
 }
 
@@ -885,26 +497,13 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 	if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
 	{
 	    int j;
-	    if(G->sparse>=true)
+	    for(j=0; j < G->n; j++) if(GraphAreConnected(G, v, j))
 	    {
-		for(j=0; j < G->degree[v]; j++)
-		    if(G->neighbor[v][j] == v) assert(G->selfAllowed); // nothing to do; don't add self to a BFS
-		    else if(distArray[G->neighbor[v][j]] == -1) /* some of the neighbors might have already been visited */
-		    {
-			distArray[G->neighbor[v][j]] = distArray[v] + 1;
-			QueuePut(BFSQ, (foint)G->neighbor[v][j]);
-		    }
-	    }
-	    if(G->sparse==both || !G->sparse)
-	    {
-		for(j=0; j < G->n; j++) if(GraphAreConnected(G, v, j))
+		if(v==j) assert(G->self); // nothing to do; don't add self to a BFS
+		else if(distArray[j] == -1)
 		{
-		    if(v==j) assert(G->selfAllowed); // nothing to do; don't add self to a BFS
-		    else if(distArray[j] == -1)
-		    {
-			distArray[j] = distArray[v] + 1;
-			QueuePut(BFSQ, (foint)j);
-		    }
+		    distArray[j] = distArray[v] + 1;
+		    QueuePut(BFSQ, (foint)j);
 		}
 	    }
 	}
@@ -935,19 +534,22 @@ static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
     *k -= 1;
     if (*k <= 0) return true;
     int i;
-    for (i = 0; i < G->degree[v]; i++) {
-        if (G->neighbor[v][i]==v) assert(G->selfAllowed); // nothing to do, don't add self in a DFS
+    Apology("noCCatLeast");
+    #if 0
+    for (i = 0; i < GraphDegree(G,v); i++) {
+        if (G->neighbor[v][i]==v) assert(G->self); // nothing to do, don't add self in a DFS
         else if (!SetIn(visited, G->neighbor[v][i])) {
             Boolean result = _GraphCCatLeastKHelper(G, visited, G->neighbor[v][i], k);
             if (result)
                 return result;
         }
     }
+    #endif
     return false;
 }
 
 /* At top-level call, set (*pn)=0. The visited array does *not* need to be clear, but everything needs to be allocated.
-** We return the number of elements in Varray.
+** We return the number of elements in Varray. Not particularly efficient.
 */
 int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, int *pn)
 {
@@ -957,16 +559,9 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 	SetAdd(visited, v);
 	Varray[(*pn)++] = v;
     	int i;
-	if(G->sparse>=true) {
-	    for(i=0; i < G->degree[v]; i++)
-		if(G->neighbor[v][i]==v) assert(G->selfAllowed);
-		else GraphVisitCC(G, G->neighbor[v][i], visited, Varray, pn);
-	}
-	else {
-	    for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) {
-		if(v==i) assert(G->selfAllowed);
-		else GraphVisitCC(G, i, visited, Varray, pn);
-	    }
+	for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) {
+	    if(v==i) assert(G->self);
+	    else GraphVisitCC(G, i, visited, Varray, pn);
 	}
     }
     return *pn;
@@ -976,14 +571,12 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 GRAPH *GraphInduced(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    if(G->supportNodeNames) GraphNameWarn("GraphInduced");
-    GRAPH *Gv = GraphAlloc(nV, G->sparse, false);
-    Gv->selfAllowed = G->selfAllowed;
+    GRAPH *Gv = GraphAlloc(nV, G->self, G->directed, !!G->weight);
+    Gv->self = G->self;
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, i, j);
-    if(G->selfAllowed) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, i, i);
-    GraphSort(Gv);
+    if(G->self) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, i, i);
     return Gv;
 }
 
@@ -991,18 +584,17 @@ GRAPH *GraphInduced(GRAPH *G, SET *V)
 GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
-    if(G->supportNodeNames) GraphNameWarn("GraphInduced_NoVertexDelete");
-    GRAPH *Gv = GraphAlloc(G->n, G->sparse, false);
-    Gv->selfAllowed = G->selfAllowed;
+    GRAPH *Gv = GraphAlloc(G->n, G->self, G->directed, !!G->weight);
+    Gv->self = G->self;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, array[i], array[j]);
-    if(G->selfAllowed) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, array[i], array[i]);
-    GraphSort(Gv);
+    if(G->self) for(i=0; i < nV; i++) if(GraphAreConnected(G, array[i], array[i])) GraphConnect(Gv, array[i], array[i]);
     return Gv;
 }
 
+#if 0
 /*
 ** A reasonably fast search for triangles.
 */
@@ -1117,7 +709,7 @@ CLIQUE *GraphKnFirst(GRAPH *G, int k)
 	nDegk = 0;
 	SetEmpty(setDegk);
 	for(i=0; i < c->G->n; i++)
-	    if(c->G->degree[i] >= k-1)
+	    if(GraphDegree(c->G,i) >= k-1)
 	    {
 		++nDegk;
 		SetAdd(setDegk, i);
@@ -1208,7 +800,7 @@ static Boolean _permutationIdentical(int n, int perm[n])
 {
     int i, j;
     for(i=0; i<n; i++)
-	if(isoG1->degree[i] != isoG2->degree[perm[i]])
+	if(GraphDegree(isoG1,i) != GraphDegree(isoG2,perm[i]))
 	    return false;
 
     for(i=0; i<n; i++) for(j=i+1; j<n; j++)
@@ -1217,7 +809,7 @@ static Boolean _permutationIdentical(int n, int perm[n])
 	    !GraphAreConnected(isoG2, perm[i], perm[j]))
 	    return false;   /* non-isomorphic */
     // Note they don't both have to ALLOW self loops, but if one does, then both need to have or not the same loops
-    if(isoG1->selfAllowed || isoG2->selfAllowed) for(i=0; i<n; i++)
+    if(isoG1->self || isoG2->self) for(i=0; i<n; i++)
        if(!GraphAreConnected(isoG1, i,i) != !GraphAreConnected(isoG2, perm[i], perm[i])) return false;   /* non-isomorphic */
     return true;   /* isomorphic! */
 }
@@ -1227,7 +819,7 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     static int recursionDepth;
     ++recursionDepth;
     assert(recursionDepth <= G1->n + 1);
-    Boolean self = (G1->selfAllowed || G2->selfAllowed);
+    Boolean self = (G1->self || G2->self);
     int i, n = G1->n, degreeCount1[n+self], degreeCount2[n+self];
 
     SET *degreeOnce;
@@ -1240,12 +832,12 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     if(n < 2) {--recursionDepth; return true;}
 
     /*
-    ** Ensure each degree occurs the same number of times in each... and the count can be == n if selfAllowed is true
+    ** Ensure each degree occurs the same number of times in each... and the count can be == n if self is true
     */
     for(i=0; i<n+self; i++) degreeCount1[i] = degreeCount2[i] = 0;
     for(i=0; i<n; i++) {
-	++degreeCount1[G1->degree[i]];
-	++degreeCount2[G2->degree[i]];
+	++degreeCount1[GraphDegree(G1,i)];
+	++degreeCount2[GraphDegree(G2,i)];
     }
     for(i=0; i<n+self; i++) if(degreeCount1[i] != degreeCount2[i]) {--recursionDepth; return false;}
 
@@ -1260,16 +852,15 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     for(i=0; i<n+self; i++)
     {
 	/* Find out if the degree of vertex i in G1 appears only once */
-	if(SetIn(degreeOnce, G1->degree[i]))
+	if(SetIn(degreeOnce, GraphDegree(G1,i)))
 	{
-	    int j, degree = G1->degree[i];
+	    int j, degree = GraphDegree(G1,i);
 	    GRAPH *neighG1i, *neighG2j;
 
 	    /* find the (unique) vertex in G2 that has the same degree */
-	    for(j=0; j < n; j++) if(G2->degree[j] == degree) break;
+	    for(j=0; j < n; j++) if(GraphDegree(G2,j) == degree) break;
 	    assert(j < n);
 
-	    assert((!G1->sparse||G1->sparse==both) && (!G2->sparse||G2->sparse==both));
             // remove self-loops from the set to induce on...
             SET *G1Ai = SetCopy(NULL, G1->A[i]), *G2Aj = SetCopy(NULL, G2->A[j]);
             SetDelete(G1Ai, i); neighG1i = GraphInduced(G1, G1->A[i]);
@@ -1303,6 +894,7 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     --recursionDepth;
     return !!CombinAllPermutations(n, perm, _permutationIdentical);
 }
+#endif // clique and combin stuff
 #ifdef __cplusplus
 } // end extern "C"
 #endif

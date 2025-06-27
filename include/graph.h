@@ -10,46 +10,31 @@ extern "C" {
 #include <stdio.h>
 #include "bintree.h" // to support node names
 
-#define SORT_NEIGHBORS 0 // Thought this might speed things up but it appears not to.
-
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
-    unsigned n;
-    SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
+    unsigned n, m;
+    SET **A; /* Adjacency "Matrix", as a dynamically allocated array[G->n] of SETs */
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
-    Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
-    Boolean selfAllowed; // self-loops allowed iff this is true
-    unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
-    unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
-    unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
-    float **weight; /* weights of the edges in neighbors array above, or NULL pointed if unweighted */
-#if SORT_NEIGHBORS
-    SET *sorted; // Boolean array: when sparse, is the neighbor list of node[i] sorted or not?
-#endif
-    unsigned maxEdges, numEdges, *edgeList; /* UNSORTED list of all edges in the graph, edgeList[0,..2*numEdges] */
-    // next two members are only used if called with supportNodeNames=true;
-    Boolean supportNodeNames;
+    Boolean self; // self-loops allowed iff this is true
+    Boolean directed;
+    float *weight; // weights of the edges in the edgeList, or NULL pointer if unweighted
     BINTREE *nameDict;	// string to int map
     char **name;	// int to string map (inverse of the above)
 } GRAPH;
 
-GRAPH *GraphAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // does NOT allow self-loops
-GRAPH *GraphSelfAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
-
-GRAPH *GraphMakeWeighted(GRAPH *G);
-GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
+GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted);
+GRAPH *GraphAssignNames(GRAPH *G, BINTREE *nameDict); // (re)-assign the (string names <-> nodes) mapping
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
-GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
-GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
-double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w); // returns old weight
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
-unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
+//unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
 GRAPH *GraphComplement(GRAPH *G);
 GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2);
-#define GraphDegree(G,v) ((G)->useComplement ? (G)->n-(G)->degree[v] : (G)->degree[v])
-#define GraphNumEdges(G) ((G)->useComplement ? ((((G)->n)*((G)->n-1))/2 - (G)->numEdges) : (G)->numEdges)
+#define GraphDegree(G,v) ((G)->useComplement ? (G)->n-SetCardinality((G)->A[v]) : SetCardinality((G)->A[v]))
+#define GraphNumEdges(G) ((G)->useComplement ? ((((G)->n)*((G)->n-1))/2 - (G)->m) : (G)->m)
 GRAPH *GraphCopy(GRAPH *G); // (deep) copy a graph
+GRAPH *GraphConnect(GRAPH *G, int i, int j);
+GRAPH *GraphDisconnect(GRAPH *G, int i, int j);
 
 // buf must be a pointer to a pre-allocated integer. When called with *buf=0, return u's first neighbor. 
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
@@ -94,18 +79,13 @@ GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V);
 GRAPH *GraphInduced(GRAPH *G, SET *V);
 
 void GraphPrintAdjMatrix(FILE *fp, GRAPH *G);
-GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse);
 void GraphPrintAdjList(FILE *fp, GRAPH *G);
-GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
 
-// set weights pointer to NULL if no weights
-GRAPH *GraphFromEdgeList(unsigned numNodes, unsigned numEdges, unsigned *pairs, Boolean sparse, float *weights);
-
-GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
+GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weighted);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
-Boolean GraphAreConnected(GRAPH *G, int i, int j);
+#define GraphAreConnected(G,i,j) SetIn(G->A[i],(j))
 
 /*
 ** The following subroutines should be used with caution, because they take
