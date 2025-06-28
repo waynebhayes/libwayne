@@ -262,7 +262,10 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
     int i=vec->maxElem, seg, numSegs = NUMSEGS(vec->maxElem);
 
     for(seg=0; seg<numSegs; seg++) if(vec->segment[seg]) { // first find the lowest non-zero segment
-	for(i=0; i<bitvecBits; i++) if(BitvecIn(vec, seg*bitvecBits + i)) break;
+	for(i=0; i<bitvecBits; i++) {
+	    int element = seg*bitvecBits + i;
+	    if(element < vec->maxElem && BitvecIn(vec, element)) break;
+	}
 	assert(i<bitvecBits);
 	break;
     }
@@ -275,17 +278,19 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 
 unsigned int BitvecAssignLargestElement1(BITVEC *vec)
 {
+    if(vec->cardinality==0) return 0;
     _largestGood = false;
     int i=0, seg, numSegs = NUMSEGS(vec->maxElem);
 
     for(seg=numSegs-1; seg>=0; --seg) if(vec->segment[seg]) { // first find the highest non-zero segment
-	for(i=bitvecBits-1; i>=0; --i) if(BitvecIn(vec, seg*bitvecBits + i)) break;
+	for(i=bitvecBits-1; i>=0; --i) {
+	    int element = seg*bitvecBits + i;
+	    if(element < vec->maxElem && BitvecIn(vec, element)) break;
+	}
 	assert(i>=0);
 	break;
     }
-    // note the following works even if there's no new smallest element or when numSegs==0
     vec->largestElement = MAX(seg*bitvecBits + i, 0);
-    if(vec->largestElement == 0) assert(BitvecCardinality(vec) <= 1);
     _largestGood = true;
     return vec->largestElement;
 }

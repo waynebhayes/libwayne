@@ -180,9 +180,35 @@ Boolean GraphAreConnected(GRAPH *G, int i, int j)
 }
 #endif
 
-void GraphRandomEdge(GRAPH *G, int *u, int *v)
+SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
 {
+    SET_ELEMENT_TYPE edge;
+#if DUMB
+    if(*u==-1) Apology("sorry, picking a specific edge not implemented in dumb RandomEdge");
     do { *u=G->n*drand48(); *v=G->n*drand48(); } while((*u==*v && !G->self) || !GraphAreConnected(G,*u,*v));
+    return 0;
+#else
+    static GRAPH *Gsame;
+    static SET_ELEMENT_TYPE *cumDegree;
+    SET_ELEMENT_TYPE i, j;
+    if(G != Gsame) {
+	Gsame = G;
+	if(cumDegree) Free(cumDegree);
+	cumDegree = Calloc(G->n, sizeof(cumDegree[0]));
+	cumDegree[0] = GraphDegree(G,0);
+	for(i=1; i<G->n; i++) // up to and including i
+	    cumDegree[i] = cumDegree[i-1] + GraphDegree(G, i);
+	assert(cumDegree[G->n-1] == 2*G->m);
+    }
+    if(*u==-1) edge = *v;
+    else edge = G->m * drand48(); // target edge
+    for(i=0;i<G->n;i++) if(edge < cumDegree[i]) break;
+    assert(i<G->n);
+    *u = i;
+    *v = GraphRandomNeighbor(G,i);
+    assert(GraphAreConnected(G,*u,*v));
+#endif
+    return edge;
 }
 
 int GraphRandomNeighbor(GRAPH *G, int u)

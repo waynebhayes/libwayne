@@ -41,8 +41,10 @@ int GraphNeighbor(GRAPH *G, int u, int n); // return the nth neighbor of u, wher
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
 int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted
 int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
-void GraphRandomEdge(GRAPH *G, int *u, int *v); // A return a random edge (u,v) written into the pointers
 
+// A return a random edge (u,v) written into the pointers; also return the unique ID of that edge (0 <= edge < G->m)
+// However, if *u is -1, then *v is the specific edge ID that we want (rather than random), and fill in *u and *v.
+SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v);
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
  * nodeArray[0] always= seed, distArray[seed] always= 0.
