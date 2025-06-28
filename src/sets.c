@@ -33,6 +33,7 @@ Boolean SetStartup(void)
     return s;
 }
 
+#define MAX_CROSSOVER ((unsigned)(-1))
 
 unsigned SetComputeCrossover(unsigned n)
 {
@@ -56,12 +57,11 @@ unsigned SetComputeCrossover(unsigned n)
     }
     prevResult = MAX((unsigned)mid,SET_MIN_LIST);
     //fprintf(stderr, "n=%u CROSSOVER %u\n", n,prevResult);
-    static const unsigned max_crossover=(unsigned)(-1);
-    if(prevResult > max_crossover) {
+    if(prevResult > MAX_CROSSOVER) {
 	static char warned;
-	if(!warned) Warning("SET datatype can't handle list of %u elements; setting crossover to %u", prevResult, max_crossover);
+	if(!warned) Warning("SET datatype can't handle list of %u elements; setting crossover to %u", prevResult, MAX_CROSSOVER);
 	warned=1;
-	prevResult = max_crossover;
+	prevResult = MAX_CROSSOVER;
     }
     return (unsigned)prevResult;
 }
@@ -99,6 +99,8 @@ SET *SetAlloc(SET_ELEMENT_TYPE n)
     return set;
 }
 #endif
+
+unsigned SetUseMaxCrossover(SET *s) {return (s->crossover = MAX_CROSSOVER);}
 
 // Used when qsort'ing the neighbors when graph is sparse.
 static int ElementCmp(const void *a, const void *b)
@@ -144,6 +146,20 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
     }
     for(i=set->numSorted; i<set->cardinality; i++) if(element == set->list[i]) return true;
     return false;
+}
+
+SET_ELEMENT_TYPE SetElement(SET *s, int i) {
+    if(!s->list) Apology("sorry, SetElement only works for lists");
+    assert(0 <= i && i < s->cardinality);
+    return s->list[i];
+}
+
+SET_ELEMENT_TYPE SetRandomElement(SET *s) {
+    if(s->list) { // it's easy, just choose a random member of the list
+	int e = drand48() * s->cardinality;
+	return s->list[e];
+    } else
+	return BitvecRandomElement(s->bitvec);
 }
 
 // "Upgrade" a set from using an unsorted list to BITVEC
@@ -231,8 +247,8 @@ SET *SetAdd(SET *s, unsigned element)
     }
     ++s->cardinality;
     if(element < s->smallestElement) s->smallestElement = element;
-    if(s->list && s->cardinality > 2*(s->numSorted+64)) {
-	SetListSort(s); // 32 is arbitrary to avoid sorting too frequently
+    if(s->list && s->cardinality > 2*(s->numSorted+64)) { // avoid sorting too frequently
+	SetListSort(s);
 	assert(s->numSorted == s->cardinality);
 	int i; for(i=1; i < s->cardinality; i++) assert(s->list[i-1] < s->list[i]); // ensure it's sorted
 	assert(s->smallestElement == s->list[0]);

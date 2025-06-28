@@ -26,6 +26,7 @@ int NUMSEGS(int n) { return (n+bitvecBits-1)/bitvecBits; }   /* number of segmen
 int BitvecBytes(unsigned n) { return (sizeof(BITVEC)+NUMSEGS(n)*sizeof(BITVEC_SEGMENT));}
 
 Boolean _smallestGood=true;
+Boolean _largestGood=true;
 
 unsigned int lookupBitCount[BITVEC_LOOKUP_SIZE];
 /* count the number of 1 bits in a long
@@ -70,6 +71,7 @@ BITVEC *BitvecAlloc(unsigned n)
     BITVEC *vec = (BITVEC*) Calloc(1,sizeof(BITVEC));
     vec->maxElem = n;
     vec->smallestElement = n; // ie., invalid
+    vec->largestElement = 0; // not technically invalid but the best we can do with unsigned
     vec->segment = (BITVEC_SEGMENT*) Calloc(sizeof(BITVEC_SEGMENT), NUMSEGS(n));
     assert(vec->cardinality==0);
     return vec;
@@ -109,6 +111,7 @@ BITVEC *BitvecEmpty(BITVEC *vec)
 {
     int segment=NUMSEGS(vec->maxElem);
     vec->smallestElement = vec->maxElem;
+    vec->largestElement = 0;
     memset(vec->segment, 0, segment * sizeof(vec->segment[0]));
     vec->cardinality=0;
     return vec;
@@ -170,6 +173,7 @@ BITVEC *BitvecCopy(BITVEC *dst, BITVEC *src)
     else
 	dst = BitvecResize(dst, src->maxElem);
     dst->smallestElement = src->smallestElement;
+    dst->largestElement = src->largestElement;
 
     for(i=0; i < numSrc; i++)
 	dst->segment[i] = src->segment[i];
@@ -199,6 +203,7 @@ BITVEC *BitvecAdd(BITVEC *vec, unsigned element)
     if(!(vec->segment[element/bitvecBits] & BITVEC_BIT(element))) {
 	vec->segment[element/bitvecBits] |= BITVEC_BIT(element);
 	if(element < vec->smallestElement) vec->smallestElement = element;
+	if(element > vec->largestElement) vec->largestElement = element;
 	++vec->cardinality;
     }
     return vec;
@@ -237,6 +242,20 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 }
 
 
+unsigned int BitvecRandomElement(BITVEC *vec) {
+    assert(vec->cardinality>0);
+    int seg, loSeg, hiSeg, i;
+    loSeg = vec->segment[vec->smallestElement/bitvecBits];
+    hiSeg = vec->segment[vec->largestElement/bitvecBits];
+    do { // find a random nonzero segment 
+	seg = drand48() * (hiSeg - loSeg + 1);
+    } until(vec->segment[seg]);
+    do { // now pick a random 1 bit in the segment
+	i=drand48()*bitvecBits;
+    } until(BitvecIn(vec, seg*bitvecBits + i));
+    return seg*bitvecBits + i;
+}
+
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 {
     _smallestGood = false;
@@ -254,6 +273,23 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
     return vec->smallestElement;
 }
 
+unsigned int BitvecAssignLargestElement1(BITVEC *vec)
+{
+    _largestGood = false;
+    int i=0, seg, numSegs = NUMSEGS(vec->maxElem);
+
+    for(seg=numSegs-1; seg>=0; --seg) if(vec->segment[seg]) { // first find the highest non-zero segment
+	for(i=bitvecBits-1; i>=0; --i) if(BitvecIn(vec, seg*bitvecBits + i)) break;
+	assert(i>=0);
+	break;
+    }
+    // note the following works even if there's no new smallest element or when numSegs==0
+    vec->largestElement = MAX(seg*bitvecBits + i, 0);
+    if(vec->largestElement == 0) assert(BitvecCardinality(vec) <= 1);
+    _largestGood = true;
+    return vec->largestElement;
+}
+
 /* Delete an element from a vec.  Returns the same vec handle.
 */
 BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
@@ -267,6 +303,11 @@ BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 	{
 	    BitvecAssignSmallestElement1(vec);
 	    assert(vec->smallestElement > element);
+	}
+	if(element == vec->largestElement)
+	{
+	    BitvecAssignLargestElement1(vec);
+	    assert(vec->largestElement < element);
 	}
     }
     return vec;
@@ -392,6 +433,33 @@ unsigned int BitvecAssignSmallestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
     return C->smallestElement;
 }
 
+unsigned int BitvecAssignLargestElement3(BITVEC *C,BITVEC *A,BITVEC *B)
+{
+    _largestGood = false;
+    if(A->largestElement == B->largestElement)
+	C->largestElement = A->largestElement;
+    else if(BitvecIn(A, B->largestElement))
+    {
+	assert(!BitvecIn(B, A->largestElement));
+	assert(A->largestElement > B->largestElement);
+	C->largestElement = A->largestElement;
+    }
+    else if(BitvecIn(B, A->largestElement))
+    {
+	assert(!BitvecIn(A, B->largestElement));
+	assert(B->largestElement > A->largestElement);
+	C->largestElement = B->largestElement;
+    }
+    else
+    {
+	BitvecAssignLargestElement1(C);
+	assert(C->largestElement < A->largestElement);
+	assert(C->largestElement < B->largestElement);
+    }
+    _largestGood = true;
+    return C->largestElement;
+}
+
 /* Intersection A and B into C.  Any or all may be the same pointer.
 */
 BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B)
@@ -403,6 +471,7 @@ BITVEC *BitvecIntersect(BITVEC *C, BITVEC *A, BITVEC *B)
 	C->segment[i] = A->segment[i] & B->segment[i];
     C->cardinality = BitvecCardinalitySafe(C);
     BitvecAssignSmallestElement3(C,A,B);
+    BitvecAssignLargestElement3(C,A,B);
     return C;
 }
 
@@ -429,6 +498,7 @@ BITVEC *BitvecXOR(BITVEC *C, BITVEC *A, BITVEC *B)
 	C->segment[i] = A->segment[i] ^ B->segment[i];
     C->cardinality = BitvecCardinalitySafe(C);
     BitvecAssignSmallestElement3(C,A,B);
+    BitvecAssignLargestElement3(C,A,B);
     return C;
 }
 
@@ -444,6 +514,7 @@ BITVEC *BitvecComplement(BITVEC *B, BITVEC *A)
 	B->segment[i] = ~A->segment[i];
     B->cardinality = A->maxElem - A->cardinality;
     BitvecAssignSmallestElement1(B);
+    BitvecAssignLargestElement1(B);
     return B;
 }
 

@@ -32,11 +32,11 @@ extern unsigned bitvecBits, bitvecBits_1;
 
 typedef struct _bitvecType {
     unsigned maxElem; /* in bits */
-    unsigned smallestElement, cardinality;
+    unsigned smallestElement, largestElement, cardinality;
     BITVEC_SEGMENT* segment;
 } BITVEC;
 
-extern Boolean _smallestGood; // when false, smallestElement may be inconsistent
+extern Boolean _smallestGood, _largestGood; // when false, smallestElement may be inconsistent
 
 int NUMSEGS(int n);  /* number of segments needed to store n bits */
 int BitvecBytes(unsigned n); // returns the memory footprint (in bytes) of a BITVEC with maxElem=n
@@ -70,6 +70,7 @@ BITVEC *BitvecComplement(BITVEC *B, BITVEC *A);  /* B = complement of A */
 unsigned BitvecCardinalitySafe(const BITVEC *const A);    /* returns non-negative integer */
 Boolean BitvecInSafe(const BITVEC *const vec, unsigned element); /* boolean: 0 or 1 */
 #define BitvecSmallestElement(S) (S->smallestElement)
+#define BitvecLargestElement(S) (S->largestElement)
 #if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < vec->maxElem, which is dangerous
 //#define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e) ? true:false)
@@ -84,6 +85,9 @@ Boolean BitvecSubsetProper(BITVEC *sub, BITVEC *super);	/* proper subset */
 #define BitvecSupersetProper(spr,sub) BitvecSubsetProper((sub),(spr))
 unsigned int BitvecAssignSmallestElement1(BITVEC *A);
 unsigned int BitvecAssignSmallestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
+unsigned int BitvecAssignLargestElement1(BITVEC *A);
+unsigned int BitvecAssignLargestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
+unsigned int BitvecRandomElement(BITVEC *B);
 
 /*
 ** You allocate an array big enough to hold the number of elements,

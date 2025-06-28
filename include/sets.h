@@ -68,6 +68,7 @@ SET *SetAlloc_fl(unsigned n, const char *file, const int line);
 #define SetAlloc(n) SetAlloc_fl((n),__FILE__,__LINE__)
 #else
 SET *SetAlloc(unsigned n);
+unsigned SetUseMaxCrossover(SET *);
 #endif
 SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
@@ -85,6 +86,8 @@ Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #else
 #define SetIn SetInSafe
 #endif
+SET_ELEMENT_TYPE SetElement(SET*, int i); // return the i'th element in the set, where 0 <= i < cardinality
+SET_ELEMENT_TYPE SetRandomElement(SET*);
 SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
 SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */

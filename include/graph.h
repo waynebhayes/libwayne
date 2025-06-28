@@ -36,6 +36,7 @@ GRAPH *GraphCopy(GRAPH *G); // (deep) copy a graph
 GRAPH *GraphConnect(GRAPH *G, int i, int j);
 GRAPH *GraphDisconnect(GRAPH *G, int i, int j);
 
+int GraphNeighbor(GRAPH *G, int u, int n); // return the nth neighbor of u, where 0<=n<=Degree(u)
 // buf must be a pointer to a pre-allocated integer. When called with *buf=0, return u's first neighbor. 
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
 int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted

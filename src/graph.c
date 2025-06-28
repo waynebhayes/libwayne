@@ -35,8 +35,10 @@ GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted)
     if(weighted) Apology("sorry no weighted graphs yet in libwayne/graph.c");
     G->m = 0;
     G->A = Calloc(n, sizeof(G->A[0]));
-    for(i=0; i<n; i++)
+    for(i=0; i<n; i++) {
 	G->A[i] = SetAlloc(n);
+	SetUseMaxCrossover(G->A[i]); // allows use of neighborlist
+    }
     return G;
 }
 
@@ -186,22 +188,23 @@ void GraphRandomEdge(GRAPH *G, int *u, int *v)
 int GraphRandomNeighbor(GRAPH *G, int u)
 {
     assert(GraphDegree(G,u)>0);
-    int v;
-    do { v = G->n * drand48(); } while((u==v && !G->self) || !GraphAreConnected(G,u,v));
-    return v;
+    return SetRandomElement(G->A[u]);
+}
+
+int GraphNeighbor(GRAPH *G, int u, int n) {
+    return SetElement(G->A[u], n);
 }
 
 int GraphNextNeighbor(GRAPH *G, int u, int *buf)
 {
-    Apology("Sorry, no GraphNextNeighbor yet");
     assert(0 <= *buf && *buf <= G->n);
     if(G->useComplement) {
-	while(*buf < G->n && GraphAreConnected(G,u,*buf)) (*buf)++;
+	Apology("Sorry, no GraphNextNeighbor for complement graphs");
 	if(*buf == G->n) return -1;
 	else return (*buf)++;
     } else {
 	if(*buf == GraphDegree(G,u)) return -1;
-	//else return G->neighbor[u][(*buf)++];
+	else return SetElement(G->A[u], (*buf)++);
     }
     return 0;
 }
@@ -241,7 +244,7 @@ unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j)
     {
 	assert(!G->sparse||G->sparse==both);
 	static SET *combined; // for G this is the SetIntersect; for G' it'll be the SetUnion
-	if(!combined) combined = SetAlloc(G->n);
+	if(!combined) { combined = SetAlloc(G->n); SetUseMaxCrossover(combined);}
 	SetReset(combined);
 	if(G->useComplement) { 
 	    SetUnion(combined, G->A[i], G->A[j]);
@@ -517,7 +520,7 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 
 static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k);
 Boolean GraphCCatLeastK(GRAPH *G, int v, int k) {
-    SET* visited = SetAlloc(G->n);
+    SET* visited = SetAlloc(G->n); SetUseMaxCrossover(visited);
     Boolean result = _GraphCCatLeastKHelper(G, visited, v, &k);
     SetFree(visited);
     return result;
@@ -610,7 +613,7 @@ GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
 Boolean GraphConnectingCausesK3(GRAPH *G, int i, int j)
 {
     int numIntersect;
-    SET *C = SetAlloc(G->n);
+    SET *C = SetAlloc(G->n); SetUseMaxCrossover(C);
     assert(!G->sparse||G->sparse==both);
     SetIntersect(C, G->A[i], G->A[j]);
     numIntersect = SetCardinality(C);
@@ -693,7 +696,7 @@ CLIQUE *GraphKnFirst(GRAPH *G, int k)
     if(k == 0)
 	return NULL;
 
-    setDegk = SetAlloc(G->n);
+    setDegk = SetAlloc(G->n); SetUseMaxCrossover(setDegk);
     c = (CLIQUE*)Calloc(1,sizeof(CLIQUE));
     c->G = GraphCopy(G);
     c->cliqueSize = k;
@@ -850,7 +853,7 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
     ** G1 and G2 are isomorphic only if the neighborhood of v1 is isomorphic
     ** to the neighborhood of v2.
     */
-    degreeOnce = SetAlloc(n+self);
+    degreeOnce = SetAlloc(n+self); SetUseMaxCrossover(degreeOnce);
     for(i=0; i<n+self; i++) if(degreeCount1[i] == 1) SetAdd(degreeOnce, i);
     for(i=0; i<n+self; i++)
     {
