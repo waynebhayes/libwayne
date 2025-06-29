@@ -58,38 +58,45 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j)
 {
     if(G->useComplement) Apology("Sorry haven't implemented useComplement yet");
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    if(i==j) assert(G->self);
     if(GraphAreConnected(G, i, j))
     {
-	if(!G->directed) assert(GraphAreConnected(G, j, i));
+	if(i!=j && !G->directed) assert(GraphAreConnected(G, j, i));
 	return G;
     }
+    assert(!SetIn(G->A[i], j));
     SetAdd(G->A[i], j);
     G->m++;
-    if(!G->directed) SetAdd(G->A[j], i);
+    if(i==j) { assert(G->self); G->numSelf++; }
+    else if(!G->directed) {
+	assert(!SetIn(G->A[j], i));
+	SetAdd(G->A[j], i);
+    }
     return G;
-}
-
-Boolean GraphAreConnect(GRAPH *G, unsigned i, unsigned j)
-{
-    return (SetIn(G->A[i], j) != G->useComplement);
 }
 
 GRAPH *GraphDisconnect(GRAPH *G, int i, int j)
 {
     if(G->useComplement) Apology("Sorry haven't implemented useComplement yet");
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-    if(i==j) assert(G->self);
-    if(SetIn(G->A[i], j))
+    if(!GraphAreConnected(G, i, j))
     {
-	if(!G->directed) {
-	    assert(SetIn(G->A[j], i));
-	    SetDelete(G->A[j], i);
-	}
-	SetDelete(G->A[i], j);
-	G->m--;
+	if(i!=j && !G->directed) assert(!GraphAreConnected(G, j, i));
+	return G;
+    }
+    assert(SetIn(G->A[i], j));
+    SetDelete(G->A[i], j);
+    G->m--;
+    if(i==j) { assert(G->self); G->numSelf--; }
+    else if(!G->directed) {
+	assert(SetIn(G->A[j], i));
+	SetDelete(G->A[j], i);
     }
     return G;
+}
+
+Boolean GraphAreConnect(GRAPH *G, unsigned i, unsigned j)
+{
+    return (SetIn(G->A[i], j) != G->useComplement);
 }
 
 GRAPH *GraphCopy(GRAPH *G)
@@ -103,82 +110,16 @@ GRAPH *GraphCopy(GRAPH *G)
     return Gc;
 }
 
-static int IntCmp(const void *a, const void *b)
-{
-    const int *i = (const int*)a, *j = (const int*)b;
-    return (*i)-(*j);
-}
-
-double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
-{
-    Apology("no weights yet");
-    return 0.0;
-}
+double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, float w) { Apology("no weights yet"); return 0.0; }
+double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)          { Apology("no weights yet"); return 0.0; }
 
 GRAPH *GraphEdgesAllDelete(GRAPH *G)
 {
     int i;
     for(i=0; i < G->n; i++) SetEmpty(G->A[i]);
-    G->m = 0;
+    G->numSelf = G->m = 0;
     return G;
 }
-
-
-#if GRAPH_USES_ONLY_EDGELIST
-// Used when qsort'ing the neighbors when graph is sparse.
-static unsigned _searchNode; // 0 or 1 to sort by first or second node in the pair
-static Boolean _G_directed, _G_self;
-static int EdgeCmp(const void *a, const void *b)
-{
-    assert(_searchNode == 0 || _searchNode == 1);
-    const EDGE *e = (const EDGE*)a, *f = (const EDGE*)b;
-    if(!_G_directed) {
-	assert(e->v[0] <= e->v[1]);
-	assert(f->v[0] <= f->v[1]);
-    }
-    return (int)e->v[_searchNode]-(int)f->v[_searchNode];
-}
-
-static GRAPH *GraphSort(GRAPH *G)
-{
-    if(G->weight) Apology("Sorry GraphSort not yet implemented for weighted graphs");
-    if(G->m == 0) return G;
-
-    // Sort the edgeList by the first node of the EDGE
-    _searchNode = 0; qsort(G->edgeList, G->m, sizeof(EDGE), EdgeCmp);
-
-    // Now sort each sub-list by the second node
-    unsigned bottom=0;
-    while(bottom < G->m) {
-	unsigned top=bottom, v0 = G->edgeList[bottom].v[0];
-	while(top < G->m && G->edgeList[top].v[0] == v0) ++top; // find the index of the next node in the edgeList
-	_searchNode = 1; qsort(G->edgeList+bottom, top-bottom, sizeof(EDGE), EdgeCmp);
-	bottom=top;
-    }
-    return G;
-}
-
-static Boolean _rawConnectedViaEdgeListSearch(GRAPH *G, int i, int j)
-{
-#if PARANOID_ASSERTS
-    assert(0 <= i && i < G->n && 0 <= j && j < G->n);
-#endif
-    if(i > j) {int tmp=i; i=j; j=tmp;} // swap them
-    _searchNode=0;
-    EDGE *i_e = bsearch(&i, G->edgeList, G->m, sizeof(EDGE), EdgeCmp);
-    assert(i_e); // this node had better exist...
-    // bsearch might return any element of the edgeList with i as the first element; now find the bottom
-    while(i_e > G->edgeList && (i_e-1)->v[0] == i) --i_e;
-    _searchNode=1;
-    return !!bsearch(&j, i_e, GraphDegree(G,i), sizeof(EDGE), EdgeCmp);
-}
-
-Boolean GraphAreConnected(GRAPH *G, int i, int j)
-{
-    if(G->useComplement) return !_rawConnected(G,i,j);
-    else		 return  _rawConnected(G,i,j);
-}
-#endif
 
 SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
 {
@@ -191,22 +132,40 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     static GRAPH *Gsame;
     static SET_ELEMENT_TYPE *cumDegree;
     SET_ELEMENT_TYPE i, j;
+    // Remember each edge appears TWICE: seen once from each end
     if(G != Gsame) {
 	Gsame = G;
 	if(cumDegree) Free(cumDegree);
-	cumDegree = Calloc(G->n, sizeof(cumDegree[0]));
-	cumDegree[0] = GraphDegree(G,0);
-	for(i=1; i<G->n; i++) // up to and including i
-	    cumDegree[i] = cumDegree[i-1] + GraphDegree(G, i);
-	assert(cumDegree[G->n-1] == 2*G->m);
+	cumDegree = Calloc(1+G->n, sizeof(cumDegree[0])); // extra+1 for G->n; cum[0] stays 0
+	for(i=0; i<G->n; i++) // includes element for G->n
+	    cumDegree[i+1] = cumDegree[i] + GraphDegree(G, i); // up to BUT NOT including i
+	assert(i==G->n && cumDegree[i] == 2*G->m);
     }
-    if(*u==-1) edge = *v;
-    else edge = G->m * drand48(); // target edge
-    for(i=0;i<G->n;i++) if(edge < cumDegree[i]) break;
-    assert(i<G->n);
+    if(*u==-1) {
+	assert(*v>=0 && *v < 2*G->m);
+	edge = *v;
+	// Code to warn if user doesn't seem to realize edge can be >=G->m
+	static Boolean neverGtGm = true;
+	if(neverGtGm) {
+	    if(*v>=G->m) neverGtGm=false;
+	    else {
+		static int numLessGm;
+		++numLessGm;
+		if(numLessGm > G->m)
+		    Fatal("GraphRandomEdge: specified edge should be <2*G->m, but has been <G->m too frequently");
+	    }
+	}
+    }
+    else edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
+    for(i=0;i<G->n;i++) if(edge < cumDegree[i+1]) break;
+    assert(0<=i && i<G->n);
+    assert(cumDegree[i]<=edge && edge-cumDegree[i]<GraphDegree(G,i));
+    if(*u==-1) {
+	*v = GraphNeighbor(G,i,edge-cumDegree[i]);
+    } else
+	*v = GraphRandomNeighbor(G,i);
     *u = i;
-    *v = GraphRandomNeighbor(G,i);
-    assert(GraphAreConnected(G,*u,*v));
+    assert(GraphAreConnected(G,*u,*v) && (!G->directed && GraphAreConnected(G,*v,*u)));
 #endif
     return edge;
 }
@@ -232,7 +191,6 @@ int GraphNextNeighbor(GRAPH *G, int u, int *buf)
 	if(*buf == GraphDegree(G,u)) return -1;
 	else return SetElement(G->A[u], (*buf)++);
     }
-    return 0;
 }
 
 #if 0
@@ -331,8 +289,148 @@ char *HashString(char *s)
     return hash;
 }
 
+static GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, float *weights)
+{
+    int i;
+    GRAPH *G = GraphAlloc(n, false, false, !!weights);
+    assert(n == G->n);
+    if(G->weight) assert(weights);
+    for(i=0; i<m; i++) {
+	if(pairs[2*i] == pairs[2*i+1] && !G->self) {
+	    static Boolean warned;
+	    if(!warned) Warning("GraphFromEdgeList: node %d has a self-loop; assuming they are allowed", pairs[2*i]);
+	    warned = G->self = true;
+	}
+	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
+	if(weights) {assert(weights[i]!=0.0); GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);}
+    }
+    return G;
+}
+
+// The old one that can read through the list only once
+#define MIN_EDGELIST 1024
+static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed, Boolean weighted)
+{
+    unsigned numNodes=0, numNodesFirstLine=0;
+    unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
+    unsigned *pairs = Malloc(2*maxEdges*sizeof(pairs[0]));
+    float *fweight = NULL;
+    if(weighted) fweight=Malloc(maxEdges*sizeof(fweight[0]));
+    const Boolean supportNodeNames=true; // always true now
+
+    // SUPPORT_NODE_NAMES
+    unsigned maxNodes=MIN_EDGELIST;
+    char **names = NULL;
+    BINTREE *nameDict = NULL;
+    names = Malloc(maxNodes*sizeof(char*));
+    nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
+
+    char line[BUFSIZ];
+    static Boolean selfWarned;
+    while(fgets(line, sizeof(line), fp))
+    {
+	if(numEdges == 0) { // check to see if first line has a single integer (which would be the number of nodes)
+	    char dummy[BUFSIZ];
+	    if(sscanf(line, "%u %s ", &numNodesFirstLine, dummy) == 1) // try to get 2 things, see if we get only one integer
+		continue; // success, there was an integer, so move on to the next line
+	}
+	// nuke all whitespace, including DOS carriage returns, from the end of the line
+	int len = strlen(line);
+	while(isspace(line[len-1])) line[--len]='\0';
+	float w;
+	assert(numEdges <= maxEdges);
+	if(numEdges >= maxEdges)
+	{
+	    maxEdges = 2*maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
+	    pairs = Realloc(pairs, 2*maxEdges*sizeof(pairs[0]));
+	    if(weighted) fweight = Realloc(fweight, maxEdges*sizeof(fweight[0]));
+	}
+	const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
+	    *fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
+	// name and foints are used only if supportNodeNames is true
+	union {int i; char name[BUFSIZ];} v1, v2;
+	foint f1, f2;
+	if(supportNodeNames)
+	{
+	    assert(numNodes <= maxNodes);
+	    if(numNodes+2 >= maxNodes) // -2 for a bit of extra space
+	    {
+		maxNodes *=2;
+		names = Realloc(names, maxNodes*sizeof(names[0]));
+	    }
+	}
+	// Note: if !supportNodeNames, a binary integer will be written into the name unions
+	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
+	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges+1,
+		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
+	if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
+	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", numEdges+1, v1.name);
+	    Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
+	    selfWarned = true;
+	}
+	if(supportNodeNames) {
+	    if(!BinTreeLookup(nameDict, (foint)v1.name, &f1))
+	    {
+		names[numNodes] = Strdup(v1.name);
+		f1.i = numNodes++;
+		BinTreeInsert(nameDict, (foint)v1.name, f1);
+	    }
+	    if(!BinTreeLookup(nameDict, (foint)v2.name, &f2))
+	    {
+		names[numNodes] = Strdup(v2.name);
+		f2.i = numNodes++;
+		BinTreeInsert(nameDict, (foint)v2.name, f2);
+	    }
+	    v1.i = f1.i; v2.i = f2.i;
+	}
+	else {
+	    // if !supportNodeNames, fscanf wrote the integers into the char* pointers
+	    numNodes = MAX(numNodes, v1.i);
+	    numNodes = MAX(numNodes, v2.i);
+	}
+	pairs[2*numEdges] = v1.i;
+	pairs[2*numEdges+1] = v2.i;
+	if(weighted) { assert(w>0.0); fweight[numEdges] = w;}
+	if(pairs[2*numEdges] > pairs[2*numEdges+1])
+	{
+	    unsigned tmp = pairs[2*numEdges];
+	    pairs[2*numEdges] = pairs[2*numEdges+1];
+	    pairs[2*numEdges+1] = tmp;
+	}
+	assert(pairs[2*numEdges] < pairs[2*numEdges+1]+selfWarned);
+	numEdges++;
+    }
+    if(supportNodeNames)
+    {
+	//printf("BINTREE Dictionary Dump\n");
+	unsigned i;
+	for(i=0; i<numNodes;i++)
+	{
+	    foint info;
+	    if(!BinTreeLookup(nameDict, (foint)names[i], &info))
+		Fatal("couldn't find int for name '%s'", names[i]);
+	    assert(i == info.i);
+	    //printf("%d is %s which in turn is %d\n", i, names[i], info.i);
+	}
+    }
+    else
+	numNodes++;	// increase it by one since so far it's simply been the biggest integer seen on the input.
+
+    GRAPH *G = GraphFromEdgeList(numNodes, numEdges, pairs, fweight);
+    G->nameDict = nameDict;
+    G->name = names;
+    Free(pairs);
+    if(weighted) Free(fweight);
+    assert(G->m <= maxEdges && G->m == numEdges);
+    return G;
+}
+
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weighted)
 {
+    if(fseek(fp, 0L, SEEK_END) != 0) // Must use old, one-pass method
+	return GraphReadEdgeListOnePass(fp, self, directed, weighted);
+    assert(fseek(fp, 0L, SEEK_SET) == 0);
+
     char line[BUFSIZ], *s;
     unsigned numNodes=0, numEdges=0; // these will be increased as necessary during reading
     static Boolean selfWarned;

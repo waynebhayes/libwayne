@@ -12,11 +12,11 @@ extern "C" {
 
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
-    unsigned n, m;
+    unsigned n, m, numSelf;
     SET **A; /* Adjacency "Matrix", as a dynamically allocated array[G->n] of SETs */
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
     Boolean self; // self-loops allowed iff this is true
-    Boolean directed;
+    Boolean directed; // if undirected, each off-diagonal edge will appear twice, as is conventional.
     float *weight; // weights of the edges in the edgeList, or NULL pointer if unweighted
     BINTREE *nameDict;	// string to int map
     char **name;	// int to string map (inverse of the above)
@@ -26,6 +26,7 @@ GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted);
 GRAPH *GraphAssignNames(GRAPH *G, BINTREE *nameDict); // (re)-assign the (string names <-> nodes) mapping
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
+double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, float w);
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
 //unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
 GRAPH *GraphComplement(GRAPH *G);
@@ -42,8 +43,9 @@ int GraphNeighbor(GRAPH *G, int u, int n); // return the nth neighbor of u, wher
 int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted
 int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
 
-// A return a random edge (u,v) written into the pointers; also return the unique ID of that edge (0 <= edge < G->m)
-// However, if *u is -1, then *v is the specific edge ID that we want (rather than random), and fill in *u and *v.
+// A return a random edge (u,v) written into the pointers. Also return the unique ID of that edge which is for INTERNAL
+// USE ONLY. (It will have 0 <= edge < 2*G->m, and it is only to be used when passing back into the same function.)
+// If *u is -1, then *v is a specific edge ID as returned previously by a call to this function, or any value <2*G->m.
 SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v);
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
