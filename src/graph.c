@@ -336,11 +336,11 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
     char line[BUFSIZ], *s;
     unsigned numNodes=0, numEdges=0; // these will be increased as necessary during reading
     static Boolean selfWarned;
+    const Boolean supportNodeNames = true;
 
     BINTREE *nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
     const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
 	*fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
-    const Boolean supportNodeNames = true;
     // name and foints are used for supportNodeNames
     union {int i; char name[BUFSIZ];} v1, v2;
     foint f1, f2;
@@ -393,6 +393,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 
     GRAPH *G = GraphAlloc(numNodes, self, directed, weighted);
     G->name = Calloc(numNodes, sizeof(char*));
+    G->nameDict = nameDict;
 
     int lineNum=0, nodeNum=0; // use different variables than the first read-through.
     while(fgets(line, sizeof(line), fp))
