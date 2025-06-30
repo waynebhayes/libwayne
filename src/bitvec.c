@@ -312,7 +312,7 @@ BITVEC *BitvecDelete(BITVEC *vec, unsigned element)
 	if(element == vec->largestElement)
 	{
 	    BitvecAssignLargestElement1(vec);
-	    assert(vec->largestElement < element);
+	    assert(vec->largestElement==0 || vec->largestElement < element);
 	}
     }
     return vec;
