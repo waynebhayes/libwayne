@@ -111,15 +111,16 @@ static int ElementCmp(const void *a, const void *b)
     return 0;
 }
 
-static void SetListSort(SET *s)
+Boolean SetSort(SET *s)
 {
-    if(!s->list) {assert(s->listSize==0); return;}
-    if(s->numSorted == s->cardinality) return;
+    if(!s->list) {assert(s->listSize==0); return false;}
+    if(s->numSorted == s->cardinality) return false;
     qsort(s->list, s->cardinality, sizeof(SET_ELEMENT_TYPE), ElementCmp);
-#if PARANOID_ASSERTS
+#if 0 // PARANOID_ASSERTS
     int i; for(i=1; i < s->cardinality; i++) assert(s->list[i-1] < s->list[i]); // ensure it's sorted
 #endif
     s->numSorted = s->cardinality;
+    return true;
 }
 
 /* query if an element is in a set; return 0 or non-zero.
@@ -138,7 +139,7 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
     if(set->numSorted > 0) {
 	if(bsearch(&element, set->list, set->numSorted, sizeof(SET_ELEMENT_TYPE), ElementCmp)) return true;
 	// bsearch sometimes FAILS to find an element that exists! So search from ZERO rather than set->numSorted.... Grrrr!
-#if PARANOID_ASSERTS
+#if 0 // && PARANOID_ASSERTS
 	for(i=1; i<set->numSorted; i++) assert(set->list[i-1] < set->list[i]); // ensure it's sorted
 	for(i=0; i<set->numSorted; i++) if(element == set->list[i])
 	    Fatal("bsearch failed even though element %d exists at position %d", element, i);
@@ -152,6 +153,16 @@ SET_ELEMENT_TYPE SetElement(SET *s, int i) {
     if(!s->list) Apology("sorry, SetElement only works for lists");
     assert(0 <= i && i < s->cardinality);
     return s->list[i];
+}
+
+SET_ELEMENT_TYPE SetNextElement(SET *s, int *buf) {
+    assert(0 <= *buf && *buf <= s->cardinality);
+    if(*buf == s->cardinality) return s->cardinality;
+    else {
+	if(s->list)
+	    return s->list[(*buf)++];
+	else Apology("Sorry, SetNextElement only works on lists");
+    }
 }
 
 SET_ELEMENT_TYPE SetRandomElement(SET *s) {
@@ -248,7 +259,7 @@ SET *SetAdd(SET *s, unsigned element)
     ++s->cardinality;
     if(element < s->smallestElement) s->smallestElement = element;
     if(s->list && s->cardinality > 2*(s->numSorted+64)) { // avoid sorting too frequently
-	SetListSort(s);
+	SetSort(s);
 	assert(s->numSorted == s->cardinality);
 	int i; for(i=1; i < s->cardinality; i++) assert(s->list[i-1] < s->list[i]); // ensure it's sorted
 	assert(s->smallestElement == s->list[0]);

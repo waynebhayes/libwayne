@@ -86,7 +86,9 @@ Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #else
 #define SetIn SetInSafe
 #endif
+Boolean SetSort(SET*); // sorts a set (might be more efficient); always succeeds + returns whether a sort actually occured.
 SET_ELEMENT_TYPE SetElement(SET*, int i); // return the i'th element in the set, where 0 <= i < cardinality
+SET_ELEMENT_TYPE SetNextElement(SET*, int *buf); // return the next element of the set or set->cardinality if no more
 SET_ELEMENT_TYPE SetRandomElement(SET*);
 SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
