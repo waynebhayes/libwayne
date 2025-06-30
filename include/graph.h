@@ -25,6 +25,7 @@ typedef struct _Graph {
 GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted);
 GRAPH *GraphAssignNames(GRAPH *G, BINTREE *nameDict); // (re)-assign the (string names <-> nodes) mapping
 void GraphFree(GRAPH *G);
+GRAPH *GraphSort(GRAPH *G); // optimize graph for efficiency (happens automatically but this forces it)
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, float w);
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
@@ -38,10 +39,11 @@ GRAPH *GraphConnect(GRAPH *G, int i, int j);
 GRAPH *GraphDisconnect(GRAPH *G, int i, int j);
 
 int GraphNeighbor(GRAPH *G, int u, int n); // return the nth neighbor of u, where 0<=n<=Degree(u)
+int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
+
 // buf must be a pointer to a pre-allocated integer. When called with *buf=0, return u's first neighbor. 
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
-int GraphNextNeighbor(GRAPH *G, int u, int *buf); // A return value of (-1) means the list is exhausted
-int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uniformly at random
+int GraphNextNeighbor(GRAPH *G, int u, int *buf); // It's done when *buf==GraphDegree(u) (and it returns 0 then)
 
 // A return a random edge (u,v) written into the pointers. Also return the unique ID of that edge which is for INTERNAL
 // USE ONLY. (It will have 0 <= edge < 2*G->m, and it is only to be used when passing back into the same function.)

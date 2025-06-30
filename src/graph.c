@@ -113,6 +113,13 @@ GRAPH *GraphCopy(GRAPH *G)
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, float w) { Apology("no weights yet"); return 0.0; }
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)          { Apology("no weights yet"); return 0.0; }
 
+GRAPH *GraphSort(GRAPH *G)
+{
+    int i;
+    for(i=0; i < G->n; i++) SetSort(G->A[i]);
+    return G;
+}
+
 GRAPH *GraphEdgesAllDelete(GRAPH *G)
 {
     int i;
@@ -156,10 +163,27 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
 	    }
 	}
     }
-    else edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
+    else
+	edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
+#if LINEAR_SEARCH
     for(i=0;i<G->n;i++) if(edge < cumDegree[i+1]) break;
+#else
+    // binary search
+    int tries=0;
+    unsigned low=0, high=G->n, mid=G->n/2; // inclusive
+    while(low<high) {
+	assert(++tries < 1000);
+	mid = (high+low)/2;
+	assert(low <= mid && mid <= high);
+	if(edge > cumDegree[mid]) low=mid+1;
+	else high=mid-1;
+    }
+    i=mid; // not sure why this is sometimes 1 or 2 off
+    for(;i<G->n;i++) if(edge <  cumDegree[i+1]) break;
+    for(;i>=0  ;i--) if(edge >= cumDegree[i]) break;
+#endif
     assert(0<=i && i<G->n);
-    assert(cumDegree[i]<=edge && edge-cumDegree[i]<GraphDegree(G,i));
+    assert(cumDegree[i]<=edge && edge < cumDegree[i+1] && edge-cumDegree[i]<GraphDegree(G,i));
     if(*u==-1) {
 	*v = GraphNeighbor(G,i,edge-cumDegree[i]);
     } else
@@ -182,14 +206,14 @@ int GraphNeighbor(GRAPH *G, int u, int n) {
 
 int GraphNextNeighbor(GRAPH *G, int u, int *buf)
 {
-    assert(0 <= *buf && *buf <= G->n);
     if(G->useComplement) {
 	Apology("Sorry, no GraphNextNeighbor for complement graphs");
 	if(*buf == G->n) return -1;
 	else return (*buf)++;
     } else {
+	assert(0 <= *buf && *buf <= GraphDegree(G,u));
 	if(*buf == GraphDegree(G,u)) return -1;
-	else return SetElement(G->A[u], (*buf)++);
+	return SetNextElement(G->A[u], buf); // don't touch buf here, SetNextElement will adjust it
     }
 }
 
@@ -422,6 +446,7 @@ static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed,
     Free(pairs);
     if(weighted) Free(fweight);
     assert(G->m <= maxEdges && G->m == numEdges);
+    GraphSort(G);
     return G;
 }
 
@@ -453,7 +478,10 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
     while(isspace(s[len-1])) s[--len]='\0';
     assert(len == strlen(s));
     for(i=0;i<len;i++) if(isdigit(s[i])) ++numDigits;
-    if(numDigits == len) numNodes = atol(s); // the first line is the number of nodes
+    if(numDigits == len) {
+	numNodes = atol(s); // the first line is the number of nodes
+	Note("Got n=%d from first line", numNodes);
+    }
     else {
 	do { // read through the file to get the names and number of nodes.
 	    // FIRST LINE IS ALREADY READ... copy reading code here, get names + numNodes, then rewind
@@ -486,14 +514,15 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	    perror("rewind/fseek(0):");
 	    Apology("input must be a file on disk, not a pipe");
 	}
+	Note("Got n=%d, m=%d from first read-through", numNodes, numEdges);
     }
-    // At this point, we definitely have numNodes, and numEdges is nonzero iff we read the file
+    // At this point, we definitely have numNodes; numEdges is correct if we read the file, otherwise it's 0
 
     GRAPH *G = GraphAlloc(numNodes, self, directed, weighted);
     G->name = Calloc(numNodes, sizeof(char*));
     G->nameDict = nameDict;
 
-    int lineNum=0, nodeNum=0; // use different variables than the first read-through.
+    int edgeNum=0, nodeNum=0; // use different variables than the first read-through.
     while(fgets(line, sizeof(line), fp))
     {
 	// nuke all whitespace, including DOS carriage returns, from the end of the line
@@ -501,10 +530,10 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	len = strlen(line);
 	while(isspace(line[len-1])) line[--len]='\0';
 	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
-	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", lineNum+1,
+	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", edgeNum+1+!numEdges,
 		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
 	if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
-	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", lineNum+1, v1.name);
+	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", edgeNum+1+!numEdges, v1.name);
 	    Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
 	    selfWarned = true;
 	}
@@ -524,9 +553,11 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	G->name[f2.i] = Strdup(v2.name);
 	v1.i = f1.i; v2.i = f2.i;
 	GraphConnect(G, v1.i, v2.i);
-	++lineNum;
+	++edgeNum;
     }
-    assert(G->m == numEdges);
+    Note("Got m=%d", edgeNum);
+    assert(G->m == edgeNum);
+    if(numEdges) assert(G->m == numEdges);
 
     //printf("BINTREE Dictionary Dump\n");
     for(i=0; i<numNodes;i++)
@@ -537,7 +568,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	assert(i == info.i);
 	//printf("%d is %s which in turn is %d\n", i, G->name[i], info.i);
     }
-    assert(G->m <= numEdges);
+    GraphSort(G);
     return G;
 }
 
@@ -682,17 +713,18 @@ static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k) {
 /* At top-level call, set (*pn)=0. The visited array does *not* need to be clear, but everything needs to be allocated.
 ** We return the number of elements in Varray. Not particularly efficient.
 */
-int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, int *pn)
+int GraphVisitCC(GRAPH *G, unsigned int u, SET *visited, unsigned int *Varray, int *pn)
 {
-    assert(v < SetMaxSize(visited));
-    if(!SetIn(visited,v))
+    assert(u < SetMaxSize(visited));
+    if(!SetIn(visited,u))
     {
-	SetAdd(visited, v);
-	Varray[(*pn)++] = v;
-    	int i;
-	for(i=0; i < G->n; i++) if(GraphAreConnected(G,v,i)) {
-	    if(v==i) assert(G->self);
-	    else GraphVisitCC(G, i, visited, Varray, pn);
+	SetAdd(visited, u);
+	Varray[(*pn)++] = u;
+    	int i=0, v; // i = list element for u's neighbors, v=actual neighbor
+	while((v=GraphNextNeighbor(G,u,&i)) >= 0) {
+	    assert(GraphAreConnected(G,u,v));
+	    if(u==v) assert(G->self);
+	    else GraphVisitCC(G, v, visited, Varray, pn);
 	}
     }
     return *pn;
