@@ -165,12 +165,13 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     }
     else
 	edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
+    assert(((int) edge) >= 0); // check against integer overflow
 #if LINEAR_SEARCH
     for(i=0;i<G->n;i++) if(edge < cumDegree[i+1]) break;
 #else
     // binary search
     int tries=0;
-    unsigned low=0, high=G->n, mid=G->n/2; // inclusive
+    int low=0, high=G->n, mid=G->n/2; // inclusive
     while(low<high) {
 	assert(++tries < 1000);
 	mid = (high+low)/2;

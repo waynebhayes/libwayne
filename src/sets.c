@@ -161,7 +161,8 @@ SET_ELEMENT_TYPE SetNextElement(SET *s, int *buf) {
     else {
 	if(s->list)
 	    return s->list[(*buf)++];
-	else Apology("Sorry, SetNextElement only works on lists");
+	else
+	    return Apology("Sorry, SetNextElement only works on lists"), 0;
     }
 }
 
