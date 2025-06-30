@@ -258,6 +258,7 @@ unsigned int BitvecRandomElement(BITVEC *vec) {
 
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 {
+    if(vec->cardinality==0) return (vec->smallestElement=vec->maxElem);
     _smallestGood = false;
     int i=vec->maxElem, seg, numSegs = NUMSEGS(vec->maxElem);
 
@@ -278,9 +279,9 @@ unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
 
 unsigned int BitvecAssignLargestElement1(BITVEC *vec)
 {
-    if(vec->cardinality==0) return 0;
+    if(vec->cardinality==0) return (vec->largestElement=0);
     _largestGood = false;
-    int i=0, seg, numSegs = NUMSEGS(vec->maxElem);
+    int i=-1, seg, numSegs = NUMSEGS(vec->maxElem);
 
     for(seg=numSegs-1; seg>=0; --seg) if(vec->segment[seg]) { // first find the highest non-zero segment
 	for(i=bitvecBits-1; i>=0; --i) {
