@@ -210,12 +210,13 @@ function log2(n){return log(n)/log(2)}
 function log10(n){return log(n)/log(10)}
 
 # res1 is your variable, where the output set goes; it will be nuked and replaced with the set intersection of T1 and T2.
+# Return value is the cardinality of the result.
 function SetIntersect(res1,T1,T2,
     g){delete res1;if(length(T1)<length(T2)){for(g in T1)if(g in T2)res1[g]=1}
-						       else{for(g in T2)if(g in T1)res1[g]=1}}
+						       else{for(g in T2)if(g in T1)res1[g]=1}; return length(res1)}
 # same as above but for set union, and res2 is the result.
 function SetUnion(res2,T1,T2,
-    g){delete res2;for(g in T1)res2[g]=1;for(g in T2)res2[g]=1}
+    g){delete res2;for(g in T1)res2[g]=1;for(g in T2)res2[g]=1; return length(res2)}
 # cumulative add set T to res3
 function SetCumulativeUnion(res3,T, g){for(g in T)res3[g]=1}
 function SetCopy(dest,src,   g){delete dest;for(g in src)dest[g]=1}
