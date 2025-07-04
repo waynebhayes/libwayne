@@ -51,6 +51,9 @@ void GraphFree(GRAPH *G)
 	Free(G->name);
     }
     if(G->nameDict) BinTreeFree(G->nameDict);
+    if(G->cumDegree) Free(G->cumDegree);
+    for(i=0; i<G->n; i++) SetFree(G->A[i]);
+    Free(G->A);
     Free(G);
 }
 
@@ -136,18 +139,15 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     do { *u=G->n*drand48(); *v=G->n*drand48(); } while((*u==*v && !G->self) || !GraphAreConnected(G,*u,*v));
     return 0;
 #else
-    static GRAPH *Gsame;
-    static SET_ELEMENT_TYPE *cumDegree;
     SET_ELEMENT_TYPE i, j;
-    // Remember each edge appears TWICE: seen once from each end
-    if(G != Gsame) {
-	Gsame = G;
+    if(!G->cumDegree) {
+	G->cumDegree = Calloc((1+G->n),sizeof(G->cumDegree[0])); // extra+1 for G->n; cum[0] stays 0
 	assert(G->m < (1U << (8*sizeof(SET_ELEMENT_TYPE)-1))); // must be < 2^31 to avoid overflow when multiplying by 2
-	if(cumDegree) Free(cumDegree);
-	cumDegree = Calloc(1+G->n, sizeof(cumDegree[0])); // extra+1 for G->n; cum[0] stays 0
+	G->cumDegree[0] = 0;
 	for(i=0; i<G->n; i++) // includes element for G->n
-	    cumDegree[i+1] = cumDegree[i] + GraphDegree(G, i); // up to BUT NOT including i
-	assert(i==G->n && cumDegree[i] == 2*G->m);
+	    G->cumDegree[i+1] = G->cumDegree[i] + GraphDegree(G, i); // up to BUT NOT including i
+	// Remember each edge appears TWICE: seen once from each end
+	assert(i==G->n && G->cumDegree[i] == 2*G->m);
     }
     if(*u==-1) {
 	assert(*v>=0 && *v < 2*G->m);
@@ -167,7 +167,7 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     else
 	edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
 #if LINEAR_SEARCH
-    for(i=0;i<G->n;i++) if(edge < cumDegree[i+1]) break;
+    for(i=0;i<G->n;i++) if(edge < G->cumDegree[i+1]) break;
 #else
     // binary search
     int tries=0;
@@ -176,17 +176,17 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
 	assert(++tries < 1000);
 	mid = (high+low)/2;
 	assert(low <= mid && mid <= high);
-	if(edge > cumDegree[mid]) low=mid+1;
+	if(edge > G->cumDegree[mid]) low=mid+1;
 	else high=mid-1;
     }
     i=mid; // not sure why this is sometimes 1 or 2 off
-    for(;i<G->n;i++) if(edge <  cumDegree[i+1]) break;
-    for(;i>=0  ;i--) if(edge >= cumDegree[i]) break;
+    for(;i<G->n;i++) if(edge <  G->cumDegree[i+1]) break;
+    for(;i>=0  ;i--) if(edge >= G->cumDegree[i]) break;
 #endif
     assert(0<=i && i<G->n);
-    assert(cumDegree[i]<=edge && edge < cumDegree[i+1] && edge-cumDegree[i]<GraphDegree(G,i));
+    assert(G->cumDegree[i]<=edge && edge < G->cumDegree[i+1] && edge-G->cumDegree[i]<GraphDegree(G,i));
     if(*u==-1) {
-	*v = GraphNeighbor(G,i,edge-cumDegree[i]);
+	*v = GraphNeighbor(G,i,edge-G->cumDegree[i]);
     } else
 	*v = GraphRandomNeighbor(G,i);
     *u = i;
@@ -481,7 +481,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
     for(i=0;i<len;i++) if(isdigit(s[i])) ++numDigits;
     if(numDigits == len) {
 	numNodes = atol(s); // the first line is the number of nodes
-	//Note("Got n=%d from first line", numNodes);
+	Note("Got n=%d from first line", numNodes);
     }
     else {
 	do { // read through the file to get the names and number of nodes.
@@ -515,7 +515,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	    perror("rewind/fseek(0):");
 	    Apology("input must be a file on disk, not a pipe");
 	}
-	//Note("Got n=%d, m=%d from first read-through", numNodes, numEdges);
+	Note("Got n=%d, m=%d from first read-through", numNodes, numEdges);
     }
     // At this point, we definitely have numNodes; numEdges is correct if we read the file, otherwise it's 0
 
@@ -556,9 +556,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	GraphConnect(G, v1.i, v2.i);
 	++edgeNum;
     }
-    //Note("Got m=%d", edgeNum);
-    assert(G->n == numNodes);
-    assert(numNodes == nameDict->n);
+    Note("Got m=%d", edgeNum);
     assert(G->m == edgeNum);
     if(numEdges) assert(G->m == numEdges);
 

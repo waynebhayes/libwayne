@@ -18,6 +18,7 @@ typedef struct _Graph {
     Boolean self; // self-loops allowed iff this is true
     Boolean directed; // if undirected, each off-diagonal edge will appear twice, as is conventional.
     float *weight; // weights of the edges in the edgeList, or NULL pointer if unweighted
+    SET_ELEMENT_TYPE *cumDegree; // needed only for GraphRandomEdge
     BINTREE *nameDict;	// string to int map
     char **name;	// int to string map (inverse of the above)
 } GRAPH;
