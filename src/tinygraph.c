@@ -31,10 +31,10 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
 	return G;
-    if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
     ++G->degree[i];
-    if(!G->directed&&i!=j){
+    if(i==j) assert(G->selfLoops);
+    else if(!G->directed){
 	TSetAdd(G->A[j],i);
 	++G->degree[j];
     }
@@ -76,10 +76,10 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 {
     if(!TinyGraphAreConnected(G, i, j))
 	return G;
-    if(i==j) assert(G->selfLoops);
     TSetDelete(G->A[i], j);
     G->degree[i]--;
-    if(!G->directed&&i!=j) {
+    if(i==j) assert(G->selfLoops);
+    else if(!G->directed) {
 	TSetDelete(G->A[j],i);
 	G->degree[j]--;
     }
