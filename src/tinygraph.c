@@ -31,10 +31,15 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
 	return G;
+    if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
     ++G->degree[i];
+<<<<<<< HEAD
     if(i==j) assert(G->selfLoops);
     else if(!G->directed){
+=======
+    if(!G->directed){
+>>>>>>> 28566e518bd5a36f9c52167da2355ff65be01468
 	TSetAdd(G->A[j],i);
 	++G->degree[j];
     }
@@ -76,10 +81,15 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 {
     if(!TinyGraphAreConnected(G, i, j))
 	return G;
+    if(i==j) assert(G->selfLoops);
     TSetDelete(G->A[i], j);
     G->degree[i]--;
+<<<<<<< HEAD
     if(i==j) assert(G->selfLoops);
     else if(!G->directed) {
+=======
+    if(!G->directed) {
+>>>>>>> 28566e518bd5a36f9c52167da2355ff65be01468
 	TSetDelete(G->A[j],i);
 	G->degree[j]--;
     }
@@ -182,6 +192,7 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 
 int TinyGraphNumEdges(TINY_GRAPH *G)
 {
+<<<<<<< HEAD
     int total=0, i,numSelf=0;
     for(i=0; i<G->n; i++) {
 	total += G->degree[i];
@@ -189,6 +200,14 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     }
     assert(numSelf==0||G->selfLoops);
     return (numSelf*(1-G->directed)+total)/(2-G->directed);
+=======
+    int total=0, i;
+    for(i=0; i<G->n; i++) {
+	total += G->degree[i];
+    }
+    assert(!G->selfLoops); // Alan: the below formula doesn't work if there are self-loops
+    return total/(2-G->directed);
+>>>>>>> 28566e518bd5a36f9c52167da2355ff65be01468
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
@@ -480,6 +499,12 @@ Boolean TinyGraphsIsomorphic(int *perm, TINY_GRAPH *G1, TINY_GRAPH *G2)
     --recursionDepth;
     return !!CombinAllPermutations(n, perm, _permutationIdentical);
 }
+#ifdef __cplusplus
+} // end extern "C"
+#endif
+
+
+
 #ifdef __cplusplus
 } // end extern "C"
 #endif
