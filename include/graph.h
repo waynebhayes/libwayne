@@ -30,6 +30,7 @@ GRAPH *GraphSort(GRAPH *G); // optimize graph for efficiency (happens automatica
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, float w);
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
+unsigned GraphNodeNameToInt(GRAPH *G, char name[]); // returns the internal integer for the string name--FATAL ERROR if none
 //unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
 GRAPH *GraphComplement(GRAPH *G);
 GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2);

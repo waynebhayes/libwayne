@@ -332,6 +332,13 @@ static GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, float *
     return G;
 }
 
+unsigned GraphNodeNameToInt(GRAPH *G, char name[]) {
+    foint node, ID;
+    node.s = name;
+    if(!BinTreeLookup(G->nameDict, node, &ID)) Fatal("GraphNodeNameToInt: node name \"%s\" not found", name);
+    return ID.ui;
+}
+
 // The old one that can read through the list only once
 #define MIN_EDGELIST 1024
 static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed, Boolean weighted)

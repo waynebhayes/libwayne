@@ -952,7 +952,7 @@ function InducedEdges(edge,T,D,       u,v,m) { # note you can skip passing in D
     MakeEmptySet(D);
     for(u in T) for(v in T) if((u in edge) && (v in edge[u])) { ++D[u]; ++D[v]; ++m; }
     for(u in T) { ASSERT(D[u]%2==0, "InducedEdges: D["u"]="D[u]); D[u]/=2; }
-    ASSERT(m%2==0, "m is not even");
+    ASSERT(m%2==0, "m is "m", which is not even");
     return m/2;
 }
 
