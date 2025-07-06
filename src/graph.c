@@ -732,11 +732,12 @@ int GraphVisitCC(GRAPH *G, unsigned int u, SET *visited, unsigned int *Varray, i
 }
 
 /* doesn't allow Gv == G */
-GRAPH *GraphInduced(GRAPH *G, SET *V)
+GRAPH *GraphInduced(GRAPH *G, SET *V, unsigned arraySize, unsigned *array)
 {
-    unsigned array[G->n], nV = SetToArray(array, V), i, j;
+    unsigned i,j,nV = SetCardinality(V);
+    assert(arraySize >= nV);
+    nV = SetToArray(array, V);
     GRAPH *Gv = GraphAlloc(nV, G->self, G->directed, !!G->weight);
-    Gv->self = G->self;
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
 	    GraphConnect(Gv, i, j);
@@ -1027,9 +1028,9 @@ Boolean GraphsIsomorphic(int *perm, GRAPH *G1, GRAPH *G2)
 
             // remove self-loops from the set to induce on...
             SET *G1Ai = SetCopy(NULL, G1->A[i]), *G2Aj = SetCopy(NULL, G2->A[j]);
-            SetDelete(G1Ai, i); neighG1i = GraphInduced(G1, G1->A[i]);
-            SetDelete(G2Aj, j); neighG2j = GraphInduced(G2, G2->A[j]);
-
+	    unsigned nMax = MAX(G1->n,G2->n), array[nMax]; // needed just as placeholders
+            SetDelete(G1Ai, i); neighG1i = GraphInduced(G1, G1->A[i], nMax, array);
+            SetDelete(G2Aj, j); neighG2j = GraphInduced(G2, G2->A[j], nMax, array);
 
 	    /*
 	    ** Note: this recursion works only as long as _permutationIdentical doesn't call GraphsIsomorphic.

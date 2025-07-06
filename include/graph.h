@@ -81,10 +81,11 @@ int GraphVisitCC(GRAPH *G, unsigned int v, SET *visited, unsigned int *Varray, i
 ** GraphInduced_NoVertexDelete doesn't delete any vertices, it only deletes
 ** edges whose ends don't both appear in V.  GraphInduced builds an entirely
 ** new graph in which also the vertices not in V are deleted; vertices
-** are renumbered but ordering is conserved.
+** are renumbered but ordering is conserved, and the mapping is put into the
+** array YOU allocate + pass, which must be big enough.
 */
 GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V);
-GRAPH *GraphInduced(GRAPH *G, SET *V);
+GRAPH *GraphInduced(GRAPH *G, SET *V, unsigned arraySize, unsigned *mapping);
 
 void GraphPrintAdjMatrix(FILE *fp, GRAPH *G);
 void GraphPrintAdjList(FILE *fp, GRAPH *G);
