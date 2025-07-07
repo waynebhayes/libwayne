@@ -340,9 +340,9 @@ const char* getFileExtension(char* filename) {
 ** same. But since you should *never* seed twice within the same code, that's your problem.
 ** (This problem can be offset by setting "trulyRandom" to true.)
 */
-unsigned int GetFancySeed(Boolean trulyRandom)
+long GetFancySeed(Boolean trulyRandom)
 {
-    unsigned int seed = 0;
+    long seed = 0;
     const char *cmd = "(hostname -i || hostname | sum | awk '{srand(); printf \"%d.%d.%d.%d\n\",256*rand(),256*rand(),$1/256,$1%256}') 2>/dev/null | awk '{for(i=1;i<=NF;i++)if(match($i,\"^[0-9]*\\\\.[0-9]*\\\\.[0-9]*\\\\.[0-9]*$\")){IP=$i;exit}}END{if(!IP)IP=\"127.0.0.1\"; print IP}'";
     FILE *fp=popen(cmd,"r");
     int i, ip[4], host_ip=0;

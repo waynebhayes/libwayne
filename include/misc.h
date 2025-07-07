@@ -186,7 +186,7 @@ int PrimeFactors(int n, int count[]);
 ** same. But since you should *never* seed twice within the same code, that's your problem.
 ** (This problem can be offset by setting "trulyRandom" to true.)
 */
-unsigned int GetFancySeed(Boolean trulyRandom);
+long GetFancySeed(Boolean trulyRandom);
 
 #endif  /* _MISC_H */
 
