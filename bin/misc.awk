@@ -1007,4 +1007,4 @@ function PQalloc(name) { _PQ_size[name]=0;PQ_[name][0][0]=1; delete PQ_[name][0]
 function PQdelloc(name) { delete PQ_size[name]; delete PQ_[name] }
 function PQfree(name) { PQdelloc(name); }
 
-{ASSERT(!gsub("",""), "Sorry, we cannot accept DOS text files. Please remove the carriage returns from file "FILENAME);}
+//{Fatal("Carriage return found on line "FNR" of "FILENAME". We cannot process DOS/Windows files. The offending line is:\n"$0);}
