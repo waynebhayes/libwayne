@@ -519,6 +519,16 @@ SET *SetIntersect(SET *C, SET *A, SET *B)
     return C;
 }
 
+unsigned SetIntersectCount(SET *A, SET *B) {
+    SET *smaller, *larger;
+    if(SetCardinality(A) < SetCardinality(B)) {smaller = A; larger = B;}
+    else {smaller=B; larger=A;}
+    unsigned i, count=0, n=SetCardinality(smaller);
+    SET_ELEMENT_TYPE array[n]; SetToArray(array, smaller);
+    for(i=0;i<n;i++) if(SetIn(larger, array[i])) ++count;
+    return count;
+}
+
 /* XOR A and B into C.  Any or all may be the same pointer.
 */
 SET *SetXOR(SET *C, SET *A, SET *B)

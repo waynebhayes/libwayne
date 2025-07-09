@@ -92,6 +92,7 @@ SET_ELEMENT_TYPE SetNextElement(SET*, int *buf); // return the next element of t
 SET_ELEMENT_TYPE SetRandomElement(SET*);
 SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
+unsigned SetIntersectCount(SET *A, SET *B);  // return only the COUNT of common elements
 SET *SetXOR(SET *C, SET *A, SET *B);  /* C = XOR of A and B */
 SET *SetComplement(SET *B, SET *A);  /* B = complement of A */
 unsigned SetCardinality(const SET *A);    /* returns non-negative integer */
