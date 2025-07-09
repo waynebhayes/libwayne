@@ -241,19 +241,45 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 #endif
 }
 
+// n = 0 for "first" bit, just as if it was an array
+unsigned BitvecElement(BITVEC *v, unsigned n) {
+    if(n >= v->cardinality) return v->maxElem;
+    unsigned bit, order=0;
+    for(bit=0; bit<v->maxElem; bit++) {
+	if(BitvecIn(v, bit)) {
+	    if(order==n) return bit;
+	    else ++order;
+	}
+    }
+    Fatal("BitvecElement: shouldn't get here");
+    return v->maxElem;
+}
 
 unsigned int BitvecRandomElement(BITVEC *vec) {
     assert(vec->cardinality>0);
-    int seg, loSeg, hiSeg, i;
-    loSeg = vec->segment[vec->smallestElement/bitvecBits];
-    hiSeg = vec->segment[vec->largestElement/bitvecBits];
-    do { // find a random nonzero segment 
-	seg = drand48() * (hiSeg - loSeg + 1);
+    unsigned seg, loSeg, hiSeg, i;
+    loSeg = vec->smallestElement/bitvecBits;
+    hiSeg = vec->largestElement/bitvecBits;
+    do { // find a random nonzero segment
+	seg = loSeg + drand48() * (hiSeg - loSeg + 1);
+	assert(seg >= loSeg && seg <= hiSeg);
     } until(vec->segment[seg]);
     do { // now pick a random 1 bit in the segment
 	i=drand48()*bitvecBits;
     } until(BitvecIn(vec, seg*bitvecBits + i));
     return seg*bitvecBits + i;
+}
+
+unsigned BitvecNextElement(BITVEC *v, unsigned *buf) {
+    assert(0 <= *buf && *buf <= v->maxElem);
+#if 1 // yeah this is really slow on sparse bitvecs, make it faster later
+    while(*buf < v->maxElem) {
+	if(BitvecIn(v, *buf)) break;;
+	(*buf)++;
+    }
+#endif
+    if(*buf == v->maxElem) return v->maxElem;
+    else return (*buf)++; // increment it in prep for the next call
 }
 
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)

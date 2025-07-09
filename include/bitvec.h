@@ -22,6 +22,7 @@ extern "C" {
 #include <stdlib.h>
 #include <assert.h>
 #include "misc.h"
+#include "rand48.h"
 
 typedef unsigned BITVEC_SEGMENT;
 extern unsigned bitvecBits, bitvecBits_1;
@@ -83,11 +84,13 @@ Boolean BitvecSubsetEq(BITVEC *sub, BITVEC *super); /* is sub <= super? */
 #define BitvecSupersetEq(spr,sb) BitvecSubsetEq((sb),(spr))
 Boolean BitvecSubsetProper(BITVEC *sub, BITVEC *super);	/* proper subset */
 #define BitvecSupersetProper(spr,sub) BitvecSubsetProper((sub),(spr))
-unsigned int BitvecAssignSmallestElement1(BITVEC *A);
-unsigned int BitvecAssignSmallestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
-unsigned int BitvecAssignLargestElement1(BITVEC *A);
-unsigned int BitvecAssignLargestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
-unsigned int BitvecRandomElement(BITVEC *B);
+unsigned BitvecAssignSmallestElement1(BITVEC *A);
+unsigned BitvecAssignSmallestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
+unsigned BitvecAssignLargestElement1(BITVEC *A);
+unsigned BitvecAssignLargestElement3(BITVEC *C, BITVEC *A, BITVEC *B);
+unsigned BitvecNextElement(BITVEC*, unsigned *buf); // return the next element or maxElem if no more
+unsigned BitvecElement(BITVEC*, unsigned i); // return the i'th element in the bitvec, where 0 <= i < cardinality
+unsigned BitvecRandomElement(BITVEC *B);
 
 /*
 ** You allocate an array big enough to hold the number of elements,

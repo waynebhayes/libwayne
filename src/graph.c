@@ -37,7 +37,7 @@ GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted)
     G->A = Calloc(n, sizeof(G->A[0]));
     for(i=0; i<n; i++) {
 	G->A[i] = SetAlloc(n);
-	SetUseMaxCrossover(G->A[i]); // allows use of neighborlist
+	//SetUseMaxCrossover(G->A[i]); // needed only if BitvecNext doesn't work
     }
     return G;
 }
@@ -213,15 +213,13 @@ int GraphNeighbor(GRAPH *G, int u, int n) {
     return SetElement(G->A[u], n);
 }
 
-int GraphNextNeighbor(GRAPH *G, int u, int *buf)
+unsigned GraphNextNeighbor(GRAPH *G, unsigned u, unsigned *buf)
 {
     if(G->useComplement) {
 	Apology("Sorry, no GraphNextNeighbor for complement graphs");
-	if(*buf == G->n) return -1;
+	if(*buf == G->n) return G->n;
 	else return (*buf)++;
     } else {
-	assert(0 <= *buf && *buf <= GraphDegree(G,u));
-	if(*buf == GraphDegree(G,u)) return -1;
 	return SetNextElement(G->A[u], buf); // don't touch buf here, SetNextElement will adjust it
     }
 }
@@ -738,12 +736,13 @@ int GraphVisitCC(GRAPH *G, unsigned int u, SET *visited, unsigned int *Varray, i
     {
 	SetAdd(visited, u);
 	Varray[(*pn)++] = u;
-    	int i=0, v; // i = list element for u's neighbors, v=actual neighbor
-	while((v=GraphNextNeighbor(G,u,&i)) >= 0) {
+	unsigned i=0, v; // i = list element for u's neighbors, v=actual neighbor
+	while((v=GraphNextNeighbor(G,u,&i)) < G->n) {
 	    assert(GraphAreConnected(G,u,v));
 	    if(u==v) assert(G->self);
-	    else GraphVisitCC(G, v, visited, Varray, pn);
+	    GraphVisitCC(G, v, visited, Varray, pn);
 	}
+	assert(v==G->n);
     }
     return *pn;
 }

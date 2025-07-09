@@ -46,7 +46,8 @@ int GraphRandomNeighbor(GRAPH *G, int u); // A return a neighbor of u chosen uni
 
 // buf must be a pointer to a pre-allocated integer. When called with *buf=0, return u's first neighbor. 
 // Otherwise return next neighbor (caller should not modify *buf except to reset by setting *buf to 0).
-int GraphNextNeighbor(GRAPH *G, int u, int *buf); // It's done when *buf==GraphDegree(u) (and it returns 0 then)
+// Returns G->n when none remain
+unsigned GraphNextNeighbor(GRAPH *G, unsigned u, unsigned *buf); // Returns G->n when no more
 
 // A return a random edge (u,v) written into the pointers. Also return the unique ID of that edge which is for INTERNAL
 // USE ONLY. (It will have 0 <= edge < 2*G->m, and it is only to be used when passing back into the same function.)

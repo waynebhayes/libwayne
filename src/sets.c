@@ -149,21 +149,24 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
     return false;
 }
 
-SET_ELEMENT_TYPE SetElement(SET *s, int i) {
-    if(!s->list) Apology("sorry, SetElement only works for lists");
-    assert(0 <= i && i < s->cardinality);
-    return s->list[i];
+SET_ELEMENT_TYPE SetElement(SET *s, unsigned i) {
+    if(s->list) { // Apology("sorry, SetElement only works for lists");
+	if(i >= s->cardinality) return s->maxElem;
+	return s->list[i];
+    }
+    else {
+	return BitvecElement(s->bitvec, i);
+    }
 }
 
-SET_ELEMENT_TYPE SetNextElement(SET *s, int *buf) {
-    assert(0 <= *buf && *buf <= s->cardinality);
-    if(*buf == s->cardinality) return s->cardinality;
-    else {
-	if(s->list)
-	    return s->list[(*buf)++];
-	else
-	    return Apology("Sorry, SetNextElement only works on lists"), 0;
+SET_ELEMENT_TYPE SetNextElement(SET *s, unsigned *buf) {
+    if(s->list) {
+	assert(0 <= *buf && *buf <= s->cardinality);
+	if(*buf == s->cardinality) return s->maxElem;
+	else return s->list[(*buf)++];
     }
+    assert(s->bitvec);
+    return BitvecNextElement(s->bitvec, buf);
 }
 
 SET_ELEMENT_TYPE SetRandomElement(SET *s) {

@@ -68,8 +68,8 @@ SET *SetAlloc_fl(unsigned n, const char *file, const int line);
 #define SetAlloc(n) SetAlloc_fl((n),__FILE__,__LINE__)
 #else
 SET *SetAlloc(unsigned n);
-unsigned SetUseMaxCrossover(SET *);
 #endif
+unsigned SetUseMaxCrossover(SET *);
 SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
 SET *SetEmpty(SET *set);    /* make the set empty (set must be allocated )*/
@@ -81,14 +81,10 @@ SET *SetAddList(SET *set, ...); /* end list with (-1); uses varargs/stdarg */
 SET *SetDelete(SET *set, unsigned element); /* delete a single element */
 Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
-#if NDEBUG && !PARANOID_ASSERTS
-#define SetIn(set,e) ( (set)->bitvec ? BitvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
-#else
 #define SetIn SetInSafe
-#endif
 Boolean SetSort(SET*); // sorts a set (might be more efficient); always succeeds + returns whether a sort actually occured.
-SET_ELEMENT_TYPE SetElement(SET*, int i); // return the i'th element in the set, where 0 <= i < cardinality
-SET_ELEMENT_TYPE SetNextElement(SET*, int *buf); // return the next element of the set or set->cardinality if no more
+SET_ELEMENT_TYPE SetElement(SET*, unsigned i); // return the i'th element in the set, where 0 <= i < cardinality
+SET_ELEMENT_TYPE SetNextElement(SET*, SET_ELEMENT_TYPE *buf); // return next element or set->maxElem if none
 SET_ELEMENT_TYPE SetRandomElement(SET*);
 SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
