@@ -495,7 +495,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
     for(i=0;i<len;i++) if(isdigit(s[i])) ++numDigits;
     if(numDigits == len) {
 	numNodes = atol(s); // the first line is the number of nodes
-	Note("Got n=%d from first line", numNodes);
+	// Note("Got n=%d from first line", numNodes);
     }
     else {
 	do { // read through the file to get the names and number of nodes.
@@ -529,7 +529,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	    perror("rewind/fseek(0):");
 	    Apology("input must be a file on disk, not a pipe");
 	}
-	Note("Got n=%d, m=%d from first read-through", numNodes, numEdges);
+	// Note("Got n=%d, m=%d from first read-through", numNodes, numEdges);
     }
     // At this point, we definitely have numNodes; numEdges is correct if we read the file, otherwise it's 0
 
@@ -570,7 +570,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	GraphConnect(G, v1.ui, v2.ui);
 	++edgeNum;
     }
-    Note("Got m=%d", edgeNum);
+    // Note("Got m=%d", edgeNum);
     assert(G->m == edgeNum);
     if(numEdges) assert(G->m == numEdges);
 

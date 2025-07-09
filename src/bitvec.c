@@ -241,20 +241,6 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 #endif
 }
 
-// n = 0 for "first" bit, just as if it was an array
-unsigned BitvecElement(BITVEC *v, unsigned n) {
-    if(n >= v->cardinality) return v->maxElem;
-    unsigned bit, order=0;
-    for(bit=0; bit<v->maxElem; bit++) {
-	if(BitvecIn(v, bit)) {
-	    if(order==n) return bit;
-	    else ++order;
-	}
-    }
-    Fatal("BitvecElement: shouldn't get here");
-    return v->maxElem;
-}
-
 unsigned int BitvecRandomElement(BITVEC *vec) {
     assert(vec->cardinality>0);
     unsigned seg, loSeg, hiSeg, i;
@@ -270,16 +256,53 @@ unsigned int BitvecRandomElement(BITVEC *vec) {
     return seg*bitvecBits + i;
 }
 
+#define DUMB_ELEMENT 1
 unsigned BitvecNextElement(BITVEC *v, unsigned *buf) {
     assert(0 <= *buf && *buf <= v->maxElem);
-#if 1 // yeah this is really slow on sparse bitvecs, make it faster later
-    while(*buf < v->maxElem) {
-	if(BitvecIn(v, *buf)) break;;
+    if(*buf == v->maxElem) return v->maxElem;
+    unsigned obuf = *buf; // "old buf", ie., value of buf upon entry
+    unsigned seg = (*buf)/bitvecBits, oldSeg=seg;
+    until(BitvecIn(v, *buf)) { // check the rest of this segment
 	(*buf)++;
+	if(*buf == v->maxElem) return *buf;
+	if((*buf)/bitvecBits > oldSeg) break; // we're in a new segment
     }
+    seg = (*buf)/bitvecBits;
+    if(seg == oldSeg) ; // do nothing, *buf now points at the next element in the SAME segment as obuf
+    else {
+	assert(seg > oldSeg); // we've past the old segment; find the next nonzero segment
+	oldSeg = seg; // the first seg past the one we just eliminated
+	until(*buf >= v->maxElem || v->segment[seg]) {*buf += bitvecBits; seg = (*buf)/bitvecBits;}
+	if(*buf >= v->maxElem) { *buf = v->maxElem; return *buf; }
+	*buf = bitvecBits * seg; // In any case it's a new seg, so we need to start at its BEGINNING
+	oldSeg = seg; // remember this segment: the next element should be in here
+	until(*buf >=v->maxElem || BitvecIn(v, *buf)) (*buf)++;
+	if(*buf >= v->maxElem) { *buf = v->maxElem; return *buf; }
+	assert((*buf)/bitvecBits == oldSeg); // we should've found something here
+    }
+#if DUMB_ELEMENT // yeah this is really slow on sparse bitvecs, make it faster later
+    while(obuf < v->maxElem) {
+	if(BitvecIn(v, obuf)) break;;
+	obuf++;
+    }
+    assert(*buf == obuf);
 #endif
     if(*buf == v->maxElem) return v->maxElem;
     else return (*buf)++; // increment it in prep for the next call
+}
+
+// n = 0 for "first" bit, just as if it was an array
+unsigned BitvecElement(BITVEC *v, unsigned n) {
+    if(n >= v->cardinality) return v->maxElem;
+    unsigned bit, order=0;
+    for(bit=0; bit<v->maxElem; bit++) {
+	if(BitvecIn(v, bit)) {
+	    if(order==n) return bit;
+	    else ++order;
+	}
+    }
+    Fatal("BitvecElement: shouldn't get here");
+    return v->maxElem;
 }
 
 unsigned int BitvecAssignSmallestElement1(BITVEC *vec)
@@ -307,17 +330,18 @@ unsigned int BitvecAssignLargestElement1(BITVEC *vec)
 {
     if(vec->cardinality==0) return (vec->largestElement=0);
     _largestGood = false;
-    int i=-1, seg, numSegs = NUMSEGS(vec->maxElem);
-
-    for(seg=numSegs-1; seg>=0; --seg) if(vec->segment[seg]) { // first find the highest non-zero segment
+    unsigned element = vec->maxElem - 1;
+    int i=element % bitvecBits, seg;
+    for(seg=element/bitvecBits; seg>=0; --seg) if(vec->segment[seg]) { // first find the highest non-zero segment
 	for(i=bitvecBits-1; i>=0; --i) {
-	    int element = seg*bitvecBits + i;
+	    element = seg*bitvecBits + i;
 	    if(element < vec->maxElem && BitvecIn(vec, element)) break;
 	}
 	assert(i>=0);
 	break;
     }
     vec->largestElement = MAX(seg*bitvecBits + i, 0);
+    assert(vec->largestElement < vec->maxElem);
     _largestGood = true;
     return vec->largestElement;
 }
