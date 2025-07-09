@@ -42,9 +42,25 @@ GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted)
     return G;
 }
 
+GRAPH *GraphComputeCumDegree(GRAPH *G)
+{
+    if(!G->cumDegree) {
+	G->cumDegree = Calloc((2+G->n),sizeof(G->cumDegree[0])); // extra+1 for G->n, and another for DEADBEEF
+	assert(G->m < (1U << (8*sizeof(SET_ELEMENT_TYPE)-1))); // must be < 2^31 to avoid overflow when multiplying by 2
+    }
+    G->cumDegree[0] = 0;
+    unsigned i;
+    for(i=0; i<G->n; i++) // includes element for G->n
+	G->cumDegree[i+1] = G->cumDegree[i] + GraphDegree(G, i); // up to BUT NOT including i
+    if(i!=G->n || G->cumDegree[i] != 2*G->m) // 2*m since each edge appears TWICE: once from each end
+	Fatal("GraphAllocCumDegree corrupt; possibly due to being called by multiple threads simultaneously?");
+    G->cumDegree[G->n+1] = 0xDEADBEEF;
+    return G;
+}
+
 void GraphFree(GRAPH *G)
 {
-    int i;
+    unsigned i;
     if(G->weight) Free(G->weight);
     if(G->name) {
 	for(i=0;i<G->n;i++) Free(G->name[i]);
@@ -140,15 +156,6 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     return 0;
 #else
     SET_ELEMENT_TYPE i, j;
-    if(!G->cumDegree) {
-	G->cumDegree = Calloc((1+G->n),sizeof(G->cumDegree[0])); // extra+1 for G->n; cum[0] stays 0
-	assert(G->m < (1U << (8*sizeof(SET_ELEMENT_TYPE)-1))); // must be < 2^31 to avoid overflow when multiplying by 2
-	G->cumDegree[0] = 0;
-	for(i=0; i<G->n; i++) // includes element for G->n
-	    G->cumDegree[i+1] = G->cumDegree[i] + GraphDegree(G, i); // up to BUT NOT including i
-	// Remember each edge appears TWICE: seen once from each end
-	assert(i==G->n && G->cumDegree[i] == 2*G->m);
-    }
     if(*u==-1) {
 	assert(*v>=0 && *v < 2*G->m);
 	edge = *v;
@@ -166,6 +173,7 @@ SET_ELEMENT_TYPE GraphRandomEdge(GRAPH *G, int *u, int *v)
     }
     else
 	edge = drand48() * (2*G->m); // target edge--don't forget each edge appears TWICE
+    assert(G->cumDegree && G->cumDegree[G->n+1] == 0xDEADBEEF);
 #if LINEAR_SEARCH
     for(i=0;i<G->n;i++) if(edge < G->cumDegree[i+1]) break;
 #else
@@ -380,7 +388,7 @@ static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed,
 	const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
 	    *fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
 	// name and foints are used only if supportNodeNames is true
-	union {int i; char name[BUFSIZ];} v1, v2;
+	union {unsigned ui; int i; char name[BUFSIZ];} v1, v2;
 	foint f1, f2;
 	if(supportNodeNames)
 	{
@@ -393,35 +401,35 @@ static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed,
 	}
 	// Note: if !supportNodeNames, a binary integer will be written into the name unions
 	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
-	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges+1,
+	    Fatal("GraphReadEdgeListOnePass: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges+1,
 		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
 	if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
-	    Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed", numEdges+1, v1.name);
-	    Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
+	    Warning("GraphReadEdgeListOnePass: line %d has self-loop (%s to itself); assuming they are allowed", numEdges+1, v1.name);
+	    Warning("GraphReadEdgeListOnePass: (another warning will appear below from \"GraphFromEdgeList\")");
 	    selfWarned = true;
 	}
 	if(supportNodeNames) {
 	    if(!BinTreeLookup(nameDict, (foint)v1.name, &f1))
 	    {
 		names[numNodes] = Strdup(v1.name);
-		f1.i = numNodes++;
+		f1.ui = numNodes++;
 		BinTreeInsert(nameDict, (foint)v1.name, f1);
 	    }
 	    if(!BinTreeLookup(nameDict, (foint)v2.name, &f2))
 	    {
 		names[numNodes] = Strdup(v2.name);
-		f2.i = numNodes++;
+		f2.ui = numNodes++;
 		BinTreeInsert(nameDict, (foint)v2.name, f2);
 	    }
-	    v1.i = f1.i; v2.i = f2.i;
+	    v1.ui = f1.ui; v2.ui = f2.ui;
 	}
 	else {
 	    // if !supportNodeNames, fscanf wrote the integers into the char* pointers
-	    numNodes = MAX(numNodes, v1.i);
-	    numNodes = MAX(numNodes, v2.i);
+	    numNodes = MAX(numNodes, v1.ui);
+	    numNodes = MAX(numNodes, v2.ui);
 	}
-	pairs[2*numEdges] = v1.i;
-	pairs[2*numEdges+1] = v2.i;
+	pairs[2*numEdges] = v1.ui;
+	pairs[2*numEdges+1] = v2.ui;
 	if(weighted) { assert(w>0.0); fweight[numEdges] = w;}
 	if(pairs[2*numEdges] > pairs[2*numEdges+1])
 	{
@@ -441,8 +449,8 @@ static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed,
 	    foint info;
 	    if(!BinTreeLookup(nameDict, (foint)names[i], &info))
 		Fatal("couldn't find int for name '%s'", names[i]);
-	    assert(i == info.i);
-	    //printf("%d is %s which in turn is %d\n", i, names[i], info.i);
+	    assert(i == info.ui);
+	    //printf("%u is %s which in turn is %u\n", i, names[i], info.ui);
 	}
     }
     else
@@ -455,6 +463,7 @@ static GRAPH *GraphReadEdgeListOnePass(FILE *fp, Boolean self, Boolean directed,
     if(weighted) Free(fweight);
     assert(G->m <= maxEdges && G->m == numEdges);
     GraphSort(G);
+    GraphComputeCumDegree(G);
     return G;
 }
 
@@ -473,7 +482,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
     const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
 	*fmt[2][2] = {{"%d%d ", "%d%d%f "}, {"%s%s ", "%s%s%f "}};
     // name and foints are used for supportNodeNames
-    union {int i; char name[BUFSIZ];} v1, v2;
+    union {unsigned ui; int i; char name[BUFSIZ];} v1, v2;
     foint f1, f2;
 
     // Check to see if the first line has an integer on it, in which case it's the number of nodes
@@ -506,12 +515,12 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	    }
 	    if(!BinTreeLookup(nameDict, (foint)v1.name, &f1))
 	    {
-		f1.i = numNodes++;
+		f1.ui = numNodes++;
 		BinTreeInsert(nameDict, (foint)v1.name, f1);
 	    }
 	    if(!BinTreeLookup(nameDict, (foint)v2.name, &f2))
 	    {
-		f2.i = numNodes++;
+		f2.ui = numNodes++;
 		BinTreeInsert(nameDict, (foint)v2.name, f2);
 	    }
 	    ++numEdges;
@@ -548,19 +557,19 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	Boolean found = BinTreeLookup(nameDict, (foint)v1.name, &f1);
 	if(numEdges) assert(found);
 	else if(!found) {
-	    f1.i = nodeNum++;
+	    f1.ui = nodeNum++;
 	    BinTreeInsert(nameDict, (foint)v1.name, f1);
 	}
-	G->name[f1.i] = Strdup(v1.name);
+	G->name[f1.ui] = Strdup(v1.name);
 	found = BinTreeLookup(nameDict, (foint)v2.name, &f2);
 	if(numEdges) assert(found);
 	else if(!found) {
-	    f2.i = nodeNum++;
+	    f2.ui = nodeNum++;
 	    BinTreeInsert(nameDict, (foint)v2.name, f2);
 	}
-	G->name[f2.i] = Strdup(v2.name);
-	v1.i = f1.i; v2.i = f2.i;
-	GraphConnect(G, v1.i, v2.i);
+	G->name[f2.ui] = Strdup(v2.name);
+	v1.ui = f1.ui; v2.ui = f2.ui;
+	GraphConnect(G, v1.ui, v2.ui);
 	++edgeNum;
     }
     Note("Got m=%d", edgeNum);
@@ -573,10 +582,11 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean self, Boolean directed, Boolean weigh
 	foint info;
 	if(!BinTreeLookup(nameDict, (foint)G->name[i], &info))
 	    Fatal("couldn't find int for name '%s'", G->name[i]);
-	assert(i == info.i);
-	//printf("%d is %s which in turn is %d\n", i, G->name[i], info.i);
+	assert(i == info.ui);
+	//printf("%u is %s which in turn is %u\n", i, G->name[i], info.ui);
     }
     GraphSort(G);
+    GraphComputeCumDegree(G);
     return G;
 }
 
@@ -585,7 +595,7 @@ int GraphNodeName2Int(GRAPH *G, char *name)
     foint info;
     if(!BinTreeLookup(G->nameDict, (foint)name, &info))
 	Fatal("BinTreeLookup couldn't find an int for name '%s'", name);
-    return info.i;
+    return info.ui;
 }
 
 
@@ -651,7 +661,7 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
     QueuePut(BFSQ, (foint)root);
     while(QueueSize(BFSQ) > 0)
     {
-	int v = QueueGet(BFSQ).i;
+	int v = QueueGet(BFSQ).ui;
 
 	/* At this point, distArray[v] should be assigned (when v was appended
 	 * onto the queue), but v hasn't been "visited" or "counted" yet.

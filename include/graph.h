@@ -25,6 +25,7 @@ typedef struct _Graph {
 
 GRAPH *GraphAlloc(unsigned n, Boolean self, Boolean directed, Boolean weighted);
 GRAPH *GraphAssignNames(GRAPH *G, BINTREE *nameDict); // (re)-assign the (string names <-> nodes) mapping
+GRAPH *GraphComputeCumDegree(GRAPH *G); // call this BEFORE any threads start
 void GraphFree(GRAPH *G);
 GRAPH *GraphSort(GRAPH *G); // optimize graph for efficiency (happens automatically but this forces it)
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
