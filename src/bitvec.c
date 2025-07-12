@@ -243,20 +243,14 @@ BITVEC *BitvecAddList(BITVEC *vec, ...)
 
 unsigned int BitvecRandomElement(BITVEC *vec) {
     assert(vec->cardinality>0);
-    unsigned seg, loSeg, hiSeg, i;
-    loSeg = vec->smallestElement/bitvecBits;
-    hiSeg = vec->largestElement/bitvecBits;
-    do { // find a random nonzero segment
-	seg = loSeg + drand48() * (hiSeg - loSeg + 1);
-	assert(seg >= loSeg && seg <= hiSeg);
-    } until(vec->segment[seg]);
-    do { // now pick a random 1 bit in the segment
-	i=drand48()*bitvecBits;
-    } until(BitvecIn(vec, seg*bitvecBits + i));
-    return seg*bitvecBits + i;
+    unsigned element, lo=vec->smallestElement, num=vec->largestElement-lo+1;
+    do {
+	element=lo+num*drand48();
+    } until(BitvecIn(vec, element));
+    return element;
 }
 
-#define DUMB_ELEMENT 1
+#define DUMB_ELEMENT 0
 unsigned BitvecNextElement(BITVEC *v, unsigned *buf) {
     assert(0 <= *buf && *buf <= v->maxElem);
     if(*buf == v->maxElem) return v->maxElem;
