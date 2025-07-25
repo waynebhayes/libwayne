@@ -37,9 +37,9 @@ void AvlTreeInsert(AVLTREE *, foint key, foint info); // replaces info if the ke
 /* O(log n): both lookup and/or delete: returns false if element not found.
 ** If found and (int)pInfo==1, delete it; otherwise if pInfo != NULL, populate with new info; otherwise just return true.
 */
-Boolean AvlTreeLookDel(AVLTREE *, foint key, foint *pInfo);
-#define AvlTreeDelete(T,k) AvlTreeLookDel((T),(k),(foint*)1)
-#define AvlTreeLookup(T,k,f) AvlTreeLookDel((T),(k), (f))
+Boolean AvlTreeLookDel (AVLTREE *, foint key, foint *pInfo);
+Boolean AvlTreeLookup(AVLTREE *, foint key, foint *pInfo);
+Boolean AvlTreeDelete(AVLTREE *, foint key);
 
 /*
 ** AvlTreeTraverse: Traverse an AVL tree, calling your function pointer (pFointTraversalFcn) on each element,

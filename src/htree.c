@@ -1,8 +1,14 @@
+#include <stdio.h>
+#include <wchar.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include "misc.h"
 #include "htree.h" // bintree or avltree is included there (as appropriate)
+
+#ifdef VERBOSE
+#include <time.h>
+#endif
 
 /*-------------------  Types  ------------------*/
 
@@ -28,7 +34,7 @@ static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint 
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-	TreeInsert(tree, keys[currentDepth], data);
+		TreeInsert(tree, keys[currentDepth], data);
     else {
 	// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,
 	// so to find the next tree we use the key at this level to *look up* the binary tree at the next level down

@@ -22,6 +22,7 @@ extern "C" {
 #define TreeInsert AvlTreeInsert
 #define TreeLookup AvlTreeLookup
 #define TreeLookDel AvlTreeLookDel
+#define TreeDelete AvlTreeDelete
 #define TreeTraverse AvlTreeTraverse
 #define TreeFree AvlTreeFree
 #else
