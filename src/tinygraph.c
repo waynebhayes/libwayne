@@ -34,7 +34,8 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
     if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
     ++G->degree[i];
-    if(!G->directed){
+    if(i==j) assert(G->selfLoops);
+    else if(!G->directed){
 	TSetAdd(G->A[j],i);
 	++G->degree[j];
     }
@@ -79,7 +80,8 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
     if(i==j) assert(G->selfLoops);
     TSetDelete(G->A[i], j);
     G->degree[i]--;
-    if(!G->directed) {
+    if(i==j) assert(G->selfLoops);
+    else if(!G->directed) {
 	TSetDelete(G->A[j],i);
 	G->degree[j]--;
     }
@@ -182,12 +184,13 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 
 int TinyGraphNumEdges(TINY_GRAPH *G)
 {
-    int total=0, i;
+    int total=0, i,numSelf=0;
     for(i=0; i<G->n; i++) {
 	total += G->degree[i];
+	numSelf +=TinyGraphAreConnected(G,i,i);
     }
-    assert(!G->selfLoops); // Alan: the below formula doesn't work if there are self-loops
-    return total/(2-G->directed);
+    assert(numSelf==0||G->selfLoops);
+    return (numSelf*(1-G->directed)+total)/(2-G->directed);  // Alan: please check if this works with self-loops--your PR had (2-directed) I think
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)

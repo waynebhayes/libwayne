@@ -11,6 +11,8 @@ int main(int argc, char *argv[])
     srand48(time(NULL));
     for(testNum=0;testNum<10000;testNum++)
     {
+      // Alan: which of these do we want? I don't understand
+	n = 3 + lrand48() % (TINY_SET_SIZE-2); // ensure G->n is at least 2
 	n = 6 + lrand48() % 3; // ensure G->n is at least 2
 	G = TinyGraphAlloc(n,(lrand48()%2==0),(lrand48()%2==0));
 	GG = TinyGraphComplement(NULL,G);
