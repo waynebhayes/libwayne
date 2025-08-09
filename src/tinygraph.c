@@ -190,7 +190,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
 	numSelf +=TinyGraphAreConnected(G,i,i);
     }
     assert(numSelf==0||G->selfLoops);
-    return (numSelf*(1-G->directed)+total)/(2-G->directed);
+    return (numSelf*(1-G->directed)+total)/(2-G->directed);  // Alan: please check if this works with self-loops--your PR had (2-directed) I think
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
