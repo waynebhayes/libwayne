@@ -588,7 +588,25 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
     return G;
 }
 
-GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
+// Add the list of edges to the graph--should only be called while the graph is being built immediately after Alloc
+static GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights)
+{
+    int i;
+    Apology("Sorry, GraphAddEdgeList not yet implemented");
+    if(weights) assert(G->weight);
+    for(i=0; i<m; i++) {
+	if(pairs[2*i] == pairs[2*i+1] && !G->selfAllowed) {
+	    static Boolean warned;
+	    if(!warned) Warning("GraphAddEdgeList: node %d has a self-loop; assuming they are allowed", pairs[2*i]);
+	    warned = G->selfAllowed = true;
+	}
+	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
+	if(weights) {assert(weights[i]!=0.0); GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);}
+    }
+    return G;
+}
+
+static GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
 {
     int i;
     GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
@@ -660,7 +678,11 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
 	if(numEdges >= maxEdges)
 	{
 	    maxEdges = 2*maxEdges-1; // -1 to reduce chance of overflow near 2GB and 4GB.
-	    pairs = Realloc(pairs, 2*maxEdges*sizeof(pairs[0]));
+	    unsigned newBytes = 2*maxEdges*sizeof(pairs[0]);
+	    if(newBytes >= (1U<<30)) {
+		Warning("about to Reallac(%u) bytes--might segfault; implement GraphAddEdgeList to avoid this", newBytes);
+	    }
+	    pairs = Realloc(pairs, newBytes);
 	    if(weighted) fweight = Realloc(fweight, maxEdges*sizeof(fweight[0]));
 	}
 	const char numExpected[2] = {2, 3}, // fmt[][] below has dimensions [supportNames][weighted]
