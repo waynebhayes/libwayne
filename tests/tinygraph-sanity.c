@@ -11,19 +11,10 @@ int main(int argc, char *argv[])
     srand48(time(NULL));
     for(testNum=0;testNum<10000;testNum++)
     {
-<<<<<<< HEAD
-	n = 3 + lrand48() % (TINY_SET_SIZE-2); // ensure G->n is at least 3, up to TINY_SET_SIZE
-	if(drand48() < 0.5)
-	    G = TinyGraphAlloc(n);
-	else
-	    G = TinyGraphSelfAlloc(n);
-
-=======
-	n = 6 + lrand48() % 3; // ensure G->n is at least 2
+	n = 3 + lrand48() % (TINY_SET_SIZE-2); // ensure G->n is at least 2
 	G = TinyGraphAlloc(n,(lrand48()%2==0),(lrand48()%2==0));
 	GG = TinyGraphComplement(NULL,G);
 	Complete = TinyGraphCopy(NULL,GG);
->>>>>>> b78c2a3e722f015d839496c7c7c65735bafb2611
 	assert(n==G->n);
 	assert(testNum == _testNum++);
 	printf("#%d n %d self %d directed %d\n", testNum, G->n, G->selfLoops, G->directed); fflush(stdout);
