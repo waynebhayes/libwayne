@@ -22,8 +22,8 @@ typedef struct _tinyGraph {
     TSET A[MAX_TSET];   /* Adjacency Matrix */
 } TINY_GRAPH;
 
-TINY_GRAPH *TinyGraphAllocD(unsigned int n, Boolean selfLoops, Boolean directed);
-TINY_GRAPH *TinyGraphAlloc(unsigned int n);
+TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed);
+TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n);
 #define TinyGraphFree Free
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
