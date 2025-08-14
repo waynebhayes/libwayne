@@ -10,7 +10,23 @@ extern "C" {
 **
 *************************************************************************/
 
-TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
+TINY_GRAPH *TinyGraphAllocD(unsigned int n, Boolean selfLoops, Boolean directed)
+{
+    static Boolean startup = 1;
+    TINY_GRAPH *G = Calloc(1, sizeof(TINY_GRAPH));
+    // Note: an assert(n<=MAX_TSET) isn't enough, because it can be turned off with NDEBUG. We need to be CERTAIN.
+    if(n > MAX_TSET) Fatal("TinyGraphAllocD can only handle up to %d nodes, not %d", MAX_TSET, n);
+    if(startup)
+    {
+	startup = 0;
+	SetStartup();
+    }
+    G->n = n;
+    G->directed = directed;
+    G->selfLoops = selfLoops;
+    return G;
+}
+TINY_GRAPH *TinyGraphAlloc(unsigned int n)
 {
     static Boolean startup = 1;
     TINY_GRAPH *G = Calloc(1, sizeof(TINY_GRAPH));
@@ -22,11 +38,10 @@ TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
 	SetStartup();
     }
     G->n = n;
-    G->directed = directed;
-    G->selfLoops = selfLoops;
+    G->directed = 0;
+    G->selfLoops = 0;
     return G;
 }
-
 TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
@@ -111,7 +126,7 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed)
     int i,j,n=-1;
     TINY_GRAPH *G;
     assert(1==fscanf(fp, "%d", &n) && n>=0);
-    G = TinyGraphAlloc(n,0,directed);
+    G = TinyGraphAllocD(n,0,directed);
     for(i=0; i<n; i++) for(j=0; j<n; j++)
     {
 	int connected;
@@ -128,7 +143,7 @@ TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G)
 {
     int i,j;
     assert(Gbar != G); // can't handle complementing a graph to itself
-    if(!Gbar) Gbar = TinyGraphAlloc(G->n,G->selfLoops,G->directed);
+    if(!Gbar) Gbar = TinyGraphAllocD(G->n,G->selfLoops,G->directed);
     for(i=0; i < G->n; i++) for(j=0;j<G->n;j++){
 	if(i==j&&!G->selfLoops) continue;
 	if(TinyGraphAreConnected(G,i,j)) TinyGraphDisconnect(Gbar,i,j);
@@ -147,7 +162,7 @@ TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *dest, TINY_GRAPH *G1, TINY_GRAPH *G2)
     if(dest)
 	dest->n = G1->n;
     else
-	dest = TinyGraphAlloc(G1->n,G1->selfLoops||G2->selfLoops,G1->directed);
+	dest = TinyGraphAllocD(G1->n,G1->selfLoops||G2->selfLoops,G1->directed);
 
     for(i=0; i < G1->n; i++)
     {
@@ -166,7 +181,7 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
     if(dest)
 	dest->n = G1->n;
     else
-	dest = TinyGraphAlloc(G1->n,G1->selfLoops,G1->directed);
+	dest = TinyGraphAllocD(G1->n,G1->selfLoops,G1->directed);
 
     for(i=0; i < G1->n; i++)
     {
@@ -288,7 +303,7 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 	TinyGraphEdgesAllDelete(Gv);
     }
     else
-	Gv = TinyGraphAlloc(nV,0,0);
+	Gv = TinyGraphAllocD(nV,0,0);
     Gv->selfLoops = G->selfLoops;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
@@ -317,7 +332,7 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 	TinyGraphEdgesAllDelete(Gv);
     }
     else
-	Gv = TinyGraphAlloc(G->n,0,0);
+	Gv = TinyGraphAllocD(G->n,0,0);
     Gv->selfLoops = G->selfLoops;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
