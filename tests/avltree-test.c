@@ -10,6 +10,7 @@
 int main(int argc, char *argv[])
 {
     assert(argc == 2);
+{
     FILE *fp = fopen(argv[1], "r");
     AVLTREE *tree = AvlTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
     char buf[lineLen], bufs[1000*BUFSIZ][lineLen];
@@ -53,4 +54,5 @@ int main(int argc, char *argv[])
     AvlTreeSanityCheck(tree);
     AvlTreeFree(tree);
     return 0;
+}
 }
