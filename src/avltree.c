@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,7 +74,7 @@ static void Rotate(AVLTREENODE** N, AVLTREENODE* n, int d) {
 #define MaxHeight (int)(log(tree->n+2)*4.7852-0.3277)
 #ifdef VERBOSE
 #define Print AvlPrint(tree->root, 0, 0)
-void AvlPrint(AVLTREENODE* node, unsigned char level, char side)
+void AvlPrint(AVLTREENODE *node, unsigned char level, char side)
 {
 	if (node == NULL) return;
 	else if (level == 0) printf("(%i)%s\n", node->balance, node->info.s);
@@ -89,6 +90,36 @@ void AvlPrint(AVLTREENODE* node, unsigned char level, char side)
 
 	AvlPrint(node->left, level + 1, 'L');
 	AvlPrint(node->right, level + 1, 'R');
+}
+
+
+// returns height of subtree to calculate balance where needed
+unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
+{
+	if (node->right && node->left)
+	{
+		unsigned char left=CheckBalance(node->left,level+1);
+		unsigned char right=CheckBalance(node->right,level+1);
+		level=left;
+		if (left>right) { level=left; assert(node->balance==-1); }
+		else if (left<right) { level=right; assert(node->balance==1); }
+		else assert(node->balance==0);
+		assert(abs(left - right) < 2);
+	}
+	else if (node->left==NULL && node->right==NULL)
+		assert(node->balance==0);
+	else if (node->right==NULL)
+	{
+		assert(node->balance==-1);
+		level=CheckBalance(node->left,level+1);
+	}
+	else
+	{
+		assert(node->balance==1);
+		level=CheckBalance(node->right,level+1);
+	}
+
+	return level;
 }
 #endif
 
@@ -171,7 +202,7 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	if(!critNodeFound) r=tree->root;
 	else
 	{
-		int d1,d2,d3;
+		char d1,d2,d3;
 
 		// C is a locative that points to the CHILD of the critical node
 		{ 
@@ -215,6 +246,10 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	{
 		AssignBalance(r->balance,r,key,r);
 	}
+
+	#ifdef VERBOSE
+	CheckBalance(tree->root, 0);
+	#endif
 
     tree->n++;
 }
@@ -265,7 +300,8 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	assert(tree->n > 0);
 
 	// At this point, p points to the node we want to delete
-	if (p->right == NULL) *P = p->left;
+	if (p->right == NULL) 
+		*P = p->left;
 	else // Find the inorder successor. Q is a locative
 	{
 		AVLTREENODE *q, **Q;
@@ -286,21 +322,13 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	tree->freeKey(p->key);
 	tree->freeInfo(p->info);
 	Free(p);
+	tree->n--;
 
 	// Update balance then rotate if necessary
-	if (--tree->n == 0) return true;
-	else if (parent->balance == 0) 
-	{
-		parent->balance += (parent->right==NULL) ? -1:1;
-		return true;
-	}
-	else // The total height of the tree has changed; need to adjust balance and/or rotate down the whole tree
-	{
-		if (parent->right == NULL && parent->left == NULL)
-			parent->balance = 0;
-		else
-			parent->balance += (parent->right==NULL) ? -1:1;
-
+	if (parent->balance == 0)
+		parent->balance = (parent->right==*P || parent==*P) ? -1:1;
+	else if (tree->n != 0)
+	{ // The height of the subtree has changed; need to check balance potentially all the way to the root
 		STACK *nodePath = StackAlloc(MaxHeight);
 		StackPush(nodePath, (foint){.v=&(tree->root)}); // Contains locatives
 		p = tree->root;
@@ -334,64 +362,108 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 		assert(traversal_steps <= worst);
 		#endif
 		
-		while (StackSize(nodePath) > 0 && p->balance != 0)
+		parent = NULL; // NOTE: as of this point, parent = previous node along path back up to root
+		while (StackSize(nodePath) > 0)
 		{
-			int d1,d2,d3;
-			AVLTREENODE *b, *c, **C;
 			P = StackPop(nodePath).v; p = *P;
 
 			// C is a locative that points to the CHILD of the critical node
+			char d1,d2,d3;
+			AVLTREENODE *b, *c, **C;
 			d1 = p->balance;
-			p->balance = (d1 == 0 ? 0:(d1 < 0 ? -1:1));
 			if(d1 < 0) AssignLocative(C, c, p->left);
-			else if(d1 > 0) AssignLocative(C, c, p->right);
-			else continue;
+			else if (d1 > 0) AssignLocative(C, c, p->right);
 
-			if (c == NULL) { p->balance = 0; continue; }
-			else 
+			if (p->balance == 0) // Node now imbalanced, height not changed
 			{
-				if (d1 < -1)
+				p->balance = (p->right==parent) ? -1:1;
+				break;
+			}
+			else if (c == NULL) // Imbalance removed
+			{
+				p->balance = 0;
+			}
+			else if (c->balance == 0 && parent == c)
+			{ // Height decreased where previously there was an imbalance, although there may still be
+				if (p->left && p->right) p->balance = 0;
+			} 
+			else // Two nodes are imbalanced, rotation likely needed
+			{
+				if (p->left && p->right)
 				{
-					d1 = -1; d2 = d1; c->balance = d1;
-					b = c->left;
-				}
-				else if (d1 > 1)
-				{
-					d1 = 1; d2 = d1; c->balance = d1;
-					b = c->right;
-				}
-				else
-				{
-					d2 = c->balance;
-					b = d2 > 0 ? c->right : c->left;
-					assert(d2!=0);
+					b=p->left; parent=p->right;
+					d2=d3=0;
+					// NOTE: in this scope only d2 = height of left subtree, d3 = height of right subtree
+					// b and parent navigate the left and right subtrees respectively
+
+					while (b != NULL || parent != NULL)
+					{
+						if (b != NULL) 
+						{
+							b=(b->balance < 0) ? b->left : b->right;
+							d2++;
+						}
+
+						if (parent != NULL)
+						{
+							parent=(parent->balance < 0) ? parent->left : parent->right;
+							d3++;
+						}
+					}
+					
+					if (d2 == d3)
+					{ // This node is actually now balanced, no rotation needed
+						p->balance = 0; parent = p;
+						continue;
+					}
 				}
 
-				if(d2==d1) // d2!=0, single rotation
+				// Rotation is caused by height change on the opposite side
+				if (c->balance == 0) d2 = p->balance;
+				else d2 = c->balance;
+				b = d2 > 0 ? c->right : c->left;
+
+				if (b == NULL)  // Deleted node was just before leaf, rotation not possible
+					c->balance = 0;
+				else if(d2==d1) // d2!=0, single rotation
 				{ 
-					p->balance=0;
+					if (c->balance == 0)
+					{
+						c->balance=-d1;
+						p->balance=d1;
+						Rotate(P, p, -d1);
+						break;
+					}
+
+					c->balance=p->balance=0;
 					Rotate(P, p, -d1);
+					parent = c; continue;
 				}
 				else // d2==-d1, double rotation
 				{
-					if (b == NULL) { continue; }
-					else { d3 = b->balance; }
-
+					d3 = b->balance;
 					if(d3==d2)
 					{
 						p->balance=0;
 						c->balance=d1;
 					} 
-					else if(d3==-d2) p->balance=d2;
-					else p->balance=0; // d3=0, B=R is a leaf
+					else if(d3==-d2) { p->balance=d2; c->balance=0; }
+					else p->balance=c->balance=0; // d3=0, B=R is a leaf
+					b->balance=0;
 					Rotate(C, c, -d2);
 					Rotate(P, p, -d1);
+					parent = b; continue;
 				}
 			}
+			parent = p;
 		}
 
 		StackFree(nodePath);
 	}
+
+	#ifdef VERBOSE
+	CheckBalance(tree->root, 0);
+	#endif
 
 	return true;
 }
