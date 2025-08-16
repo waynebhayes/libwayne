@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,6 +18,8 @@ extern "C" {
 #include <string.h>
 #include "avltree.h"
 #include <math.h> // for logarithm
+
+#include <stack.h>
 
 static foint CopyInt(foint i)
 {
@@ -47,44 +51,144 @@ AVLTREE *AvlTreeAlloc(pCmpFcn cmpKey,
 // Note the order of these two assignments is important, do not swap them.
 #define AssignLocative(P,p,q) (((P)=&(q)),((p)=(q)))
 
-// Rotate the tree around locative node P by d = +/-1
-static void Rotate(AVLTREENODE **P, AVLTREENODE *p, int d) {
-    AVLTREENODE **CP, *cp, **GCP, *gcp; // temporary copies of child + grandchild of P for swapping
-    if(d==-1) {
-	AssignLocative(CP,cp,p->right);
-	AssignLocative(GCP,gcp,p->right->left);
-	*P=p->right; *CP=p->right->left; *GCP=p;
-    } else {
-	assert(d==1);
-	AssignLocative(CP,cp,p->left);
-	AssignLocative(GCP,gcp,p->left->right);
-	*P=p->left; *CP=p->left->right; *GCP=p;
-    }
+// Rotate the tree around node n by d = +/-1
+static void Rotate(AVLTREENODE** N, AVLTREENODE* n, int d) {
+	AVLTREENODE *p, **P, *tp, **TP;
+
+	if (d==-1)
+	{
+		AssignLocative(P,p,n->right);
+		AssignLocative(TP,tp,n->right->left);
+		*N=p; *P=tp; *TP=n;
+	}
+	else
+	{
+		assert(d==1);
+		AssignLocative(P,p,n->left);
+		AssignLocative(TP,tp,n->left->right);
+		*N=p; *P=tp; *TP=n;
+	}
 }
+
+
+#define MaxHeight (int)(log(tree->n+2)*4.7852-0.3277)
+#ifdef VERBOSE
+#define Print AvlPrint(tree->root, 0, 0)
+void AvlPrint(AVLTREENODE *node, unsigned char level, char side)
+{
+	if (node == NULL) return;
+	else if (level == 0) printf("(%i)%s\n", node->balance, node->info.s);
+	else
+	{
+		for (int i = 0; i < level-1; i++)
+		{
+			printf("  ");
+		}
+
+		printf("|->(%c:%i)%s\n", side, node->balance, node->info.s);
+	}
+
+	AvlPrint(node->left, level + 1, 'L');
+	AvlPrint(node->right, level + 1, 'R');
+}
+
+
+// returns height of subtree to calculate balance where needed
+unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
+{
+	if (node->right && node->left)
+	{
+		unsigned char left=CheckBalance(node->left,level+1);
+		unsigned char right=CheckBalance(node->right,level+1);
+		level=left;
+		if (left>right) { level=left; assert(node->balance==-1); }
+		else if (left<right) { level=right; assert(node->balance==1); }
+		else assert(node->balance==0);
+		assert(abs(left - right) < 2);
+	}
+	else if (node->left==NULL && node->right==NULL)
+		assert(node->balance==0);
+	else if (node->right==NULL)
+	{
+		assert(node->balance==-1);
+		level=CheckBalance(node->left,level+1);
+	}
+	else
+	{
+		assert(node->balance==1);
+		level=CheckBalance(node->right,level+1);
+	}
+
+	return level;
+}
+#endif
+
+
+// This is the macro that implements the pseudo-code (d,Q) <- K::P in Lewis+Denenberg Algorithm 7.2 (page 227)
+#define AssignBalance(d, q, K, p) { int ABcmp = tree->cmpKey((K), (p)->key); \
+    (d) = (ABcmp == 0 ? 0:(ABcmp < 0 ? -1:1)); \
+    if(ABcmp < 0) { (q) = (p)->left; } else \
+    if(ABcmp > 0) { (q) = (p)->right;} else { (q) = (p); } \
+    }
+
 
 void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
-    AVLTREENODE *p = tree->root, **P = &(tree->root), // P is a locative used to trace the path
-	*a,**A, *b,**B, *c,**C, *r,**R; // temporary node pointers and their locatives
+    AVLTREENODE *p = tree->root, **P = &(tree->root),// P is a locative used to trace the path
+	*a, **A, *b, *c, **C, *r; // temporary node pointers
     int cmp; // temporary storage of a key comparison
     Boolean critNodeFound=false;
 
+	#ifdef VERBOSE
+	int traversal_steps = 0;
+	#endif
+
+	if (p && p->balance != 0)
+	{
+		critNodeFound=true;
+		AssignLocative(A,a,tree->root);
+	}
+
     while(p && (cmp = tree->cmpKey(key, p->key)))
     {
-	if(p->balance != 0) {
-	    critNodeFound=true;
-	    AssignLocative(A,a,p); // locative A points to a critical node
-	}
-	if(cmp < 0) AssignLocative(P,p,p->left);
-	else        AssignLocative(P,p,p->right);
+		#ifdef VERBOSE
+		traversal_steps++;
+		#endif
+		
+		if(cmp < 0)
+		{
+			if (p->left && p->left->balance != 0)
+			{
+				critNodeFound=true;
+				AssignLocative(A,a,p->left);
+			}
+			AssignLocative(P,p,p->left);
+		}
+		else
+		{
+			if (p->right && p->right->balance != 0)
+			{
+				critNodeFound=true;
+				AssignLocative(A,a,p->right);
+			}
+			AssignLocative(P,p,p->right);
+		}
     }
+
+	#ifdef VERBOSE
+	int worst = MaxHeight;
+	printf("Insertion took %i STEPS to complete with %i ELEMENTS already present; worst case is %i\n", traversal_steps, tree->n, worst);
+	//assert(traversal_steps >= MinHeight && traversal_steps <= worst);
+	assert(traversal_steps <= worst);
+	#endif
+
     if(p) // key already exists, just update info
     {
-	assert(cmp==0);
-	assert(cmp == tree->cmpKey(key, p->key));
-	tree->freeInfo(p->info);
-	p->info = tree->copyInfo(info);
-	return;
+		assert(cmp==0);
+		assert(cmp == tree->cmpKey(key, p->key));
+		tree->freeInfo(p->info);
+		p->info = tree->copyInfo(info);
+		return;
     }
 
     p = (AVLTREENODE*) Calloc(1,sizeof(AVLTREENODE)); // insert a new leaf
@@ -92,78 +196,276 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
     p->info = tree->copyInfo(info);
     p->left = p->right = NULL;
     p->balance = 0;
-
-// This is the macro that implements the pseudo-code (d,Q) <- K::P in Lewis+Denenberg Algorithm 7.2 (page 227)
-#define AssignBalance(d,Q,q,K,P,p) { int ABcmp=tree->cmpKey((K),(p)->key);\
-    (d) = (ABcmp==0?0: (ABcmp<0?-1:1)); \
-    if(ABcmp<0){AssignLocative(Q,q,p->left );}else \
-    if(ABcmp>0){AssignLocative(Q,q,p->right);}else \
-             {AssignLocative(Q,q,p       );}\
-    }
+	*P = p;
 
     // Now rotate and adjust balance at critical node, if any
-    if(!critNodeFound) { *P=p; AssignLocative(R,r,p);}
-    else {
-	int d1,d2,d3;
-	AssignBalance(d1,C,c,key,A,a); // C is a locative that points to the CHILD of the critical node
-	if(a->balance != d1) { a->balance=0; AssignLocative(R,r,p); } // no rotation necessary
-	else { // rotation necessary
-	    AssignBalance(d2,B,b,key,C,c); // B is child of C in search direction
-	    if(d2==d1) { // d2!=0, single rotation
-		a->balance = 0;
-		AssignLocative(R,r,b);
-		Rotate(A, a, -d1);
-	    }
-	    else { // d2==-d1, double rotation
-		AssignBalance(d3,R,r,key,B,b);
-		if(d3==d2) {
-		    a->balance = 0;
-		    c->balance = d1;
-		} else if(d3==-d2) a->balance=d2;
-		else a->balance=0; // d3=0, B=R is a leaf
-		Rotate(C,c, -d2);
-		Rotate(A,a, -d1);
-	    }
+	if(!critNodeFound) r=tree->root;
+	else
+	{
+		char d1,d2,d3;
+
+		// C is a locative that points to the CHILD of the critical node
+		{ 
+			int ABcmp = tree->cmpKey(key, a->key);
+			d1 = (ABcmp == 0 ? 0:(ABcmp < 0 ? -1:1));
+			if(ABcmp < 0) { AssignLocative(C, c, a->left); } else 
+			if(ABcmp > 0) { AssignLocative(C, c, a->right);} else { c = a; }
+		}
+
+		if(a->balance != d1) // no rotation necessary
+		{
+			a->balance=0; r=c;
+		}
+		else
+		{ // rotation necessary
+			AssignBalance(d2,b,key,c); // B is child of C in search direction
+			if(d2==d1) // d2!=0, single rotation
+			{ 
+				a->balance=0;
+				r=b;
+				Rotate(A,a,-d1);
+			}
+			else // d2==-d1, double rotation
+			{
+				AssignBalance(d3,r,key,b);
+				if(d3==d2)
+				{
+					a->balance=0;
+					c->balance=d1;
+				} 
+				else if(d3==-d2) a->balance=d2;
+				else a->balance=0; // d3=0, B=R is a leaf
+				Rotate(C,c,-d2);
+				Rotate(A,a,-d1);
+			}
+		}
 	}
-    }
+
     // Adjust balances of nodes of balance 0 along the rest of the path
-    while(tree->cmpKey(r->key,key)) AssignBalance(r->balance,R,r,key,R,r);
+    while(tree->cmpKey(r->key,key)) 
+	{
+		AssignBalance(r->balance,r,key,r);
+	}
+
+	#ifdef VERBOSE
+	CheckBalance(tree->root, 0);
+	#endif
+
     tree->n++;
 }
 
 
-// if pInfo is 1, delete the element; NULL, just return Boolean if found; otherwise populate.
 Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
 {
-    AVLTREENODE *p = tree->root, **P = &(tree->root);
+	if ((long)pInfo==1) return AvlTreeDelete(tree, key);
+	else return AvlTreeLookup(tree, key, pInfo);
+}
+
+
+Boolean AvlTreeLookup(AVLTREE *tree, foint key, foint *pInfo)
+{
+    AVLTREENODE *p = tree->root;
+
     while(p)
     {
-	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0) {
-	    if((long)pInfo==1) break; // delete the element
-	    if(pInfo) *pInfo = p->info; // lookup with assign
-	    return true;
+		int cmp = tree->cmpKey(key, p->key);
+		if(cmp == 0)
+		{
+			if(pInfo) *pInfo = p->info;
+			return true;
+		}
+		else if(cmp < 0) p = p->left;
+		else             p = p->right;
 	}
-	else if(cmp < 0) AssignLocative(P,p,p->left);
-	else             AssignLocative(P,p,p->right);
-    }
+    
+    return false;
+}
+
+
+Boolean AvlTreeDelete(AVLTREE *tree, foint key)
+{
+	AVLTREENODE *p = tree->root, **P = &(tree->root); AVLTREENODE *parent = tree->root;
+
+    while(p)
+    {
+		int cmp = tree->cmpKey(key, p->key);
+		if(cmp == 0) break;
+
+		parent = p;
+		if(cmp < 0) AssignLocative(P,p,p->left);
+		else AssignLocative(P,p,p->right);
+	}
+    
     if(!p) return false; // node not found, nothing deleted
-    // at this point we know the key has been found
-    if((long)pInfo == 1) { // delete the element
 	assert(tree->n > 0);
-	// At this point, p points to the node we want to delete. If either child is NULL, then the other child moves up.
-	if(p->left && p->right) *P = p->right; // two children, so replace node by its inorder successor
-	else if(p->left)  *P = p->left;
-	else if(p->right) *P = p->right;
-	else *P = NULL;
+
+	// At this point, p points to the node we want to delete
+	if (p->right == NULL) 
+		*P = p->left;
+	else // Find the inorder successor. Q is a locative
+	{
+		AVLTREENODE *q, **Q;
+		AssignLocative(Q,q,p->right);
+		parent = q; // The "parent" only marks the node whose balance will change at this point
+
+		while (q->left != NULL)
+		{
+			parent = q;
+			AssignLocative(Q,q,q->left);
+		}
+
+		*P=q; *Q=q->right;
+		q->balance=p->balance;
+		q->left=p->left; q->right=p->right;
+	}
 
 	tree->freeKey(p->key);
 	tree->freeInfo(p->info);
 	Free(p);
-
 	tree->n--;
-    }
-    return true;
+
+	// Update balance then rotate if necessary
+	if (parent->balance == 0)
+		parent->balance = (parent->right==*P || parent==*P) ? -1:1;
+	else if (tree->n != 0)
+	{ // The height of the subtree has changed; need to check balance potentially all the way to the root
+		STACK *nodePath = StackAlloc(MaxHeight);
+		StackPush(nodePath, (foint){.v=&(tree->root)}); // Contains locatives
+		p = tree->root;
+		int cmp;
+
+		#ifdef VERBOSE
+		int traversal_steps = 0;
+		#endif
+
+		while ((cmp=tree->cmpKey(parent->key, p->key)))
+		{
+			#ifdef VERBOSE
+			traversal_steps++;
+			#endif
+
+			if(cmp < 0)
+			{
+				StackPush(nodePath, (foint){.v=&(p->left)});
+				p = p->left;
+			}
+			else
+			{
+				StackPush(nodePath, (foint){.v=&(p->right)});
+				p = p->right;
+			}
+		}
+
+		#ifdef VERBOSE
+		int worst = MaxHeight;
+		printf("Backtracking deletion took %i STEPS to complete with %i ELEMENTS; worst case is %i\n", traversal_steps, tree->n, worst);
+		assert(traversal_steps <= worst);
+		#endif
+		
+		parent = NULL; // NOTE: as of this point, parent = previous node along path back up to root
+		while (StackSize(nodePath) > 0)
+		{
+			P = StackPop(nodePath).v; p = *P;
+
+			// C is a locative that points to the CHILD of the critical node
+			char d1,d2,d3;
+			AVLTREENODE *b, *c, **C;
+			d1 = p->balance;
+			if(d1 < 0) AssignLocative(C, c, p->left);
+			else if (d1 > 0) AssignLocative(C, c, p->right);
+
+			if (p->balance == 0) // Node now imbalanced, height not changed
+			{
+				p->balance = (p->right==parent) ? -1:1;
+				break;
+			}
+			else if (c == NULL) // Imbalance removed
+			{
+				p->balance = 0;
+			}
+			else if (c->balance == 0 && parent == c)
+			{ // Height decreased where previously there was an imbalance, although there may still be
+				if (p->left && p->right) p->balance = 0;
+			} 
+			else // Two nodes are imbalanced, rotation likely needed
+			{
+				if (p->left && p->right)
+				{
+					b=p->left; parent=p->right;
+					d2=d3=0;
+					// NOTE: in this scope only d2 = height of left subtree, d3 = height of right subtree
+					// b and parent navigate the left and right subtrees respectively
+
+					while (b != NULL || parent != NULL)
+					{
+						if (b != NULL) 
+						{
+							b=(b->balance < 0) ? b->left : b->right;
+							d2++;
+						}
+
+						if (parent != NULL)
+						{
+							parent=(parent->balance < 0) ? parent->left : parent->right;
+							d3++;
+						}
+					}
+					
+					if (d2 == d3)
+					{ // This node is actually now balanced, no rotation needed
+						p->balance = 0; parent = p;
+						continue;
+					}
+				}
+
+				// Rotation is caused by height change on the opposite side
+				if (c->balance == 0) d2 = p->balance;
+				else d2 = c->balance;
+				b = d2 > 0 ? c->right : c->left;
+
+				if (b == NULL)  // Deleted node was just before leaf, rotation not possible
+					c->balance = 0;
+				else if(d2==d1) // d2!=0, single rotation
+				{ 
+					if (c->balance == 0)
+					{
+						c->balance=-d1;
+						p->balance=d1;
+						Rotate(P, p, -d1);
+						break;
+					}
+
+					c->balance=p->balance=0;
+					Rotate(P, p, -d1);
+					parent = c; continue;
+				}
+				else // d2==-d1, double rotation
+				{
+					d3 = b->balance;
+					if(d3==d2)
+					{
+						p->balance=0;
+						c->balance=d1;
+					} 
+					else if(d3==-d2) { p->balance=d2; c->balance=0; }
+					else p->balance=c->balance=0; // d3=0, B=R is a leaf
+					b->balance=0;
+					Rotate(C, c, -d2);
+					Rotate(P, p, -d1);
+					parent = b; continue;
+				}
+			}
+			parent = p;
+		}
+
+		StackFree(nodePath);
+	}
+
+	#ifdef VERBOSE
+	CheckBalance(tree->root, 0);
+	#endif
+
+	return true;
 }
 
 
@@ -240,7 +542,8 @@ static void AvlTreeFreeHelper(AVLTREE *tree, AVLTREENODE *t)
 	AvlTreeFreeHelper(tree, t->right);
 	tree->freeKey(t->key);
 	tree->freeInfo(t->info);
-	{assert(tree->n > 0); tree->n--; }
+	assert(tree->n > 0);
+	tree->n--;
 	free(t);
     }
 }
@@ -252,53 +555,6 @@ void AvlTreeFree(AVLTREE *tree)
     free(tree);
 }
 
-
-//////////////////// REBALANCING CODE
-static foint *keyArray, *dataArray;
-static int arraySize, currentItem;
-
-// Squirrel away all the items *in sorted order*
-static int TraverseTreeToArray(foint globals, foint key, foint data) {
-    assert(currentItem < arraySize);
-    keyArray[currentItem] = key;
-    dataArray[currentItem] = data;
-    ++currentItem;
-    return 1;
-}
-
-static void AvlTreeInsertMiddleElementOfArray(AVLTREE *tree, int low, int high) // low to high inclusive
-{
-    if(low <= high) { // we're using low though high *inclusive* so = is a valid case.
-	int mid = (low+high)/2;
-	AvlTreeInsert(tree, keyArray[mid], dataArray[mid]);
-	AvlTreeInsertMiddleElementOfArray(tree, low, mid-1);
-	AvlTreeInsertMiddleElementOfArray(tree, mid+1,high);
-    }
-}
-
-void AvlTreeRebalance(AVLTREE *tree)
-{
-    static Boolean inRebalance; // only allow one tree to be rebalanced concurrently
-    if(inRebalance) return; // even without threading, the AvlTreeTraverse below may trigger the rebalance of another tree
-    inRebalance = true;
-    if(tree->n > arraySize){
-	arraySize = tree->n;
-	keyArray = Realloc(keyArray, arraySize*sizeof(foint));
-	dataArray = Realloc(dataArray, arraySize*sizeof(foint));
-    }
-    currentItem = 0;
-    AvlTreeTraverse ((foint)NULL, tree, TraverseTreeToArray);
-    assert(currentItem == tree->n);
-    
-    AVLTREE *newTree = AvlTreeAlloc(tree->cmpKey , tree->copyKey , tree->freeKey , tree->copyInfo , tree->freeInfo);
-    // Now re-insert the items in *perfectly balanced* order.
-    assert(tree->n > 0);
-    AvlTreeInsertMiddleElementOfArray(newTree, 0, tree->n - 1);
-    assert(tree->n == newTree->n);
-    AVLTREENODE *tmp = tree->root; tree->root = newTree->root; newTree->root = tmp;
-    AvlTreeFree(newTree);
-    inRebalance = false;
-}
 #ifdef __cplusplus
 } // end extern "C"
 #endif
