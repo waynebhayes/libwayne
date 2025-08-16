@@ -26,7 +26,11 @@ TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
     G->selfLoops = selfLoops;
     return G;
 }
-
+TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n)
+{
+    TINY_GRAPH *G = TinyGraphAlloc(n,true,false);
+    return G;
+}
 TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j))
@@ -190,7 +194,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
 	numSelf +=TinyGraphAreConnected(G,i,i);
     }
     assert(numSelf==0||G->selfLoops);
-    return (numSelf*(1-G->directed)+total)/(2-G->directed);  // Alan: please check if this works with self-loops--your PR had (2-directed) I think
+    return (numSelf*(1-G->directed)+total)/(2-G->directed);
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
@@ -236,10 +240,10 @@ int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *dis
 	    unsigned int neighbor[MAX_TSET];
 	    int j, numNeighbors = TSetToArray(neighbor, G->A[v]); /* This is the slow part, O(n) */
 	    for(j=0; j < numNeighbors; j++) {
-		if(neighbor[j]==v) 
+		if(neighbor[j]==v)
 		{
 		    assert(G->selfLoops); // nothing to do, don't add self in a BFS
-		} 
+		}
 		else if(distArray[neighbor[j]] == -1) /* some of the neighbors might have already been visited */
 		{
 		    distArray[neighbor[j]] = distArray[v] + 1;
