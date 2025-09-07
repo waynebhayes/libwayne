@@ -187,6 +187,16 @@ SET *SetEmpty(SET *set)
 }
 
 
+/*
+** Add all possible members to a set
+*/
+SET *SetFill(SET *set)
+{
+    for(int l=0; l<set->maxElem; l++) SetAdd(set, l); // FIXME: dumb
+    return set;
+}
+
+
 /* free all space occupied by a set
 */
 void SetFree(SET *set)
@@ -551,6 +561,34 @@ unsigned *SetSmartArray(unsigned *array, const SET *const s, const unsigned maxS
 }
 
 
+double SetPIEkCount(int k, unsigned nSets, SET *set[nSets]) {
+    Apology("dumbass, you haven't taken k into account, nor used the (n choose k) formula yet!");
+    if(nSets > 16) Apology("Sorry, my stupid implementation of PIE is limited to 16 nets, not %d", nSets);
+    if(nSets == 0) return 0;
+    double sum=0.0;
+    int i, maxElem = set[0]->maxElem;
+#if PARANOID_ASSERTS
+    for(i=1; i<nSets; i++) assert(set[i]->maxElem == maxElem);
+#endif
+    SET *cumSet = SetAlloc(maxElem);
+    for(i=1; i<(1<<nSets); i++) {
+	unsigned set_bits=0;
+	SetFill(cumSet);
+	SSET whichSets = 0; // treat as an integer and just iterate through all possible subsets
+	for(int j=0; j<nSets;j++) {
+	    if((i>>j) & 1) { // check if the j'th set is in the current subset
+		++set_bits;
+		SSetAdd(whichSets, j);
+		SetIntersect(cumSet, cumSet, set[j]);
+	    }
+	}
+	assert(set_bits == SSetCardinality(whichSets));
+	double sign = (set_bits & 1) ? 1 : -1;
+	sum += sign * SetCardinality(cumSet);
+    }
+    return sum;
+}
+
 unsigned SSetToArray(unsigned int *array, SSET set)
 {
     int pos = 0;
@@ -808,6 +846,7 @@ char *TSetToString(int len, char s[], TSET set)
     s[len-1] = '\0';
     return s;
 }
+
 #endif
 #ifdef __cplusplus
 } // end extern "C"

@@ -72,6 +72,7 @@ SET *SetAlloc(unsigned n);
 SET *SetResize(SET *s, unsigned new_n);
 void SetFree(SET *set); /* free all memory used by a set */
 SET *SetEmpty(SET *set);    /* make the set empty (set must be allocated )*/
+SET *SetFill(SET *set);    /* make the set FULL */
 #define SetReset SetEmpty
 #define SetMaxSize(s) ((s)->maxElem)
 SET *SetCopy(SET *dst, SET *src);  /* if dst is NULL, it will be alloc'd */
@@ -96,6 +97,9 @@ Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */
 #define SetSupersetEq(spr,sb) SetSubsetEq((sb),(spr))
 Boolean SetSubsetProper(SET *sub, SET *super);	/* proper subset */
 #define SetSupersetProper(spr,sub) SetSubsetProper((sub),(spr))
+
+// Use the Principle of Inclusion-Exclusion (PIE) to count the number of distinct subsets of size k in the array of sets[]
+double SetPIEkCount(int k, unsigned nSets, SET *set[nSets]);
 
 /*
 ** You allocate an array big enough to hold the number of elements,
