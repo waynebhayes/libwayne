@@ -281,7 +281,6 @@ void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
 
 TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -295,13 +294,14 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 	Gv = TinyGraphAlloc(nV,0,0);
     Gv->selfLoops = G->selfLoops;
 
-    for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
+    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+        if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
 	    TinyGraphConnect(Gv, i, j);
+    }
     if(G->selfLoops) for(i=0; i < nV; i++)
 	if(TinyGraphAreConnected(G, array[i], array[i]))
 	    TinyGraphConnect(Gv, i, i);
-
     if(Gv == &GGv)
 	*(Gv = G) = GGv;
     return Gv;
@@ -310,7 +310,6 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 
 TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -324,12 +323,14 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 	Gv = TinyGraphAlloc(G->n,0,0);
     Gv->selfLoops = G->selfLoops;
 
-    for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
+    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+        if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
-	    TinyGraphConnect(Gv, array[i], array[j]);
+	    TinyGraphConnect(Gv, i, j);
+    }
     if(G->selfLoops) for(i=0; i < nV; i++)
 	if(TinyGraphAreConnected(G, array[i], array[i]))
-	    TinyGraphConnect(Gv, array[i], array[i]);
+	    TinyGraphConnect(Gv, i, i);
     if(Gv == &GGv)
 	*(Gv = G) = GGv;
     return Gv;

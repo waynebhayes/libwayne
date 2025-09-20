@@ -19,6 +19,7 @@ typedef struct _Graph {
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
+    Boolean directed; //whether graph is directed
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
@@ -35,7 +36,7 @@ typedef struct _Graph {
 
 GRAPH *GraphAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // does NOT allow self-loops
 GRAPH *GraphSelfAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
-
+GRAPH *GraphDirectedAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames, Boolean selfLoops);
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);
@@ -99,6 +100,7 @@ void GraphPrintAdjList(FILE *fp, GRAPH *G);
 GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
 
 // set weights pointer to NULL if no weights
+GRAPH *GraphFromEdgeListD(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights, Boolean directed);
 GRAPH *GraphFromEdgeList(unsigned numNodes, unsigned numEdges, unsigned *pairs, Boolean sparse, float *weights);
 
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
