@@ -606,7 +606,7 @@ static GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *wei
     return G;
 }
 
-static GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
+GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
 {
     int i;
     GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
