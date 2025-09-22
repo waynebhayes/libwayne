@@ -104,6 +104,7 @@ int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
+GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights);
 
 /*
 ** The following subroutines should be used with caution, because they take

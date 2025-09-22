@@ -589,7 +589,7 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
 }
 
 // Add the list of edges to the graph--should only be called while the graph is being built immediately after Alloc
-static GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights)
+GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights)
 {
     int i;
     Apology("Sorry, GraphAddEdgeList not yet implemented");
