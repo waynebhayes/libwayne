@@ -134,20 +134,17 @@ unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
 
 void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
-    AVLTREENODE *p = tree->root, **P = &(tree->root),// P is a locative used to trace the path
-	*a, **A, *b, *c, **C, *r; // temporary node pointers
-    int cmp; // temporary storage of a key comparison
-    Boolean critNodeFound=false;
+    AVLTREENODE *p = tree->root, **P = &(tree->root), // P is a locative used to trace the path
+	*a = NULL, **A = NULL, // Critical node
+	*r = NULL; // Starting point for nodes that need their balance recalculated
+    int cmp; // Temporary storage of a key comparison
 
 	#ifdef VERBOSE
 	int traversal_steps = 0;
 	#endif
 
 	if (p && p->balance != 0)
-	{
-		critNodeFound=true;
 		AssignLocative(A,a,tree->root);
-	}
 
     while(p && (cmp = tree->cmpKey(key, p->key)))
     {
@@ -158,19 +155,15 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 		if(cmp < 0)
 		{
 			if (p->left && p->left->balance != 0)
-			{
-				critNodeFound=true;
 				AssignLocative(A,a,p->left);
-			}
+
 			AssignLocative(P,p,p->left);
 		}
 		else
 		{
 			if (p->right && p->right->balance != 0)
-			{
-				critNodeFound=true;
 				AssignLocative(A,a,p->right);
-			}
+
 			AssignLocative(P,p,p->right);
 		}
     }
@@ -199,10 +192,11 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	*P = p;
 
     // Now rotate and adjust balance at critical node, if any
-	if(!critNodeFound) r=tree->root;
+	if(a == NULL) r=tree->root;
 	else
 	{
 		char d1,d2,d3;
+		AVLTREENODE *c, **C = NULL; // Children of critical node
 
 		// C is a locative that points to the CHILD of the critical node
 		{ 
@@ -218,7 +212,9 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 		}
 		else
 		{ // rotation necessary
+			AVLTREENODE *b;
 			AssignBalance(d2,b,key,c); // B is child of C in search direction
+
 			if(d2==d1) // d2!=0, single rotation
 			{ 
 				a->balance=0;
@@ -324,10 +320,18 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	Free(p);
 	tree->n--;
 
+	if (parent == p) // Edge case where <= 2 nodes are left and we delete the root
+	{
+		#ifdef VERBOSE
+		if (tree->n > 0) CheckBalance(tree->root, 0);
+		#endif
+		return true; 
+	}
+
 	// Update balance then rotate if necessary
 	if (parent->balance == 0)
 		parent->balance = (parent->right==*P || parent==*P) ? -1:1;
-	else if (tree->n != 0)
+	else
 	{ // The height of the subtree has changed; need to check balance potentially all the way to the root
 		STACK *nodePath = StackAlloc(MaxHeight);
 		StackPush(nodePath, (foint){.v=&(tree->root)}); // Contains locatives
@@ -368,8 +372,8 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 			P = StackPop(nodePath).v; p = *P;
 
 			// C is a locative that points to the CHILD of the critical node
-			char d1,d2,d3;
-			AVLTREENODE *b, *c, **C;
+			char d1,d2,d3; // Balance factors
+			AVLTREENODE *c = NULL, **C = NULL;
 			d1 = p->balance;
 			if(d1 < 0) AssignLocative(C, c, p->left);
 			else if (d1 > 0) AssignLocative(C, c, p->right);
@@ -389,6 +393,8 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 			} 
 			else // Two nodes are imbalanced, rotation likely needed
 			{
+				AVLTREENODE *b;
+
 				if (p->left && p->right)
 				{
 					b=p->left; parent=p->right;
