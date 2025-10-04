@@ -211,6 +211,11 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     return (total-selfLoops)/2 + selfLoops;
 }
 
+unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
+    int nodeArray[MAX_TSET], distArray[MAX_TSET];
+    return TinyGraphBFS(g, seed, MAX_TSET, nodeArray, distArray);
+}
+
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 {
     QUEUE *BFSQ;

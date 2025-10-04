@@ -47,6 +47,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of 
  * Also, worst-case runtime is O(n^2)... very bad, yes.. :-(
  */
 int TinyGraphBFS(TINY_GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
+unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed);
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed);
 void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited);
 /*
