@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -100,16 +102,24 @@ GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse);
 void GraphPrintAdjList(FILE *fp, GRAPH *G);
 GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
 
+<<<<<<< HEAD
 // set weights pointer to NULL if no weights
 GRAPH *GraphFromEdgeListDir(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
 GRAPH *GraphFromEdgeList(unsigned numNodes, unsigned numEdges, unsigned *pairs, Boolean sparse, float *weights);
 
+=======
+GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
+>>>>>>> 226675ae486d9170b2787c8afd7d41afb4db323c
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
+<<<<<<< HEAD
 Boolean GraphAreConnectedDir(GRAPH *G, int i, int j);
+=======
+GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights);
+>>>>>>> 226675ae486d9170b2787c8afd7d41afb4db323c
 
 /*
 ** The following subroutines should be used with caution, because they take
