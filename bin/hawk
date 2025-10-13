@@ -27,6 +27,7 @@ while true; do
     -F?) FIELD_SEP=`echo "$1" | sed 's/^-F//'`;;
     -F*) die "-F can only be followed by one character, so '$1' is not valid";;
     -p*) PROFILE=p; PROF_OUT="$1";;
+    -alego) warn "Alex Gottuso's extension not yet implemented--running script unchanged"; shift;;
     -*) die "unknown option '$1'";;
     *) break;;
     esac
