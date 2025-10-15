@@ -121,7 +121,7 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
 	if(pctDone > prevPctDone) {
-	    printf("%d%% pBad %g ", pctDone, PbadMean(sa));
+	    printf("%d%% T %g pBad %g ", sa->temperature, pctDone, PbadMean(sa));
 	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
 	    puts("");
 	    double realScore = sa->Score(true, sa->currentSolution);
