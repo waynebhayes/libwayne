@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,9 +39,9 @@ void AvlTreeInsert(AVLTREE *, foint key, foint info); // replaces info if the ke
 /* O(log n): both lookup and/or delete: returns false if element not found.
 ** If found and (int)pInfo==1, delete it; otherwise if pInfo != NULL, populate with new info; otherwise just return true.
 */
-Boolean AvlTreeLookDel(AVLTREE *, foint key, foint *pInfo);
-#define AvlTreeDelete(T,k) AvlTreeLookDel((T),(k),(foint*)1)
-#define AvlTreeLookup(T,k,f) AvlTreeLookDel((T),(k), (f))
+Boolean AvlTreeLookDel (AVLTREE *, foint key, foint *pInfo);
+Boolean AvlTreeLookup(AVLTREE *, foint key, foint *pInfo);
+Boolean AvlTreeDelete(AVLTREE *, foint key);
 
 /*
 ** AvlTreeTraverse: Traverse an AVL tree, calling your function pointer (pFointTraversalFcn) on each element,

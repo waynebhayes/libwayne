@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,6 +21,7 @@ typedef struct _Graph {
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
+    Boolean directed; //whether graph has directed edges
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
@@ -35,13 +38,15 @@ typedef struct _Graph {
 
 GRAPH *GraphAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // does NOT allow self-loops
 GRAPH *GraphSelfAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
-
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphConnectDir(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphConnectDirNew(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphDisconnectDir(GRAPH *G, unsigned i, unsigned j);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w); // returns old weight
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
@@ -99,13 +104,17 @@ void GraphPrintAdjList(FILE *fp, GRAPH *G);
 GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
 
 // set weights pointer to NULL if no weights
+GRAPH *GraphFromEdgeListDir(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
 GRAPH *GraphFromEdgeList(unsigned numNodes, unsigned numEdges, unsigned *pairs, Boolean sparse, float *weights);
 
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
+GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
+Boolean GraphAreConnectedDir(GRAPH *G, int i, int j);
+GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights);
 
 /*
 ** The following subroutines should be used with caution, because they take
