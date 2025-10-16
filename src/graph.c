@@ -378,7 +378,12 @@ GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j)
 #endif
     return G;
 }
-
+GRAPH *GraphDisconnectDir(GRAPH *G, unsigned i, unsigned j) //disconnect one direction only
+{
+    Boolean b=GraphAreConnectedDir(G,j,i);
+    GraphDisconnect(G,i,j);
+    if(b) GraphConnect(G,j,i);
+}
 static Boolean _rawConnected(GRAPH *G, int i, int j)
 {
     i&=neighField,j&=neighField;

@@ -46,6 +46,7 @@ GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphConnectDir(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphConnectDirNew(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphDisconnectDir(GRAPH *G, unsigned i, unsigned j);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w); // returns old weight
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
@@ -102,24 +103,18 @@ GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse);
 void GraphPrintAdjList(FILE *fp, GRAPH *G);
 GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
 
-<<<<<<< HEAD
 // set weights pointer to NULL if no weights
 GRAPH *GraphFromEdgeListDir(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
 GRAPH *GraphFromEdgeList(unsigned numNodes, unsigned numEdges, unsigned *pairs, Boolean sparse, float *weights);
 
-=======
-GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
->>>>>>> 226675ae486d9170b2787c8afd7d41afb4db323c
 GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
+GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
-<<<<<<< HEAD
 Boolean GraphAreConnectedDir(GRAPH *G, int i, int j);
-=======
 GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights);
->>>>>>> 226675ae486d9170b2787c8afd7d41afb4db323c
 
 /*
 ** The following subroutines should be used with caution, because they take
