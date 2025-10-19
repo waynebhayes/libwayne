@@ -23,37 +23,28 @@ extern "C" {
 **
 *************************************************************************/
 
-GRAPH *GraphAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
+GRAPH *GraphAlloc(unsigned int n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn)
 {
     static Boolean needStartup = 1;
-    int i;
     GRAPH *G = Calloc(1, sizeof(GRAPH));
     if(needStartup)
     {
 	needStartup = 0;
 	SetStartup();
     }
-    G->sparse = sparse;
+    G->sparse = true;
     G->n = n;
     G->A = NULL;
     G->degree = Calloc(n, sizeof(G->degree[0]));
     G->maxEdges = MIN_EDGELIST;
-    if(sparse>=true) // >=true means "both"
-    {
-	G->edgeList = Malloc(2*G->maxEdges*sizeof(int));
-	G->numEdges = 0;
-	G->neighbor = Calloc(n, sizeof(G->neighbor[0]));
+    G->edgeList = Malloc(2*G->maxEdges*sizeof(int));
+    G->numEdges = 0;
+    G->neighbor = Calloc(n, sizeof(G->neighbor[0]));
 #if SORT_NEIGHBORS
-	G->sorted = SetAlloc(G->n);
+    G->sorted = SetAlloc(G->n);
 #endif
-    }
-    if(sparse==both || sparse == false)
-    {
-	G->A = Calloc(n, sizeof(G->A[0]));
-	for(i=0; i<n; i++)
-	    G->A[i] = SetAlloc(n);
-    }
     G->supportNodeNames = supportNodeNames;
+    G->edgeWeightFn = edgeWeightFn;
     return G;
 }
 
@@ -120,7 +111,7 @@ GRAPH *GraphCopy(GRAPH *G)
 {
     int i;
     if(G->supportNodeNames) GraphNameWarn("GraphCopy");
-    GRAPH *Gc = GraphAlloc(G->n, G->sparse, false);
+    GRAPH *Gc = GraphAlloc(G->n, false, G->edgeWeightFn);
     Gc->degree = Calloc(G->n, sizeof(Gc->degree[0]));
     for(i=0;i<G->n;i++) Gc->degree[i] = G->degree[i];
 

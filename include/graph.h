@@ -14,6 +14,8 @@ extern "C" {
 
 #define SORT_NEIGHBORS 0 // Thought this might speed things up but it appears not to.
 
+typedef double (*GraphEdgeWeightFn)(unsigned int u, unsigned int v);
+
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
     unsigned n;
@@ -33,9 +35,10 @@ typedef struct _Graph {
     Boolean supportNodeNames;
     BINTREE *nameDict;	// string to int map
     char **name;	// int to string map (inverse of the above)
+    GraphEdgeWeightFn edgeWeightFn; // optional callback supplying computed edge weights
 } GRAPH;
 
-GRAPH *GraphAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // does NOT allow self-loops
+GRAPH *GraphAlloc(unsigned n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn); // does NOT allow self-loops
 GRAPH *GraphSelfAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
 
 GRAPH *GraphMakeWeighted(GRAPH *G);
