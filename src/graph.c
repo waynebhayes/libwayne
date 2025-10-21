@@ -50,7 +50,7 @@ GRAPH *GraphAlloc(unsigned int n, Boolean supportNodeNames, GraphEdgeWeightFn ed
 
 GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
 {
-    GRAPH *G = GraphAlloc(n, sparse, supportNodeNames);
+    GRAPH *G = GraphAlloc(n, supportNodeNames, G->edgeWeightFn);
     G->selfAllowed=true;
     return G;
 }
@@ -513,7 +513,7 @@ GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse)
     if(fscanf(fp, "%d", &n) != 1)
 	Fatal("GraphReadAdjMatrix: reading 'n' failed");
     assert(n >= 0);
-    G = GraphAlloc(n, sparse, false); // no SUPPORT_NODE_NAMES at the moment
+    G = GraphAlloc(n, false, NULL); // no SUPPORT_NODE_NAMES at the moment
     for(i=0; i<n; i++) for(j=0; j<n; j++)
     {
 	int connected;
@@ -555,7 +555,7 @@ GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse)
     if(fscanf(fp, "%d", &n) != 1)
 	Fatal("GraphReadAdjList: failed to read 'n'");
     assert(n >= 0);
-    G = GraphAlloc(n, sparse, false); // no SUPPORT_NODE_NAMES at the moment
+    G = GraphAlloc(n, false, NULL); // no SUPPORT_NODE_NAMES at the moment
     for(i=0; i<n; i++)
     {
 	if(fscanf(fp, "%d", &d) != 1)
@@ -602,7 +602,7 @@ GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights)
 GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights)
 {
     int i;
-    GRAPH *G = GraphAlloc(n, sparse, false); // will set names later
+    GRAPH *G = GraphAlloc(n, false, NULL); // will set names later
     if(weights) GraphMakeWeighted(G);
     assert(n == G->n);
     assert(G->degree);
@@ -794,7 +794,7 @@ GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
     if(fscanf(fp, "%d", &n) != 1)
 	Fatal("GraphReadConnections: failed to read 'n'");
     assert(n >= 0);
-    G = GraphAlloc(n, sparse, false);
+    G = GraphAlloc(n, false, NULL);
 
     while((d=fscanf(fp, "%d %d", &i, &j)) == 2)
     {
@@ -823,7 +823,7 @@ GRAPH *GraphComplement(GRAPH *G)
 {
     int i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphComplement");
-    GRAPH *Gbar = GraphAlloc(G->n, G->sparse, false);
+    GRAPH *Gbar = GraphAlloc(G->n, false, G->edgeWeightFn);
     Gbar->selfAllowed = G->selfAllowed;
 
     assert(Gbar->n == G->n);
@@ -847,7 +847,7 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
     assert(G1->sparse == G2->sparse);
     assert(G1->selfAllowed == G2->selfAllowed);
 
-    GRAPH *dest = GraphAlloc(n,G1->sparse, G1->supportNodeNames);
+    GRAPH *dest = GraphAlloc(n, G1->supportNodeNames, G1->edgeWeightFn);
     if(G1->supportNodeNames || G2->supportNodeNames) GraphNameWarn("GraphUnion");
 
     for(i=0; i < n; i++) for(j=i+1; j < n; j++)
@@ -993,7 +993,7 @@ GRAPH *GraphInduced(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphInduced");
-    GRAPH *Gv = GraphAlloc(nV, G->sparse, false);
+    GRAPH *Gv = GraphAlloc(nV, false, G->edgeWeightFn);
     Gv->selfAllowed = G->selfAllowed;
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
 	if(GraphAreConnected(G, array[i], array[j]))
@@ -1008,7 +1008,7 @@ GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V)
 {
     unsigned array[G->n], nV = SetToArray(array, V), i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphInduced_NoVertexDelete");
-    GRAPH *Gv = GraphAlloc(G->n, G->sparse, false);
+    GRAPH *Gv = GraphAlloc(G->n, false, G->edgeWeightFn);
     Gv->selfAllowed = G->selfAllowed;
 
     for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
