@@ -39,7 +39,7 @@ typedef struct _Graph {
 } GRAPH;
 
 GRAPH *GraphAlloc(unsigned n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn); // does NOT allow self-loops
-GRAPH *GraphSelfAlloc(unsigned n, Boolean sparse, Boolean supportNodeNames); // DOES allow self-loops
+GRAPH *GraphSelfAlloc(unsigned n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn); // DOES allow self-loops
 
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)

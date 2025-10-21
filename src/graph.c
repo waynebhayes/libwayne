@@ -48,9 +48,9 @@ GRAPH *GraphAlloc(unsigned int n, Boolean supportNodeNames, GraphEdgeWeightFn ed
     return G;
 }
 
-GRAPH *GraphSelfAlloc(unsigned int n, Boolean sparse, Boolean supportNodeNames)
+GRAPH *GraphSelfAlloc(unsigned int n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn)
 {
-    GRAPH *G = GraphAlloc(n, supportNodeNames, G->edgeWeightFn);
+    GRAPH *G = GraphAlloc(n, supportNodeNames, edgeWeightFn);
     G->selfAllowed=true;
     return G;
 }
@@ -246,20 +246,25 @@ double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w)
 
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 {
-    if(!GraphAreConnected(G,i,j)) return 0;
-    int k=0;
-    assert(G->weight);
+    if(!GraphAreConnected(G,i,j)) return 0.0;
 
+    if (G->edgeWeightFn) {
+        return G->edgeWeightFn(i, j);
+    }
+
+    if (!G->weight) return 1.0;
+
+    int k = 0;
     while(G->neighbor[i][k] != j) k++;
     assert(k < G->degree[i] && G->neighbor[i][k] == j);
     double w = G->weight[i][k];
     assert(w>0);
 
-    if(j!=i) {
-	k=0;
-	while(G->neighbor[j][k] != i) k++;
-	assert(k < G->degree[j] && G->neighbor[j][k] == i);
-	assert(G->weight[j][k] == w);
+    if (j!=i) {
+        k=0;
+        while(G->neighbor[j][k] != i) k++;
+        assert(k < G->degree[j] && G->neighbor[j][k] == i);
+        assert(G->weight[j][k] == w);
     }
     return w;
 }
