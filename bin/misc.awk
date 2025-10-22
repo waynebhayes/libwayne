@@ -26,10 +26,8 @@ function ceil(x) {if(x==int(x)) return x; else return floor(x)+1}
 function int2binary(i,l, _s){if(i<0)return "nan";_s="";while(i){_s=(i%2)""_s;i=int(i/2)};while(length(_s)<l)_s="0"_s;return _s}
 function Fatal(msg){printf "FATAL ERROR: %s\n",msg >"/dev/stderr"; exit(1);}
 function Warn(msg){printf "Warning: %s\n",msg >"/dev/stderr"}
-function NormDotProd(u,v,    _dot,_dot1,_dot2,i){_dot=_dot1=_dot2=0;
-    for(i in u){_dot+=u[i]*v[i];_dot1+=u[i]*u[i];_dot2+=v[i]*v[i]};
-    return _dot/sqrt(_dot1*_dot2);
-}
+function DotProd(u,v,    _dot,i){for(i in u) _dot+=u[i]*v[i]; return _dot;}
+function NormDotProd(u,v){return DotProd(u,v)/sqrt(DotProd(u,u)*DotProd(v,v));}
 function VecDist(u,v,    i,dist2) { dist2=0; for(i in u) dist2+=(u[i]-v[i])^2; return sqrt(dist2); }
 function LogPSim(u,v,    i,res) { for(i in u) if(u[i]==v[i])res+=36; else res-=log(ABS(u[i]-v[i])); return res/length(u); }
 function GeoMeanDist(u,v,    i,res) { for(i in u) if(u[i]==v[i])res+=log(1e-16); else res+=log(ABS(u[i]-v[i])); return exp(res/length(u)); }
