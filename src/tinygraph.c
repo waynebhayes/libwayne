@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -197,6 +199,11 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     return (numSelf*(1-G->directed)+total)/(2-G->directed);
 }
 
+unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
+    int nodeArray[MAX_TSET], distArray[MAX_TSET];
+    return TinyGraphBFS(g, seed, MAX_TSET, nodeArray, distArray);
+}
+
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
 {
     QUEUE *BFSQ;
@@ -281,7 +288,6 @@ void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited) {
 
 TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -295,13 +301,14 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 	Gv = TinyGraphAlloc(nV,0,0);
     Gv->selfLoops = G->selfLoops;
 
-    for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
+    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+        if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
 	    TinyGraphConnect(Gv, i, j);
+    }
     if(G->selfLoops) for(i=0; i < nV; i++)
 	if(TinyGraphAreConnected(G, array[i], array[i]))
 	    TinyGraphConnect(Gv, i, i);
-
     if(Gv == &GGv)
 	*(Gv = G) = GGv;
     return Gv;
@@ -310,7 +317,6 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 
 TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 {
-    assert(!G->directed&&!Gv->directed);
     unsigned int array[MAX_TSET], nV = TSetToArray(array, V), i, j;
     static TINY_GRAPH GGv;
     if(Gv)
@@ -324,12 +330,14 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 	Gv = TinyGraphAlloc(G->n,0,0);
     Gv->selfLoops = G->selfLoops;
 
-    for(i=0; i < nV; i++) for(j=i+1; j < nV; j++)
+    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+        if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
-	    TinyGraphConnect(Gv, array[i], array[j]);
+	    TinyGraphConnect(Gv, i, j);
+    }
     if(G->selfLoops) for(i=0; i < nV; i++)
 	if(TinyGraphAreConnected(G, array[i], array[i]))
-	    TinyGraphConnect(Gv, array[i], array[i]);
+	    TinyGraphConnect(Gv, i, i);
     if(Gv == &GGv)
 	*(Gv = G) = GGv;
     return Gv;

@@ -1,8 +1,16 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
+#include <stdio.h>
+#include <wchar.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 #include "misc.h"
 #include "htree.h" // bintree or avltree is included there (as appropriate)
+
+#ifdef VERBOSE
+#include <time.h>
+#endif
 
 /*-------------------  Types  ------------------*/
 
@@ -15,6 +23,13 @@ HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFc
     // Be nice and create the top-level tree.
     h->cmpKey = cmpKey; h->copyKey = copyKey; h->freeKey = freeKey;
     h->copyInfo = copyInfo; h->freeInfo = freeInfo;
+
+	// Intermediary trees only store pointers, default copy and free should be used
+	if (depth != 1)
+	{
+		copyInfo = NULL; freeInfo = NULL;
+	}
+
     h->tree = TreeAlloc(cmpKey, copyKey, freeKey, copyInfo, freeInfo);
     return h;
 }
@@ -23,14 +38,23 @@ static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint 
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-	TreeInsert(tree, keys[currentDepth], data);
+		TreeInsert(tree, keys[currentDepth], data);
     else {
 	// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,
 	// so to find the next tree we use the key at this level to *look up* the binary tree at the next level down
 	foint nextLevel;
 	TREETYPE *nextTree;
 	if(!TreeLookup(tree, keys[currentDepth], &nextLevel)) {
-	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, h->copyInfo, h->freeInfo);
+		pFointCopyFcn copyInfo = h->copyInfo;
+		pFointFreeFcn freeInfo = h->freeInfo;
+
+		// Intermediary trees only store pointers, default copy and free should be used
+		if (currentDepth < (h->depth-2))
+		{
+			copyInfo = NULL; freeInfo = NULL;
+		}
+
+	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, copyInfo, freeInfo);
 	    nextLevel.v = nextTree;
 	    TreeInsert(tree, keys[currentDepth], nextLevel);
 	}

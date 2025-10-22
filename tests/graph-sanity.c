@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include <stdio.h>
 #include "misc.h"
 #include "graph.h"
@@ -5,13 +7,41 @@
 
 int main(int argc, char *argv[])
 {
+    assert(false);
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
     GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames,false);
+    GRAPH *G1 = GraphReadEdgeListDir(stdin, sparse, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
+    GRAPH *G3 = GraphAlloc(G1->n,0,0);
     GraphFree(Gbar);
+    for(i=0;i<G1->n;i++)
+    {
+        for(j=0;j<G1->n;j++)
+        {
+            if(!GraphAreConnectedDir(G1,i,j)) GraphConnectDir(G3,i,j);
+        }
+    }
+    GRAPH *G2 = GraphComplement(G3);
+    printf("Checking sanity of Complement(Complement(G1)) (directed)...");
+    assert(G1->n == G2->n);
+    for(i=0; i<G1->n; i++)
+    {
+	assert(G1->degree[i] == G2->degree[i]);
+	if(!G1->sparse) assert(SetEq(G1->A[i], G2->A[i]));
+	else for(j=0;j<G1->n; j++)
+	    assert(G2->neighbor[i][j] == G1->neighbor[i][j]);
+    }
+    puts("passed!");
+    for(i=0;i<G1->n;i++)
+    {
+        for(j=0;j<G1->n;j++)
+        {
+            if(!GraphAreConnectedDir(G1,i,j)) GraphDisconnectDir(G3,i,j);
+        }
+    }
     printf("Checking sanity of Complement(Complement(G))...");
     assert(GG->n == G->n);
     for(i=0; i<G->n; i++)
@@ -23,7 +53,6 @@ int main(int argc, char *argv[])
     }
     puts("passed!");
     printf("Now count connected components via BFS:");
-
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
     Boolean touched[GG->n];
     for(i=0; i<GG->n; i++) touched[i] = false;
