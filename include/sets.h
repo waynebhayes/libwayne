@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,6 +80,7 @@ SET *SetCopy(SET *dst, SET *src);  /* if dst is NULL, it will be alloc'd */
 SET *SetAdd(SET *set, unsigned element);    /* add single element to set */
 SET *SetAddList(SET *set, ...); /* end list with (-1); uses varargs/stdarg */
 SET *SetDelete(SET *set, unsigned element); /* delete a single element */
+#define SetDel SetDelete
 Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS

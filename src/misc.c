@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -343,7 +345,7 @@ const char* getFileExtension(char* filename) {
 unsigned int GetFancySeed(Boolean trulyRandom)
 {
     unsigned int seed = 0;
-    const char *cmd = "(hostname -i || hostname | sum | awk '{srand(); printf \"%d.%d.%d.%d\n\",256*rand(),256*rand(),$1/256,$1%256}') 2>/dev/null | awk '{for(i=1;i<=NF;i++)if(match($i,\"^[0-9]*\\\\.[0-9]*\\\\.[0-9]*\\\\.[0-9]*$\")){IP=$i;exit}}END{if(!IP)IP=\"127.0.0.1\"; print IP}'";
+    const char *cmd = "((hostname -i || hostname || head -4c /dev/random | od | head -1 | sed 's/^0*//' | sed 's/ //g') 2>/dev/null | sum | awk '{srand(); printf \"%d.%d.%d.%d\n\",256*rand(),256*rand(),$1/256,$1%256}') 2>/dev/null | awk '{for(i=1;i<=NF;i++)if(match($i,\"^[0-9]*\\\\.[0-9]*\\\\.[0-9]*\\\\.[0-9]*$\")){IP=$i;exit}}END{if(!IP)IP=\"127.0.0.1\"; print IP}'";
     FILE *fp=popen(cmd,"r");
     int i, ip[4], host_ip=0;
     if(4!=fscanf(fp," %d.%d.%d.%d ", ip, ip+1, ip+2, ip+3)) Fatal("Attempt to get IPv4 address failed:\n%s\n",cmd);

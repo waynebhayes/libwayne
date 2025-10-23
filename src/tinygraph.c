@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -207,6 +209,11 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     }
     assert((total-selfLoops) % 2 == 0); // should be divisible by 2
     return (total-selfLoops)/2 + selfLoops;
+}
+
+unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
+    int nodeArray[MAX_TSET], distArray[MAX_TSET];
+    return TinyGraphBFS(g, seed, MAX_TSET, nodeArray, distArray);
 }
 
 int TinyGraphBFS(TINY_GRAPH *G, int root, int distance, int *nodeArray, int *distArray)

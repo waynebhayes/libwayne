@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -129,7 +131,7 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
 #if PARANOID_ASSERTS
 	assert(!_smallestGood || set->smallestElement == set->bitvec->smallestElement);
 #endif
-	return BitvecInSafe(set->bitvec, element);
+	return BitvecIn(set->bitvec, element);
     }
     assert(set->list && set->cardinality <= set->crossover);
     int i;

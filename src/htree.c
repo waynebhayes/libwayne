@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include <stdio.h>
 #include <wchar.h>
 #ifdef __cplusplus
@@ -24,7 +26,9 @@ HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFc
 
 	// Intermediary trees only store pointers, default copy and free should be used
 	if (depth != 1)
+	{
 		copyInfo = NULL; freeInfo = NULL;
+	}
 
     h->tree = TreeAlloc(cmpKey, copyKey, freeKey, copyInfo, freeInfo);
     return h;
@@ -46,7 +50,9 @@ static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint 
 
 		// Intermediary trees only store pointers, default copy and free should be used
 		if (currentDepth < (h->depth-2))
+		{
 			copyInfo = NULL; freeInfo = NULL;
+		}
 
 	    nextTree = TreeAlloc(h->cmpKey, h->copyKey, h->freeKey, copyInfo, freeInfo);
 	    nextLevel.v = nextTree;

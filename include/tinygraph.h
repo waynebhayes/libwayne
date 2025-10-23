@@ -1,3 +1,5 @@
+// This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
+// (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,6 +47,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of 
  * Also, worst-case runtime is O(n^2)... very bad, yes.. :-(
  */
 int TinyGraphBFS(TINY_GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
+unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed);
 Boolean TinyGraphDFSConnected(TINY_GRAPH *G, int seed);
 void TinyGraphDFSConnectedHelper(TINY_GRAPH *G, int seed, TSET* visited);
 /*
