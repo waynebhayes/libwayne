@@ -7,7 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-    assert(false);
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
