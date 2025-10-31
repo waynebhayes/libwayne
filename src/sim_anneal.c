@@ -126,7 +126,13 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	    puts("");
 	    double realScore = sa->Score(true, sa->currentSolution);
 	    double error = sa->currentScore-realScore;
-	    if(error>0) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
+	    if(error>0) {
+		if(realScore==0) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
+		else {
+		    double relError = fabs(error/realScore);
+		    if(relError>1e-12) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
+		}
+	    }
 	    sa->currentScore=realScore;
 	    prevPctDone=pctDone;
 
