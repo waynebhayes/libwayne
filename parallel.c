@@ -51,6 +51,7 @@ int GetLoadAv(double minutes) {
     return 0.0;
 #else
     double load[3];
+	int i = getloadavg(load, 3);
     // Take a weigthed average based on minutes since last check
     if(minutes>15) load_av = load[2];
     else if(minutes>5) load_av = (minutes*load[2] + (15-minutes)*load[1])/15;
