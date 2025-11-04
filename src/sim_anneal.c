@@ -69,7 +69,6 @@ static void Iteration(SIM_ANNEAL *sa) {
     }
     //Note("Iter: score %g (%g) T %g pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
     if(accept) sa->currentScore += delta;
-    Boolean didAccept = sa->Accept(accept, sa->currentSolution);
 }
 
 static double findPbad(SIM_ANNEAL *sa, double temperature) {
@@ -121,7 +120,7 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
 	if(pctDone > prevPctDone) {
-	    printf("%d%% T %g pBad %g ", sa->temperature, pctDone, PbadMean(sa));
+	    printf("%d%% T %g pBad %g ", pctDone, sa->temperature, PbadMean(sa));
 	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
 	    puts("");
 	    double realScore = sa->Score(true, sa->currentSolution);
