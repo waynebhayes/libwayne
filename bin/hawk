@@ -41,7 +41,7 @@ shift
 HTREES=""
 
 if [ -n "$CONVERT" ]; then
-	if CONVERTED=$(python3 "$CONVERT" "$PROG"); then
+	if CONVERTED=$(python3 "$CONVERT" "$PROG" 2>/dev/null); then
 		if [ -z "$AWKLIBPATH" ]; then
 			warn "AWKLIBPATH needs to be set to where htrees.so is built, converted script cannot be run"
 		else
@@ -49,7 +49,7 @@ if [ -n "$CONVERT" ]; then
 			HTREES=" -lhtrees"
 		fi
 	elif [ ! -f "$CONVERT" ]; then
-		warn "bad path to conversion script, script will not be converted"
+		: #warn "bad path to conversion script, script will not be converted"
 	fi
 fi
 
