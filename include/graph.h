@@ -21,7 +21,7 @@ typedef struct _Graph {
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
-    Boolean directed; //whether graph has directed edges
+    unsigned directed; //number of directed edges
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
