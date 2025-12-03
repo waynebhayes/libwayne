@@ -20,7 +20,7 @@ DIR="`dirname $0`"
 FIELD_SEP=" " # space
 PROFILE= # set to the single letter p for profiling
 PROF_OUT=
-CONVERT="../gawk-trees/tools/convert/convert.py"
+CONVERT="$DIR/../gawk-trees/tools/convert/convert.py"
 while true; do
     case "$1" in
     -T) FIELD_SEP="$TAB";;
@@ -29,7 +29,7 @@ while true; do
     -F*) die "-F can only be followed by one character, so '$1' is not valid";;
     -p*) PROFILE=p; PROF_OUT="$1";;
     -alego) CONVERT="$2"; shift;;
-	*-n*) CONVERT="";; # -n = "--no-convert" or "--normal"
+    -n|-no*|--no*) CONVERT="";; # -n = "--no-convert" or "--normal"
     -*) die "unknown option '$1'";;
     *) break;;
     esac
@@ -41,15 +41,17 @@ shift
 HTREES=""
 
 if [ -n "$CONVERT" ]; then
-	if CONVERTED=$(python3 "$CONVERT" "$PROG" 2>/dev/null); then
-		if [ -z "$AWKLIBPATH" ]; then
-			warn "AWKLIBPATH needs to be set to where htrees.so is built, converted script cannot be run"
-		else
+	if [ ! -f "$CONVERT" ]; then
+		warn "alego: '$CONVERT' doesnt't exist"
+	elif [ -z "$AWKLIBPATH" ]; then
+		warn "alego: no point running '$CONVERT' because AWKLIBPATH isn't set"
+	elif [ ! -f "$AWKLIBPATH/htrees.so" ]; then
+		warn "alego: AWKLIBPATH is set, but can't find $AWKLIBPATH/htrees.so"
+	else
+		if CONVERTED=$(python3 "$CONVERT" "$PROG" ); then
 			PROG="$CONVERTED"
 			HTREES=" -lhtrees"
 		fi
-	elif [ ! -f "$CONVERT" ]; then
-		: #warn "bad path to conversion script, script will not be converted"
 	fi
 fi
 
