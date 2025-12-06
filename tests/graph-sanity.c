@@ -1,9 +1,15 @@
 // This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
 // (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include <stdio.h>
+#include <math.h>
 #include "misc.h"
 #include "graph.h"
 #include "sets.h"
+
+static double test_weight(unsigned int u, unsigned int v)
+{
+    return 1000.0 + (double)(u + v);
+}
 
 int main(int argc, char *argv[])
 {
@@ -56,6 +62,33 @@ int main(int argc, char *argv[])
     printf("Graph has %d connected components using GraphVisitCC\n", CC);
     GraphFree(G);
     SetFree(visited);
+
+    // Test callback weight function pointer
+    GRAPH *callbackGraph = GraphAlloc(3, false, test_weight);
+    if (!callbackGraph) {
+        fprintf(stderr, "Error: GraphAlloc returned NULL for callbackGraph\n");
+        return 1;
+    }
+    GraphMakeWeighted(callbackGraph);
+    double fallbackWeight = 42.0;
+    GraphSetWeight(callbackGraph, 0, 1, fallbackWeight);
+    printf("Set fallback weight %.2f on edge (0,1)\n", fallbackWeight);
+
+    double callbackWeightAB = GraphGetWeight(callbackGraph, 0, 1);
+    double callbackWeightBA = GraphGetWeight(callbackGraph, 1, 0);
+    if (!isfinite(callbackWeightAB) || !isfinite(callbackWeightBA)) {
+        fprintf(stderr, "Error: Non-finite weight returned by GraphGetWeight\n");
+        GraphFree(callbackGraph);
+        return 1;
+    }
+    printf("Callback weight (0,1): %.2f\n", callbackWeightAB);
+    printf("Callback weight (1,0): %.2f\n", callbackWeightBA);
+    assert(callbackWeightAB == test_weight(0, 1));
+    assert(callbackWeightBA == test_weight(1, 0));
+    assert(callbackWeightAB != fallbackWeight);
+
+    printf("Callback weight test passed!\n");
+    GraphFree(callbackGraph);
 
     return 0;
 }

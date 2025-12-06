@@ -52,7 +52,10 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
 		start = clock();
 		#endif
 
+		unsigned oldTreeSize = tree->n;
 		foint* result = TreeInsert(tree, keys[currentDepth], data);
+		assert(tree->n == oldTreeSize || tree->n == oldTreeSize+1); // we either replaced or inserted an element
+		h->n += (tree->n - oldTreeSize);
 
 		#ifdef VERBOSE
 		end = clock();
@@ -99,6 +102,7 @@ foint* const HTreeInsert(HTREE *h, foint keys[], foint data)
 
 static void FreeInnerTree(foint tree)
 {
+<<<<<<< HEAD
 	TreeFree(tree.v);
 }
 
@@ -122,6 +126,17 @@ static foint* HTreeLookDelHelper(HTREE *h, unsigned char currentDepth, TREETYPE 
 		}
 		else return TreeLookup(tree, keys[currentDepth]);
 	}
+=======
+    assert(tree && 0 <= currentDepth && currentDepth < h->depth);
+    if(currentDepth == h->depth-1) // we've hit the lowest level tree; its data elements are the final elements.
+    {
+	int oldTreeSize = tree->n;
+	Boolean found=TreeLookDel(tree, keys[currentDepth], pData);
+	assert(tree->n == oldTreeSize || tree->n == oldTreeSize-1); // we either replaced or deleted an element
+	h->n += (tree->n - oldTreeSize);
+	return found;
+    }
+>>>>>>> upstream/master
     else {
 	foint* nextLevel = TreeLookup(tree, keys[currentDepth]);
 	TREETYPE *nextTree;

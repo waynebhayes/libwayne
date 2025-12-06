@@ -48,7 +48,7 @@ typedef struct _hTree
     pCmpFcn cmpKey;
     pFointCopyFcn copyKey, copyInfo;
     pFointFreeFcn freeKey, freeInfo;
-    //int n; // total number of elements across all sub-trees.
+    int n; // total number of elements across all sub-trees.
 } HTREE;
 
 /*-----------   Function Prototypes  -----------*/
