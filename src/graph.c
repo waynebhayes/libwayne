@@ -732,7 +732,7 @@ GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boo
     if(supportNodeNames)
     {
 	names = Malloc(maxNodes*sizeof(char*));
-	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
+	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)Free, NULL, NULL);
     }
 
     char line[BUFSIZ];
@@ -860,7 +860,7 @@ GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, 
     if(supportNodeNames)
     {
 	names = Malloc(maxNodes*sizeof(char*));
-	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
+	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)Free, NULL, NULL);
     }
 
     char line[BUFSIZ];
