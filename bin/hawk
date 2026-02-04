@@ -42,7 +42,7 @@ HTREES=""
 
 if [ -n "$CONVERT" ]; then
 	if [ ! -f "$CONVERT" ]; then
-		warn "alego: '$CONVERT' doesnt't exist"
+		: warn "alego: '$CONVERT' doesnt't exist"
 	elif [ -z "$AWKLIBPATH" ]; then
 		warn "alego: no point running '$CONVERT' because AWKLIBPATH isn't set"
 	elif [ ! -f "$AWKLIBPATH/htrees.so" ]; then
