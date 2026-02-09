@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    FILE *f = fopen("graph-sanity-small.el","r");
-    FILE *g = fopen("graph-sanity-small.el","r");
+    FILE *f = fopen("graph-sanity.el","r");
+    FILE *g = fopen("graph-sanity.el","r");
     assert(g),assert(f);
     GRAPH *G = GraphReadEdgeList(g, sparse, supportNames,false);
     GRAPH *G1 = GraphReadEdgeListDir(f, sparse, supportNames,false);
