@@ -101,8 +101,13 @@ Boolean SetSubsetEq(SET *sub, SET *super); /* is sub <= super? */
 Boolean SetSubsetProper(SET *sub, SET *super);	/* proper subset */
 #define SetSupersetProper(spr,sub) SetSubsetProper((sub),(spr))
 
-// Use the Principle of Inclusion-Exclusion (PIE) to count the number of distinct subsets of size k in the array of sets[]
+// Experimental/private API: Use the Principle of Inclusion-Exclusion (PIE) to count
+// the number of distinct subsets of size k in the array of sets[].
+// NOTE: The current implementation of SetPIEkCount is incomplete and may abort.
+// To use it intentionally, define SETS_EXPERIMENTAL_API before including this header.
+#ifdef SETS_EXPERIMENTAL_API
 double SetPIEkCount(int k, unsigned nSets, SET *set[nSets]);
+#endif
 
 /*
 ** You allocate an array big enough to hold the number of elements,
