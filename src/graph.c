@@ -1014,19 +1014,15 @@ GRAPH *GraphReadConnections(FILE *fp, Boolean sparse)
 
 GRAPH *GraphComplement(GRAPH *G)
 {
+    if(G->directed) assert("Sorry, complement doesn't work for directed graphs right now");
     int i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphComplement");
     GRAPH *Gbar = GraphAlloc(G->n, false, G->edgeWeightFn);
     Gbar->selfAllowed = G->selfAllowed;
     assert(Gbar->n == G->n);
-    if(G->directed==1)
-        for(i=0; i < G->n; i++) for(j=0; j < G->n; j++)
-	        if(!GraphAreConnectedDir(G, i, j) && i!=j)
-	            GraphConnectDir(Gbar, i, j);
-    else
-        for(i=0; i < G->n; i++) for(j=i+1; j < G->n; j++)
-	        if(!GraphAreConnected(G, i, j))
-	            GraphConnect(Gbar, i, j);
+    for(i=0; i < G->n; i++) for(j=i+1; j < G->n; j++)
+        if(!GraphAreConnected(G, i, j))
+            GraphConnect(Gbar, i, j);
     if(G->selfAllowed) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
     if(G->directed==0) GraphSort(Gbar);
     return Gbar;
