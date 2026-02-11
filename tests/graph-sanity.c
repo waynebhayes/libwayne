@@ -13,25 +13,41 @@ static double test_weight(unsigned int u, unsigned int v)
 
 int main(int argc, char *argv[])
 {
+    printf("graph-sanity.c sanity tests running ...\n");
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames,false);
+    FILE *f = fopen("graph-sanity.el","r");
+    FILE *g = fopen("graph-sanity.el","r");
+    assert(g),assert(f);
+    GRAPH *G = GraphReadEdgeList(g, sparse, supportNames,false);
+    GRAPH *G1 = GraphReadEdgeListDir(f, sparse, supportNames,false);
+    fclose(g),fclose(f);
+    printf("Reading graphs done...\n");
+    assert(G1->n!=0);
+    assert(G->n!=0);
+    assert(!G->directed);
     GRAPH *Gbar = GraphComplement(G);
+    assert(!Gbar->directed);
     GRAPH *GG = GraphComplement(Gbar);
-    GraphFree(Gbar);
-    printf("Checking sanity of Complement(Complement(G))...");
+    assert(!GG->directed);
+    GRAPH *G3 = GraphSelfAlloc(G1->n,0,0);
+    printf("Checking sanity of Complement(Complement(G))...\n");
     assert(GG->n == G->n);
+    assert(G->n == Gbar->n);
     for(i=0; i<G->n; i++)
     {
-	assert(GG->degree[i] == G->degree[i]);
-	if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
-	else for(j=0;j<G->n; j++)
-	    assert(GG->neighbor[i][j] == G->neighbor[i][j]);
+        //printf("%d %d %d %d %d\n",i,Gbar->degree[i],G->n,G->degree[i],Gbar->directed);
+        assert(Gbar->degree[i]==(G->n)-(G->degree[i]));
+        assert(GG->degree[i] == G->degree[i]);
+        if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
+        else for(j=0;j<G->n; j++)
+            assert(GG->neighbor[i][j] == G->neighbor[i][j]);
     }
     puts("passed!");
-    printf("Now count connected components via BFS:");
 
+    printf("Now count connected components via BFS:");
+    GraphFree(Gbar);
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
     Boolean touched[GG->n];
     for(i=0; i<GG->n; i++) touched[i] = false;
