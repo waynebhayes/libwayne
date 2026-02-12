@@ -10,7 +10,7 @@ extern "C" {
 #include "sets.h"
 #include "combin.h"
 #include <stdio.h>
-#include "bintree.h" // to support node names
+#include "tree.h" // to support node names
 
 #define SORT_NEIGHBORS 0 // Thought this might speed things up but it appears not to.
 
@@ -33,7 +33,7 @@ typedef struct _Graph {
     unsigned maxEdges, numEdges, *edgeList; /* UNSORTED list of all edges in the graph, edgeList[0,..2*numEdges] */
     // next two members are only used if called with supportNodeNames=true;
     Boolean supportNodeNames;
-    BINTREE *nameDict;	// string to int map
+    TREETYPE *nameDict;	// string to int map
     char **name;	// int to string map (inverse of the above)
     GraphEdgeWeightFn edgeWeightFn; // optional callback supplying computed edge weights
 } GRAPH;
