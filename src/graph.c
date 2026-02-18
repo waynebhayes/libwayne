@@ -19,7 +19,7 @@ extern "C" {
 #define outof (1<<30) //denotes edge going out of first index into second index ie outwards edge; set to 1 if there is NO edge in such a direction
 #define into (1<<29) //denotes edge going into first index out of second index ie inwards edge; set to 1 if there is NO edge in such a direction
 //both x&outof and x&into should be 0 if x is part of an undirected edge
-#define neighField into-1 //Use x&neighField to get the actual value of the node only, without the edge directionality stuff
+#define neighField (into-1) //Use x&neighField to get the actual value of the node only, without the edge directionality stuff
 
 /*************************************************************************
 **
