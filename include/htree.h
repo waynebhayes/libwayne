@@ -13,30 +13,7 @@ extern "C" {
 // and an array of keys with length equal to the depth you're searching.
 // Both keys and data are foints; the user is responsible for knowing what's actually stored.
 
-#ifndef HTREE_USES_AVL
-#define HTREE_USES_AVL 1 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
-#endif
-
-#if HTREE_USES_AVL
-#include "avltree.h"
-#define TREETYPE AVLTREE
-#define TreeAlloc AvlTreeAlloc
-#define TreeInsert AvlTreeInsert
-#define TreeLookup AvlTreeLookup
-#define TreeLookDel AvlTreeLookDel
-#define TreeDelete AvlTreeDelete
-#define TreeTraverse AvlTreeTraverse
-#define TreeFree AvlTreeFree
-#else
-#include "bintree.h"
-#define TREETYPE BINTREE
-#define TreeAlloc BinTreeAlloc
-#define TreeInsert BinTreeInsert
-#define TreeLookup BinTreeLookup
-#define TreeLookDel BinTreeLookDel
-#define TreeTraverse BinTreeTraverse
-#define TreeFree BinTreeFree
-#endif
+#include "tree.h" // switches between AVL and BINTREE
 
 /*-------------------  Types  ------------------*/
 
