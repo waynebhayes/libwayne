@@ -846,11 +846,11 @@ GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, 
     // SUPPORT_NODE_NAMES
     unsigned maxNodes=MIN_EDGELIST;
     char **names = NULL;
-    BINTREE *nameDict = NULL;
+    TREETYPE *nameDict = NULL;
     if(supportNodeNames)
     {
 	names = Malloc(maxNodes*sizeof(char*));
-	nameDict = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)Free, NULL, NULL);
+	nameDict = TreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)Free, NULL, NULL);
     }
 
     char line[BUFSIZ];
@@ -896,17 +896,17 @@ GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, 
 	    selfWarned = true;
 	}
 	if(supportNodeNames) {
-	    if(!BinTreeLookup(nameDict, (foint)v1.name, &f1))
+	    if(!TreeLookup(nameDict, (foint)v1.name, &f1))
 	    {
 		names[numNodes] = Strdup(v1.name);
 		f1.i = numNodes++;
-		BinTreeInsert(nameDict, (foint)v1.name, f1);
+		TreeInsert(nameDict, (foint)v1.name, f1);
 	    }
-	    if(!BinTreeLookup(nameDict, (foint)v2.name, &f2))
+	    if(!TreeLookup(nameDict, (foint)v2.name, &f2))
 	    {
 		names[numNodes] = Strdup(v2.name);
 		f2.i = numNodes++;
-		BinTreeInsert(nameDict, (foint)v2.name, f2);
+		TreeInsert(nameDict, (foint)v2.name, f2);
 	    }
 	    v1.i = f1.i; v2.i = f2.i;
 	}
@@ -929,12 +929,12 @@ GRAPH *GraphReadEdgeListDir(FILE *fp, Boolean sparse, Boolean supportNodeNames, 
     }
     if(supportNodeNames)
     {
-	//printf("BINTREE Dictionary Dump\n");
+	//printf("TREE Dictionary Dump\n");
 	unsigned i;
 	for(i=0; i<numNodes;i++)
 	{
 	    foint info;
-	    if(!BinTreeLookup(nameDict, (foint)names[i], &info))
+	    if(!TreeLookup(nameDict, (foint)names[i], &info))
 		Fatal("couldn't find int for name '%s'", names[i]);
 	    assert(i == info.i);
 	    //printf("%d is %s which in turn is %d\n", i, names[i], info.i);
