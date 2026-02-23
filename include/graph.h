@@ -21,8 +21,10 @@ typedef struct _Graph {
     unsigned n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
+    // We can probably get rid of the sparse variable, because we pretty much always assume sparse is true
     Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
+    Boolean directed; // Is the graph directed?
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
     unsigned *maxDegree;   /* the physical number of neighbors--can be increased if necessary in GraphConnect() */
     unsigned **neighbor; /* adjacency list: possibly sorted list of neighbors, sorted if SORTED below is true. */
@@ -38,8 +40,9 @@ typedef struct _Graph {
     GraphEdgeWeightFn edgeWeightFn; // optional callback supplying computed edge weights
 } GRAPH;
 
-GRAPH *GraphAlloc(unsigned n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn); // does NOT allow self-loops
-GRAPH *GraphSelfAlloc(unsigned n, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn); // DOES allow self-loops
+// Call GraphAlloc with an existing pre-allocated GRAPH*, or NULL if you need a new one allocated.
+GRAPH *GraphAlloc(GRAPH *, unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
+GRAPH *GraphSelfAlloc(unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
 
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
@@ -99,17 +102,17 @@ GRAPH *GraphInduced_NoVertexDelete(GRAPH *G, SET *V);
 GRAPH *GraphInduced(GRAPH *G, SET *V);
 
 void GraphPrintAdjMatrix(FILE *fp, GRAPH *G);
-GRAPH *GraphReadAdjMatrix(FILE *fp, Boolean sparse);
+GRAPH *GraphReadAdjMatrix(GRAPH *, FILE *fp, Boolean directed);
 void GraphPrintAdjList(FILE *fp, GRAPH *G);
-GRAPH *GraphReadAdjList(FILE *fp, Boolean sparse);
+GRAPH *GraphReadAdjList(GRAPH *, FILE *fp, Boolean directed);
 
-GRAPH *GraphFromEdgeList(unsigned n, unsigned m, unsigned *pairs, Boolean sparse, float *weights);
-GRAPH *GraphReadEdgeList(FILE *fp, Boolean sparse, Boolean supportNodeNames, Boolean weighted);
+GRAPH *GraphFromEdgeList(GRAPH *, unsigned n, unsigned m, unsigned *pairs, Boolean directed, float *weights);
+GRAPH *GraphReadEdgeList(GRAPH *, FILE *fp, Boolean directed, Boolean supportNodeNames, Boolean weighted);
 int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
-GRAPH *GraphReadConnections(FILE *fp, Boolean sparse);
+GRAPH *GraphReadConnections(GRAPH *, FILE *fp, Boolean directed);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
-GRAPH *GraphAddEdgeList(GRAPH *G, unsigned m, unsigned *pairs, float *weights);
+GRAPH *GraphAddEdgeList(GRAPH *G, Boolean directed, unsigned m, unsigned *pairs, float *weights);
 
 /*
 ** The following subroutines should be used with caution, because they take

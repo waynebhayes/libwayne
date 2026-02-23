@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    GRAPH *G = GraphReadEdgeList(stdin, sparse, supportNames,false);
+    GRAPH *G = GraphReadEdgeList(NULL, stdin, sparse, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
     GraphFree(Gbar);
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     SetFree(visited);
 
     // Test callback weight function pointer
-    GRAPH *callbackGraph = GraphAlloc(3, false, test_weight);
+    GRAPH *callbackGraph = GraphAlloc(NULL, 3, false, false, test_weight);
     if (!callbackGraph) {
         fprintf(stderr, "Error: GraphAlloc returned NULL for callbackGraph\n");
         return 1;
