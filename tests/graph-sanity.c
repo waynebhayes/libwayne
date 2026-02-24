@@ -17,21 +17,12 @@ int main(int argc, char *argv[])
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    FILE *f = fopen("graph-sanity.el","r");
-    FILE *g = fopen("graph-sanity.el","r");
-    assert(g),assert(f);
-    GRAPH *G = GraphReadEdgeList(g, sparse, supportNames,false);
-    GRAPH *G1 = GraphReadEdgeListDir(f, sparse, supportNames,false);
-    fclose(g),fclose(f);
-    printf("Reading graphs done...\n");
-    assert(G1->n!=0);
-    assert(G->n!=0);
-    assert(!G->directed);
+    GRAPH *G = GraphReadEdgeList(NULL, stdin, sparse, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     assert(!Gbar->directed);
     GRAPH *GG = GraphComplement(Gbar);
     assert(!GG->directed);
-    GRAPH *G3 = GraphSelfAlloc(G1->n,0,0);
+    GRAPH *G3 = GraphSelfAlloc(G->n, false, false, NULL);
     printf("Checking sanity of Complement(Complement(G))...\n");
     assert(GG->n == G->n);
     assert(G->n == Gbar->n);
@@ -80,7 +71,7 @@ int main(int argc, char *argv[])
     SetFree(visited);
 
     // Test callback weight function pointer
-    GRAPH *callbackGraph = GraphAlloc(3, false, test_weight);
+    GRAPH *callbackGraph = GraphAlloc(NULL, 3, false, false, test_weight);
     if (!callbackGraph) {
         fprintf(stderr, "Error: GraphAlloc returned NULL for callbackGraph\n");
         return 1;
