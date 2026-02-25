@@ -49,7 +49,10 @@ GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given know
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphConnectDir(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphConnectDirNew(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
+GRAPH *GraphDisconnectDir(GRAPH *G, unsigned i, unsigned j);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w); // returns old weight
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
@@ -112,6 +115,7 @@ int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(GRAPH *, FILE *fp, Boolean directed);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
+Boolean GraphAreConnectedDir(GRAPH *G, int i, int j);
 GRAPH *GraphAddEdgeList(GRAPH *G, Boolean directed, unsigned m, unsigned *pairs, float *weights);
 
 /*
