@@ -35,8 +35,7 @@ TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n)
 }
 TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
-    if(TinyGraphAreConnected(G, i, j))
-	return G;
+    if(TinyGraphAreConnected(G, i, j)) return G;
     if(i==j) assert(G->selfLoops);
     TSetAdd(G->A[i], j);
     ++G->degree[i];
