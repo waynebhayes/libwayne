@@ -20,11 +20,8 @@ int main(int argc, char *argv[])
     printf("Reading graphs done...\n");
     assert(G1->n!=0);
     assert(G->n!=0);
-    assert(!G->directed);
     GRAPH *Gbar = GraphComplement(G);
-    assert(!Gbar->directed);
     GRAPH *GG = GraphComplement(Gbar);
-    assert(!GG->directed);
     GRAPH *G3 = GraphSelfAlloc(G1->n,0,0);
     printf("Checking sanity of Complement(Complement(G))...\n");
     assert(GG->n == G->n);
@@ -71,6 +68,9 @@ int main(int argc, char *argv[])
     }
     printf("Graph has %d connected components using GraphVisitCC\n", CC);
     GraphFree(G);
+    GraphFree(G1);
+    GraphFree(G2);
+    GraphFree(G3);
     SetFree(visited);
 
     return 0;

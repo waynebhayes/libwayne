@@ -153,7 +153,8 @@ TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *dest, TINY_GRAPH *G1, TINY_GRAPH *G2)
     if(dest)
 	dest->n = G1->n;
     else
-	dest = TinyGraphAlloc(G1->n,G1->selfLoops||G2->selfLoops,G1->directed);
+	dest = TinyGraphAlloc(G1->n,G1->selfLoops||G2->selfLoops,G1->directed||G2->directed);
+        
 
     for(i=0; i < G1->n; i++)
     {
@@ -295,13 +296,14 @@ TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET V)
 	if(Gv == G) /* be careful, destination is same as source */
 	    Gv = &GGv;
 	Gv->n = nV;
+    Gv->selfLoops = G->selfLoops;
+    Gv->directed = G->directed;
 	TinyGraphEdgesAllDelete(Gv);
     }
     else
-	Gv = TinyGraphAlloc(nV,0,0);
-    Gv->selfLoops = G->selfLoops;
+	Gv = TinyGraphAlloc(nV,Gv->selfLoops,Gv->directed);
 
-    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+    for(i=0; i < nV; i++) for(j=G->directed ? 0 : i+1; j < nV; j++){
         if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
 	    TinyGraphConnect(Gv, i, j);
@@ -330,10 +332,10 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gv, TINY_GRAPH *G, TSET 
 	Gv = TinyGraphAlloc(G->n,0,0);
     Gv->selfLoops = G->selfLoops;
 
-    for(i=0; i < nV; i++) for(j=G->selfLoops ? 0 : i+1; j < nV; j++){
+    for(i=0; i < nV; i++) for(j=G->directed ? 0 : i+1; j < nV; j++){
         if(i==j) continue;
 	if(TinyGraphAreConnected(G, array[i], array[j]))
-	    TinyGraphConnect(Gv, i, j);
+	    TinyGraphConnect(Gv, array[i], array[j]);
     }
     if(G->selfLoops) for(i=0; i < nV; i++)
 	if(TinyGraphAreConnected(G, array[i], array[i]))
