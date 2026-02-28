@@ -38,7 +38,12 @@ static void HTreeInsertHelper(HTREE *h, int currentDepth, TREETYPE *tree, foint 
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
-		TreeInsert(tree, keys[currentDepth], data);
+    {
+	unsigned oldTreeSize = tree->n;
+	TreeInsert(tree, keys[currentDepth], data);
+	assert(tree->n == oldTreeSize || tree->n == oldTreeSize+1); // we either replaced or inserted an element
+	h->n += (tree->n - oldTreeSize);
+    }
     else {
 	// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,
 	// so to find the next tree we use the key at this level to *look up* the binary tree at the next level down
@@ -76,7 +81,13 @@ static Boolean HTreeLookDelHelper(HTREE *h, int currentDepth, TREETYPE *tree, fo
 {
     assert(tree && 0 <= currentDepth && currentDepth < h->depth);
     if(currentDepth == h->depth-1) // we've hit the lowest level tree; its data elements are the final elements.
-	return TreeLookDel(tree, keys[currentDepth], pData);
+    {
+	int oldTreeSize = tree->n;
+	Boolean found=TreeLookDel(tree, keys[currentDepth], pData);
+	assert(tree->n == oldTreeSize || tree->n == oldTreeSize-1); // we either replaced or deleted an element
+	h->n += (tree->n - oldTreeSize);
+	return found;
+    }
     else {
 	foint nextLevel;
 	TREETYPE *nextTree;

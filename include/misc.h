@@ -23,7 +23,9 @@ extern "C" {
 #endif
 
 #ifndef NDEBUG
+#ifndef PARANOID_ASSERTS
 #define PARANOID_ASSERTS 1  // turn on copious assert checking --- slows down execution significantly
+#endif
 #endif
 
 #define MAX(a,b) ((a)>(b)?(a):(b))

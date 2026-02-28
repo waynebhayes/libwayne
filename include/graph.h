@@ -16,6 +16,8 @@ extern "C" {
 
 typedef double (*GraphEdgeWeightFn)(unsigned int u, unsigned int v);
 
+typedef double (*GraphEdgeWeightFn)(unsigned int u, unsigned int v);
+
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
     unsigned n;

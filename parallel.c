@@ -51,7 +51,7 @@ int GetLoadAv(double minutes) {
     return 0.0;
 #else
     double load[3];
-    int i = getloadavg(load, 3);
+	int i = getloadavg(load, 3);
     // Take a weigthed average based on minutes since last check
     if(minutes>15) load_av = load[2];
     else if(minutes>5) load_av = (minutes*load[2] + (15-minutes)*load[1])/15;
@@ -95,7 +95,8 @@ int main(int argc, char *argv[])
 {
     int numRunning=0, n_arg = 1, status;
     char line[1024000];
-    char *SHELL = getenv("SHELL"), *SH_argv0;
+    const char *SHELL = getenv("SHELL");
+	const char *SH_argv0;
 
     switch(argc)
     {
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
 	if(strcmp(argv[1], "-s"))
 	    Fatal(USAGE);
 	n_arg = 2;
-	SHELL = (char*)"/bin/sh";
+	SHELL = "/bin/sh";
 	break;
 
     case 4:	/* parallel -s SHELL n */

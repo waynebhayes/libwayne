@@ -131,7 +131,7 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
 #if PARANOID_ASSERTS
 	assert(!_smallestGood || set->smallestElement == set->bitvec->smallestElement);
 #endif
-	return BitvecInSafe(set->bitvec, element);
+	return BitvecIn(set->bitvec, element);
     }
     assert(set->list && set->cardinality <= set->crossover);
     int i;

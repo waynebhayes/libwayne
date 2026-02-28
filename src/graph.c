@@ -118,16 +118,7 @@ GRAPH *GraphCopy(GRAPH *G)
 
     Gc->useComplement = G->useComplement;
     Gc->directed = G->directed;
-    Gc->A = NULL;
-    if(G->weight) Apology("Sorry GraphCopy not yet implemented for weighted graphs");
-    for(i=0;i<G->n;i++) { int j;
-	Gc->neighbor[i] = Calloc(G->degree[i] , sizeof(Gc->neighbor[i][0]));
-	for(j=0; j<G->degree[i];j++) Gc->neighbor[i][j]=G->neighbor[i][j];
-    }
-    Gc->numEdges = G->numEdges;
-    Gc->maxEdges = G->maxEdges;
-    Gc->edgeList = Calloc(2,G->maxEdges*sizeof(int));
-    for(i=0;i < G->numEdges; i++)
+    if(G->sparse >= true)
     {
 	Gc->edgeList[2*i] = G->edgeList[2*i];
 	Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
@@ -225,22 +216,24 @@ double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w)
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
 {
     if(!GraphAreConnected(G,i,j)) return 0.0;
+
     if (G->edgeWeightFn) {
         return G->edgeWeightFn(i, j);
     }
 
     if (!G->weight) return 1.0;
+
     int k = 0;
     while(G->neighbor[i][k] != j) k++;
     assert(k < G->degree[i] && G->neighbor[i][k] == j);
     double w = G->weight[i][k];
     assert(w>0);
 
-    if(j!=i&&!G->directed) {
-	k=0;
-	while(G->neighbor[j][k] != i) k++;
-	assert(k < G->degree[j] && G->neighbor[j][k] == i);
-	assert(G->weight[j][k] == w);
+    if (j!=i) {
+        k=0;
+        while(G->neighbor[j][k] != i) k++;
+        assert(k < G->degree[j] && G->neighbor[j][k] == i);
+        assert(G->weight[j][k] == w);
     }
     return w;
 }

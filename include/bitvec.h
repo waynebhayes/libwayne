@@ -74,8 +74,8 @@ Boolean BitvecInSafe(const BITVEC *const vec, unsigned element); /* boolean: 0 o
 #define BitvecSmallestElement(S) (S->smallestElement)
 #if NDEBUG && !PARANOID_ASSERTS
 // Note we do not check here if e is < vec->maxElem, which is dangerous
-//#define BitvecIn(vec,e) ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e) ? true:false)
-#define BitvecIn(vec,e) (!!((e)>=0 && (e)<(vec)->maxElem && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e))))
+  #define BitvecIn(vec,e) (!!((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e)))
+//#define BitvecIn(vec,e) (!!((e)>=0 && (e)<(vec)->maxElem && ((vec)->segment[(e)/bitvecBits] & BITVEC_BIT(e))))
 #else
 #define BitvecIn BitvecInSafe
 #endif

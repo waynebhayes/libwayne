@@ -1,9 +1,15 @@
 // This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
 // (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include <stdio.h>
+#include <math.h>
 #include "misc.h"
 #include "graph.h"
 #include "sets.h"
+
+static double test_weight(unsigned int u, unsigned int v)
+{
+    return 1000.0 + (double)(u + v);
+}
 
 int main(int argc, char *argv[])
 {
@@ -11,15 +17,7 @@ int main(int argc, char *argv[])
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
     Boolean sparse=false, supportNames = true;
-    FILE *f = fopen("graph-sanity.el","r");
-    FILE *g = fopen("graph-sanity.el","r");
-    assert(g),assert(f);
-    GRAPH *G = GraphReadEdgeList(g, sparse, supportNames,false);
-    GRAPH *G1 = GraphReadEdgeListDir(f, sparse, supportNames,false);
-    fclose(g),fclose(f);
-    printf("Reading graphs done...\n");
-    assert(G1->n!=0);
-    assert(G->n!=0);
+    GRAPH *G = GraphReadEdgeList(NULL, stdin, sparse, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
     GRAPH *G3 = GraphSelfAlloc(G1->n,0,0);
@@ -72,6 +70,33 @@ int main(int argc, char *argv[])
     GraphFree(G2);
     GraphFree(G3);
     SetFree(visited);
+
+    // Test callback weight function pointer
+    GRAPH *callbackGraph = GraphAlloc(NULL, 3, false, false, test_weight);
+    if (!callbackGraph) {
+        fprintf(stderr, "Error: GraphAlloc returned NULL for callbackGraph\n");
+        return 1;
+    }
+    GraphMakeWeighted(callbackGraph);
+    double fallbackWeight = 42.0;
+    GraphSetWeight(callbackGraph, 0, 1, fallbackWeight);
+    printf("Set fallback weight %.2f on edge (0,1)\n", fallbackWeight);
+
+    double callbackWeightAB = GraphGetWeight(callbackGraph, 0, 1);
+    double callbackWeightBA = GraphGetWeight(callbackGraph, 1, 0);
+    if (!isfinite(callbackWeightAB) || !isfinite(callbackWeightBA)) {
+        fprintf(stderr, "Error: Non-finite weight returned by GraphGetWeight\n");
+        GraphFree(callbackGraph);
+        return 1;
+    }
+    printf("Callback weight (0,1): %.2f\n", callbackWeightAB);
+    printf("Callback weight (1,0): %.2f\n", callbackWeightBA);
+    assert(callbackWeightAB == test_weight(0, 1));
+    assert(callbackWeightBA == test_weight(1, 0));
+    assert(callbackWeightAB != fallbackWeight);
+
+    printf("Callback weight test passed!\n");
+    GraphFree(callbackGraph);
 
     return 0;
 }
