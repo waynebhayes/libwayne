@@ -43,7 +43,7 @@ typedef struct _Graph {
 // Call GraphAlloc with an existing pre-allocated GRAPH*, or NULL if you need a new one allocated.
 GRAPH *GraphAlloc(GRAPH *, unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
 GRAPH *GraphSelfAlloc(unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
-
+GRAPH *GraphSort(GRAPH *G);
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);

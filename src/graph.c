@@ -83,7 +83,7 @@ static void GraphFreeInternals(GRAPH *G)
     int i;
     for(i=0; i<G->n; i++)
     {
-	Free(G->neighbor[i]);
+	if(G->neighbor[i])Free(G->neighbor[i]);
 	if(G->weight && G->weight[i]) Free(G->weight[i]);
     }
     if(G->degree) Free(G->degree);
@@ -118,11 +118,8 @@ GRAPH *GraphCopy(GRAPH *G)
 
     Gc->useComplement = G->useComplement;
     Gc->directed = G->directed;
-    if(G->sparse >= true)
-    {
-	Gc->edgeList[2*i] = G->edgeList[2*i];
-	Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
-    }
+    Gc->edgeList[2*i] = G->edgeList[2*i];
+    Gc->edgeList[2*i+1] = G->edgeList[2*i+1];
     Gc->n = G->n;
     return Gc;
 }
@@ -138,7 +135,6 @@ static int IntCmp(const void *a, const void *b)
 static GRAPH *GraphSort(GRAPH *G)
 {
     if(G->weight) Apology("Sorry GraphSort not yet implemented for weighted graphs");
-    if(G->directed) Apology("Sorry GraphSort not yet implemented for directed graphs");
     int v;
     for(v=0; v<G->n; v++) if(!SetIn(G->sorted, v)) 
     {
@@ -156,6 +152,7 @@ GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j)
     assert(!SORT_NEIGHBORS);
     assert(0 <= i && i < G->n && 0 <= j && j < G->n);
     if(i==j) assert(G->selfAllowed);
+    if(GraphAreConnected(G, i, j)) return G;
     // YANG: change this to only realloc if necessary, and just add 1, don't double the size since this should be rare.
     G->neighbor[i] = Realloc(G->neighbor[i], (G->degree[i]+1)*sizeof(G->neighbor[i][0]));
     if(j!=i) G->neighbor[j] = Realloc(G->neighbor[j], (G->degree[j]+1)*sizeof(G->neighbor[j][0]));
@@ -268,7 +265,12 @@ GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j) //only deletes edge fro
     Boolean found=false;
     for(k=0; k < G->numEdges; k++)
     {
-        if(G->edgeList[2*k] == j && G->edgeList[2*k+1]==i && !G->directed) swap(G->edgeList[2*k], G->edgeList[2*k+1]);
+        if(G->edgeList[2*k] == j && G->edgeList[2*k+1]==i && !G->directed)
+        {
+            unsigned temp = G->edgeList[2*k];
+            G->edgeList[2*k] = G->edgeList[2*k+1];
+            G->edgeList[2*k+1] = temp;
+        }
 	if(G->edgeList[2*k] == i && G->edgeList[2*k+1]==j)
 	{
 	    G->numEdges--;
@@ -664,7 +666,7 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 	}
     }
 
-    G = GraphAlloc(G, numNodes, directed, false, NULL);
+    G = GraphAlloc(G, numNodes, directed, selfWarned, NULL);
     GraphFromEdgeList(G, numNodes, numEdges, pairs, directed, fweight);
     G->supportNodeNames = supportNodeNames;
     if(supportNodeNames) {
@@ -735,7 +737,7 @@ GRAPH *GraphComplement(GRAPH *G)
     Gbar->selfAllowed = G->selfAllowed;
     assert(Gbar->n == G->n);
     for(i=0; i < G->n; i++) for(j=0; j < G->n; j++)
-        if(!GraphAreConnected(G, i, j))
+        if(!GraphAreConnected(G, i, j)&&i!=j)
             GraphConnect(Gbar, i, j);
     if(G->selfAllowed) for(i=0; i < G->n; i++) if(!GraphAreConnected(G,i,i)) GraphConnect(Gbar,i,i);
     if(G->directed==0) GraphSort(Gbar);
@@ -752,8 +754,9 @@ GRAPH *GraphUnion(GRAPH *G1, GRAPH *G2)
 
     assert(G1->selfAllowed == G2->selfAllowed);
     assert(G1->directed == G2->directed);
-
-    GRAPH *dest = GraphAlloc(NULL, n, G1->directed, G1->supportNodeNames, G1->edgeWeightFn);
+    GRAPH *dest=NULL;
+    if(!G1->selfAllowed) dest = GraphAlloc(NULL, n, G1->directed, G1->supportNodeNames, G1->edgeWeightFn);
+    else dest = GraphSelfAlloc(n, G1->directed, G1->supportNodeNames, G1->edgeWeightFn);
     if(G1->supportNodeNames || G2->supportNodeNames) GraphNameWarn("GraphUnion");
 
     for(i=0; i < n; i++) for(j=0; j < n; j++)

@@ -10,32 +10,52 @@ static double test_weight(unsigned int u, unsigned int v)
 {
     return 1000.0 + (double)(u + v);
 }
-
+static int IntCmp(const void *a, const void *b)
+{
+    const int *i = (const int*)a, *j = (const int*)b;
+    return (*i)-(*j);
+}
 int main(int argc, char *argv[])
 {
     printf("graph-sanity.c sanity tests running ...\n");
     //ENABLE_MEM_DEBUG();
     int BFSsize, i, j;
-    Boolean sparse=false, supportNames = true;
-    GRAPH *G = GraphReadEdgeList(NULL, stdin, sparse, supportNames,false);
+    Boolean supportNames = false,directed=false;
+    GRAPH *G = GraphReadEdgeList(NULL, stdin, directed, supportNames,false);
     GRAPH *Gbar = GraphComplement(G);
     GRAPH *GG = GraphComplement(Gbar);
-    GRAPH *G3 = GraphSelfAlloc(G1->n,0,0);
     printf("Checking sanity of Complement(Complement(G))...\n");
     assert(GG->n == G->n);
     assert(G->n == Gbar->n);
+    assert(G->selfAllowed == Gbar->selfAllowed);
+    assert(G->directed == Gbar->directed);
+    assert(GG->selfAllowed == G->selfAllowed);
+    assert(GG->directed == G->directed);
     for(i=0; i<G->n; i++)
     {
-        //printf("%d %d %d %d %d\n",i,Gbar->degree[i],G->n,G->degree[i],Gbar->directed);
+        //printf("%d %d %d %d %d\n",i,Gbar->degree[i],G->n,G->degree[i],Gbar->directed,G->directed);
         assert(Gbar->degree[i]==(G->n)-(G->degree[i]));
         assert(GG->degree[i] == G->degree[i]);
-        if(!G->sparse) assert(SetEq(GG->A[i], G->A[i]));
-        else for(j=0;j<G->n; j++)
+	    qsort(G->neighbor[i], G->degree[i], sizeof(G->neighbor[i][0]), IntCmp);
+        qsort(GG->neighbor[i], GG->degree[i], sizeof(GG->neighbor[i][0]), IntCmp);
+        for(j=0; j<G->degree[i]; j++)
             assert(GG->neighbor[i][j] == G->neighbor[i][j]);
     }
     puts("passed!");
 
-    printf("Now count connected components via BFS:");
+	for(int k=2*G->n; k>=0; k--)
+	{
+	    i = lrand48() % G->n;
+	    j = lrand48() % G->n;
+	    if(!G->selfAllowed) while(j==i) j = lrand48() % G->n;
+	    GraphConnect(G,i,j);
+	    GraphDisconnect(Gbar,i,j);
+	}
+    puts("Connected random edges done, checking sanity of GraphUnion");
+    GRAPH *GU = GraphUnion(Gbar, G);
+    for(int i=0; i<GU->n; i++)
+        assert(GU->degree[i] == G->n);
+    puts("GraphUnion passed! Now count connected components via BFS:");
     GraphFree(Gbar);
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
     Boolean touched[GG->n];
@@ -66,9 +86,6 @@ int main(int argc, char *argv[])
     }
     printf("Graph has %d connected components using GraphVisitCC\n", CC);
     GraphFree(G);
-    GraphFree(G1);
-    GraphFree(G2);
-    GraphFree(G3);
     SetFree(visited);
 
     // Test callback weight function pointer
