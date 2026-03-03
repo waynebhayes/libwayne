@@ -192,12 +192,13 @@ SET *SetEmpty(SET *set)
 /*
 ** Add all possible members to a set
 */
+/*
 SET *SetFill(SET *set)
 {
     for(int l=0; l<set->maxElem; l++) SetAdd(set, l); // FIXME: dumb
     return set;
 }
-
+*/
 
 /* free all space occupied by a set
 */
@@ -562,7 +563,7 @@ unsigned *SetSmartArray(unsigned *array, const SET *const s, const unsigned maxS
     }
 }
 
-
+/*
 double SetPIEkCount(int k, unsigned nSets, SET *set[nSets]) {
     Apology("dumbass, you haven't taken k into account, nor used the (n choose k) formula yet!");
     if(nSets > 16) Apology("Sorry, my stupid implementation of PIE is limited to 16 nets, not %d", nSets);
@@ -602,7 +603,7 @@ unsigned SSetToArray(unsigned int *array, SSET set)
     assert(pos == SSetCountBits(set));
     return pos;
 }
-
+*/
 
 /* Add the elements listed in the array to the set.
 */

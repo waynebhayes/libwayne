@@ -16,13 +16,13 @@ extern "C" {
 
 typedef double (*GraphEdgeWeightFn)(unsigned int u, unsigned int v);
 
+typedef double (*GraphEdgeWeightFn)(unsigned int u, unsigned int v);
+
 typedef struct _Graph {
     /* vertices numbered 0..n-1 inclusive */
     unsigned n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
-    // We can probably get rid of the sparse variable, because we pretty much always assume sparse is true
-    Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
     Boolean directed; // Is the graph directed?
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
@@ -43,16 +43,13 @@ typedef struct _Graph {
 // Call GraphAlloc with an existing pre-allocated GRAPH*, or NULL if you need a new one allocated.
 GRAPH *GraphAlloc(GRAPH *, unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
 GRAPH *GraphSelfAlloc(unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
-
+GRAPH *GraphSort(GRAPH *G);
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);
 GRAPH *GraphEdgesAllDelete(GRAPH *G);
 GRAPH *GraphConnect(GRAPH *G, unsigned i, unsigned j);
-GRAPH *GraphConnectDir(GRAPH *G, unsigned i, unsigned j);
-GRAPH *GraphConnectDirNew(GRAPH *G, unsigned i, unsigned j);
 GRAPH *GraphDisconnect(GRAPH *G, unsigned i, unsigned j);
-GRAPH *GraphDisconnectDir(GRAPH *G, unsigned i, unsigned j);
 double GraphSetWeight(GRAPH *G, unsigned i, unsigned j, double w); // returns old weight
 double GraphGetWeight(GRAPH *G, unsigned i, unsigned j);
 unsigned GraphNumCommonNeighbors(GRAPH *G, unsigned i, unsigned j); // can include pair(i,j) only if self-loops exist
@@ -115,7 +112,6 @@ int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(GRAPH *, FILE *fp, Boolean directed);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
-Boolean GraphAreConnectedDir(GRAPH *G, int i, int j);
 GRAPH *GraphAddEdgeList(GRAPH *G, Boolean directed, unsigned m, unsigned *pairs, float *weights);
 
 /*
