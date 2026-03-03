@@ -21,8 +21,6 @@ typedef struct _Graph {
     unsigned n;
     SET **A;   /* Adjacency Matrix, as a dynamically allocated array[G->n] of SETs */
     Boolean useComplement; // when true, calls to GraphAreConnected are inverted
-    // We can probably get rid of the sparse variable, because we pretty much always assume sparse is true
-    Boolean sparse; // true=only neighbors and degree, no matrix; false=only matrix + degree, no neighbors, both=both
     Boolean selfAllowed; // self-loops allowed iff this is true
     Boolean directed; // Is the graph directed?
     unsigned *degree;   /* degree of each v[i] == cardinality of A[i] == length of neighbor array */
@@ -43,7 +41,7 @@ typedef struct _Graph {
 // Call GraphAlloc with an existing pre-allocated GRAPH*, or NULL if you need a new one allocated.
 GRAPH *GraphAlloc(GRAPH *, unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
 GRAPH *GraphSelfAlloc(unsigned n, Boolean directed, Boolean supportNodeNames, GraphEdgeWeightFn edgeWeightFn);
-
+GRAPH *GraphSort(GRAPH *G);
 GRAPH *GraphMakeWeighted(GRAPH *G);
 GRAPH *GraphAllocateNeighborLists(GRAPH *G, unsigned *maxDegrees); // given known maxDegrees, pre-allocated neighbor lists (YING)
 void GraphFree(GRAPH *G);
