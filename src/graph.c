@@ -731,6 +731,7 @@ GRAPH *GraphReadConnections(GRAPH *G, FILE *fp, Boolean directed)
 
 GRAPH *GraphComplement(GRAPH *G)
 {
+    if(G->directed) assert("Sorry, complement doesn't work for directed graphs right now");
     int i, j;
     if(G->supportNodeNames) GraphNameWarn("GraphComplement");
     GRAPH *Gbar = GraphAlloc(NULL, G->n, G->directed, false, G->edgeWeightFn);
