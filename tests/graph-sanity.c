@@ -22,9 +22,11 @@ int main(int argc, char *argv[])
     int BFSsize, i, j;
     Boolean supportNames = false,directed=false;
     GRAPH *G = GraphReadEdgeList(NULL, stdin, directed, supportNames,false);
+    fprintf(stderr, "creating Gbar..."); 
     GRAPH *Gbar = GraphComplement(G);
+    fprintf(stderr, "done! creating GG..."); 
     GRAPH *GG = GraphComplement(Gbar);
-    printf("Checking sanity of Complement(Complement(G))...\n");
+    fprintf(stderr, "DONE!\nChecking sanity of Complement(Complement(G))...\n");
     assert(GG->n == G->n);
     assert(G->n == Gbar->n);
     assert(G->selfAllowed == Gbar->selfAllowed);
@@ -41,21 +43,22 @@ int main(int argc, char *argv[])
         for(j=0; j<G->degree[i]; j++)
             assert(GG->neighbor[i][j] == G->neighbor[i][j]);
     }
-    puts("passed!");
+    fprintf(stderr, "passed!\n");
+    fprintf(stderr, "Testing random connect/disconnect...");
 
-	for(int k=2*G->n; k>=0; k--)
-	{
-	    i = lrand48() % G->n;
-	    j = lrand48() % G->n;
-	    if(!G->selfAllowed) while(j==i) j = lrand48() % G->n;
-	    GraphConnect(G,i,j);
-	    GraphDisconnect(Gbar,i,j);
-	}
-    puts("Connected random edges done, checking sanity of GraphUnion");
+    for(int k=2*G->n; k>=0; k--)
+    {
+	i = lrand48() % G->n;
+	j = lrand48() % G->n;
+	if(!G->selfAllowed) while(j==i) j = lrand48() % G->n;
+	GraphConnect(G,i,j);
+	GraphDisconnect(Gbar,i,j);
+    }
+    fprintf(stderr, "Connected random edges done, checking sanity of GraphUnion\n");
     GRAPH *GU = GraphUnion(Gbar, G);
     for(int i=0; i<GU->n; i++)
         assert(GU->degree[i] == G->n);
-    puts("GraphUnion passed! Now count connected components via BFS:");
+    fprintf(stderr, "GraphUnion passed! Now count connected components via BFS:\n");
     GraphFree(Gbar);
     int root, distance, nodeArray[GG->n], distArray[GG->n], CC=0;
     Boolean touched[GG->n];
@@ -75,7 +78,7 @@ int main(int argc, char *argv[])
 	    ++CC;
 	}
     }
-    printf("\nGraph has %d connected components using BFS\n", CC);
+    fprintf(stderr, "\nGraph has %d connected components using BFS\n", CC);
     GraphFree(GG);
 
     SET *visited = SetAlloc(G->n);
@@ -84,7 +87,7 @@ int main(int argc, char *argv[])
 	if(!SetIn(visited,i)) ++CC;
 	GraphVisitCC(G, i, visited, nodeArray, &BFSsize);
     }
-    printf("Graph has %d connected components using GraphVisitCC\n", CC);
+    fprintf(stderr, "Graph has %d connected components using GraphVisitCC\n", CC);
     GraphFree(G);
     SetFree(visited);
 
@@ -97,7 +100,7 @@ int main(int argc, char *argv[])
     GraphMakeWeighted(callbackGraph);
     double fallbackWeight = 42.0;
     GraphSetWeight(callbackGraph, 0, 1, fallbackWeight);
-    printf("Set fallback weight %.2f on edge (0,1)\n", fallbackWeight);
+    fprintf(stderr, "Set fallback weight %.2f on edge (0,1)\n", fallbackWeight);
 
     double callbackWeightAB = GraphGetWeight(callbackGraph, 0, 1);
     double callbackWeightBA = GraphGetWeight(callbackGraph, 1, 0);

@@ -39,7 +39,7 @@ void HTreeInsert(HTREE *, foint keys[], foint info);
 // Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
 Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
 #define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
-#define HTreeDelete(h,k)   HTreeLookDel((h),(k),(pInfo*)1)
+#define HTreeDelete(h,k)   HTreeLookDel((h),(k),(foint*)1)
 
 // number of elements in trees down the hierarchy along key path; returns number of sizes[] we managed to fill,
 // which should be equal to depth.

@@ -56,6 +56,12 @@ opt:
 debug:
 	$(MAKE) 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' libwayne
 
+shared-opt:
+	$(MAKE) 'OPT=-O2 -fPIC' 'LIBOUT=libwayne.a' libwayne
+
+shared-debug:
+	$(MAKE) 'OPT=-fPIC' 'GDB=-ggdb' 'DEBUG=-DDEBUG=1' 'LIBOUT=libwayne-g.a' libwayne
+
 ndebug:
 	$(MAKE) 'OPT=-O2' 'DEBUG=-DNDEBUG=1' 'LIBOUT=libwayne-nd.a' libwayne
 
