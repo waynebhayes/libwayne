@@ -87,8 +87,8 @@ static void GraphFreeInternals(GRAPH *G)
 	if(G->weight && G->weight[i]) Free(G->weight[i]);
     }
     if(G->degree) Free(G->degree);
-    Free(G->edgeList);
-    Free(G->neighbor);
+    if(G->edgeList) Free(G->edgeList);
+    if(G->neighbor) Free(G->neighbor);
     if(G->weight) Free(G->weight);
     if(G->name) {
 	for(i=0;i<G->n;i++) Free(G->name[i]);
