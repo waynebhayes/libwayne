@@ -199,6 +199,16 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
     return (numSelf*(1-G->directed)+total)/(2-G->directed);
 }
 
+TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
+{
+    unsigned i, j;
+    TinyGraphEdgesAllDelete(H);
+    for(i=0; i < G->n; i++) for(j=0; j < G->n; j++)
+	if(TinyGraphAreConnected(G, i, j))
+	    TinyGraphConnect(H, i, j);
+    return H;
+}
+
 unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
     int nodeArray[MAX_TSET], distArray[MAX_TSET];
     return TinyGraphBFS(g, seed, MAX_TSET, nodeArray, distArray);
