@@ -40,7 +40,7 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
 	{
 		#ifdef VERBOSE
-		printf("Inserting [%s] = %s for the tree at ", keys[currentDepth].s, data.s);
+		printf("Inserting [%s] = %i for the tree at ", keys[currentDepth].s, data);
 		for (unsigned char i = 0; i < currentDepth; ++i)
 		{
 			printf("[%s]", keys[i].s);
