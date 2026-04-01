@@ -108,7 +108,7 @@ static void FreeInnerTree(foint tree)
 	TreeFree(tree.v);
 }
 
-static foint* HTreeLookDelHelper(HTREE *h, unsigned char currentDepth, TREETYPE *tree, foint keys[], unsigned char targetDepth, Boolean delete)
+static foint* const HTreeLookDelHelper(HTREE *h, unsigned char currentDepth, TREETYPE *tree, foint keys[], unsigned char targetDepth, Boolean delete)
 {
     assert(tree && 0 <= currentDepth && currentDepth < targetDepth);
     if(currentDepth == targetDepth-1)
@@ -157,7 +157,7 @@ Boolean HTreeLookDel(HTREE *h, foint keys[], foint *pInfo)
 		return false;
 }
 
-foint* UnsafeHTreeLookDel(HTREE *h, foint keys[], unsigned char targetDepth, Boolean delete)
+foint* const UnsafeHTreeLookDel(HTREE *h, foint keys[], unsigned char targetDepth, Boolean delete)
 {
 	assert(targetDepth <= h->depth);
 	targetDepth = targetDepth == 0 ? h->depth : targetDepth;

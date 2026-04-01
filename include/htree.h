@@ -41,7 +41,8 @@ foint* const UnsafeHTreeInsert(HTREE *, foint keys[], foint info);
 // Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
 Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
 // returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
-foint* UnsafeHTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
+// targetDepth allows deletion or query of elements that aren't at the lowest level (0 defaults to actual depth)
+foint* const UnsafeHTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
 #define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
 #define HTreeDelete(h,k)   HTreeLookDel((h),(k),(foint*)1)
 
