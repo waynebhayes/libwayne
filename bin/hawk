@@ -36,6 +36,22 @@ done
 
 PROG="$1"
 shift
+HTREES=""
+
+if [ -n "$CONVERT" ]; then
+	if [ ! -f "$CONVERT" ]; then
+		: warn "alego: '$CONVERT' doesnt't exist"
+	elif [ -z "$AWKLIBPATH" ]; then
+		warn "alego: no point running '$CONVERT' because AWKLIBPATH isn't set"
+	elif [ ! -f "$AWKLIBPATH/htrees.so" ]; then
+		warn "alego: AWKLIBPATH is set, but can't find $AWKLIBPATH/htrees.so"
+	else
+		if CONVERTED=$(python3 "$CONVERT" "$PROG" ); then
+			PROG="$CONVERTED"
+			HTREES=" -lhtrees"
+		fi
+	fi
+fi
 
 echo "`cat "$DIR/misc.awk"`$PROG" > $TMPDIR/PROG
 

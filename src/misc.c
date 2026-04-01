@@ -112,7 +112,7 @@ void *Realloc(void *ptr, size_t newSize)
     return p;
 }
 
-void Free(void *ptr) { free(ptr);}
+void Free(void *ptr) { if(ptr) free(ptr);}
 
 void *Memdup(void *v, size_t n)
 {
@@ -351,16 +351,16 @@ unsigned int GetFancySeed(Boolean trulyRandom)
     if(4!=fscanf(fp," %d.%d.%d.%d ", ip, ip+1, ip+2, ip+3)) Fatal("Attempt to get IPv4 address failed:\n%s\n",cmd);
     pclose(fp);
     for(i=0;i<4;i++) host_ip = 256*host_ip + ip[i];
-    unsigned int dev_random=0;
+    unsigned int dev_random=lrand48(); // cheap subtsitute in case no random
     if(trulyRandom) {
 	fp = fopen("/dev/random","r");
 	if(fp){
 	    assert(1 == fread(&dev_random, sizeof(dev_random),1, fp));
 	    fclose(fp);
 	}
-	else dev_random = lrand48(); // cheap substitute
     }
-    seed = host_ip + time(0) + getppid() + getpid() + dev_random;
+    struct timeval tv; gettimeofday(&tv, NULL); // tv.tv_usec contains microseconds since last second
+    seed = host_ip + time(0) + tv.tv_usec + getppid() + getpid() + dev_random;
 #if 0
     fprintf(stderr,"%s\n",cmd);
     fprintf(stderr,"%d.%d.%d.%d\n",ip[0],ip[1],ip[2],ip[3]);

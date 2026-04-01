@@ -20,11 +20,12 @@ typedef struct _tinyGraph {
     /* vertices numbered 0..n-1 inclusive; n must be <= MAX_TSET */
     char n, degree[MAX_TSET];   /* degree of each v[i] == cardinality of A[i] */
     Boolean selfLoops;
+    Boolean directed;
     TSET A[MAX_TSET];   /* Adjacency Matrix */
 } TINY_GRAPH;
 
-TINY_GRAPH *TinyGraphAlloc(unsigned int n); // does not allow self-loops
-TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n); // allows self-loops
+TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed);
+TINY_GRAPH *TinyGraphSelfAlloc(unsigned int n);
 #define TinyGraphFree Free
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *G, TINY_GRAPH *H); // G = H
@@ -34,6 +35,7 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j);
 TINY_GRAPH *TinyGraphComplement(TINY_GRAPH *Gbar, TINY_GRAPH *G);
 TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *destination, TINY_GRAPH *G1, TINY_GRAPH *G2);
 int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of the degrees / 2.
+TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H);
 #define TinyGraphDegree(G,v) ((G)->degree[v])
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
@@ -60,7 +62,7 @@ TINY_GRAPH *TinyGraphInduced_NoVertexDelete(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET 
 TINY_GRAPH *TinyGraphInduced(TINY_GRAPH *Gi, TINY_GRAPH *G, TSET V);
 
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G);
-TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp);
+TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed);
 
 // Doesn't work for some reason with NDEBUG. GRRR.
 // #ifdef NDEBUG
