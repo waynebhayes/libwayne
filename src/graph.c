@@ -618,7 +618,6 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 		maxNodes *=2;
 		names = Realloc(names, maxNodes*sizeof(names[0]));
 	    }
-
 	    if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
 		Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed",numEdges,v1.name);
 		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
