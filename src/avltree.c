@@ -227,6 +227,7 @@ foint* const AvlTreeInsert(AVLTREE *tree, foint key, foint info)
     }
 
     p = (AVLTREENODE*) Calloc(1,sizeof(AVLTREENODE)); // insert a new leaf
+    assert( ((uintptr_t)p & 3) == 0 ); // assert that the lower 2 bits can be used for balance
     p->key = tree->copyKey(key);
     p->info = tree->copyInfo(info);
     p->left = p->right = NULL; // also sets balance to 0
