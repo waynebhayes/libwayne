@@ -32,26 +32,18 @@ typedef struct _hTree
 HTREE *HTreeAlloc(unsigned char depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeKey,
     pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
-// key is an array with exactly "depth" elements, info is what you want to put at the lowest level.
+// keys is an array with exactly "depth" elements, info is what you want to put at the lowest level.
+void HTreeInsert(HTREE *, foint keys[], foint info);
 // returns a pointer to the info just inserted
-foint* const HTreeInsert(HTREE *, foint keys[], foint info);
+foint* const UnsafeHTreeInsert(HTREE *, foint keys[], foint info);
 
-<<<<<<< HEAD
-// returns a foint* so that you can modify the element without having to re-insert it; 
-// returns NULL upon failure; deletes the element if delete is true
-foint* HTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
-// "safe" version, only gives a value, returns false if not found
-const Boolean SHTreeLookup(HTREE*, foint keys[], unsigned char targetDepth, foint* pInfo);
-#define HTreeLookup(h,k) HTreeLookDel((h),(k),0,false)
-#define HTreeDelete(h,k) HTreeLookDel((h),(k),0,true)
-#define HTreeDeleteInner(h,k,d) HTreeLookDel((h),(k),(d),true)
-=======
 // implements both lookup and delete: if not found, return false. Otherwise, if (int)pInfo==1, delete the element.
 // Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
 Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+foint* UnsafeHTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
 #define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
 #define HTreeDelete(h,k)   HTreeLookDel((h),(k),(foint*)1)
->>>>>>> upstream/master
 
 // number of elements in trees down the hierarchy along key path; returns number of sizes[] we managed to fill,
 // which should be equal to depth.

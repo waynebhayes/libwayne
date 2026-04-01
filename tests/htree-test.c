@@ -23,14 +23,13 @@ int main(int argc, char *argv[])
     while(fscanf(fp, "%s%s%s%d", keys[0], keys[1], keys[2], &data.i) == 4) {
 	printf("Inserting %s %s %s = %d\n", keys[0], keys[1], keys[2], data.i);
 	HTreeInsert(h, (foint*)keys, (foint)data);
-	foint* found = HTreeLookup(h, (foint*)keys);
-	if(found == NULL) {
+	foint found;
+	if(!HTreeLookup(h, (foint*)keys, &found)) {
 	    fprintf(stderr, "For key ");
 	    for(i=0;i<DEPTH;i++) fprintf(stderr, "[%s]", keys[i]);
 	    Fatal("HTreeLookup couldn't find an entry");
 	}
-	
-	assert(found->i == data.i);
+	assert(found.i == data.i);
     }
     fclose(fp);
 
@@ -39,9 +38,8 @@ int main(int argc, char *argv[])
 	int sizes[DEPTH]={-1,-1,-1};
 	int depth = HTreeSizes(h, (foint*)keys, sizes);
 	printf("filled %d sizes [%d %d %d]\n",depth, sizes[0],sizes[1],sizes[2]);
-	foint* found = HTreeLookup(h, (foint*)keys);
-	if(found != NULL)
-	    printf("%d\n", found->i);
+	if(HTreeLookup(h, (foint*)keys, &data))
+	    printf("%d\n", data.i);
 	else
 	    puts("not found");
     }

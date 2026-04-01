@@ -32,22 +32,22 @@ int main(int argc, char *argv[])
     {
 	BinTreeSanityCheck(tree);
 	printf("lookup %s = ", key.s=buf);
-	if(SBinTreeLookup(tree, (foint)(key.s), &data))
+	if(BinTreeLookup(tree, (foint)(key.s), &data))
 	    printf("%d\n", data.i);
 	else
 	  puts("nope");
 	++lines;
 	BinTreeSanityCheck(tree);
     }
-    assert(false == SBinTreeLookup(tree, (foint)(key.s="foo"), &data)); BinTreeSanityCheck(tree);
-    assert(false == SBinTreeLookup(tree, (foint)(key.s="bar"), &data)); BinTreeSanityCheck(tree);
-    assert(false == SBinTreeLookup(tree, (foint)(key.s="foobar"), &data)); BinTreeSanityCheck(tree);
+    assert(false == BinTreeLookup(tree, (foint)(key.s="foo"), &data)); BinTreeSanityCheck(tree);
+    assert(false == BinTreeLookup(tree, (foint)(key.s="bar"), &data)); BinTreeSanityCheck(tree);
+    assert(false == BinTreeLookup(tree, (foint)(key.s="foobar"), &data)); BinTreeSanityCheck(tree);
 
     while(lines>0) {
 	BinTreeSanityCheck(tree);
 	--lines;
 	printf("Deleting <%s>; n=%d, phys=%d... ", bufs[lines], tree->n, tree->physical_n);
-	Boolean exists = SBinTreeLookup(tree, (foint)(key.s=bufs[lines]), &data);
+	Boolean exists = BinTreeLookup(tree, (foint)(key.s=bufs[lines]), &data);
 	assert(exists == BinTreeDelete(tree, (foint)(key.s=bufs[lines])));
 	printf("Deleted! n=%d, phys=%d\n", tree->n, tree->physical_n);
 	BinTreeSanityCheck(tree);

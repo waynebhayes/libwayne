@@ -19,7 +19,9 @@ extern "C" {
 #define TREETYPE AVLTREE
 #define TreeAlloc AvlTreeAlloc
 #define TreeInsert AvlTreeInsert
+#define UnsafeTreeInsert UnsafeAvlTreeInsert
 #define TreeLookup AvlTreeLookup
+#define UnsafeTreeLookup UnsafeAvlTreeLookup
 #define TreeLookDel AvlTreeLookDel
 #define TreeDelete AvlTreeDelete
 #define TreeTraverse AvlTreeTraverse
@@ -29,7 +31,9 @@ extern "C" {
 #define TREETYPE BINTREE
 #define TreeAlloc BinTreeAlloc
 #define TreeInsert BinTreeInsert
+#define UnsafeTreeInsert UnsafeBinTreeInsert
 #define TreeLookup BinTreeLookup
+#define UnsafeBinTreeLookup(t,k) UnsafeBinTreeLookDel((t),(k),false)
 #define TreeLookDel BinTreeLookDel
 #define TreeTraverse BinTreeTraverse
 #define TreeFree BinTreeFree

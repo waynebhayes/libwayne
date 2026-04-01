@@ -47,7 +47,13 @@ BINTREE *BinTreeAlloc(pCmpFcn cmpKey,
 #define AssignLocative(P,p,q) (((P)=&(q)),((p)=(q)))
 
 void BinTreeRebalance(BINTREE *tree, Boolean force);
-foint* const BinTreeInsert(BINTREE *tree, foint key, foint info)
+void BinTreeInsert(BINTREE *tree, foint key, foint info)
+{
+	UnsafeBinTreeInsert(tree, key, info);
+}
+
+
+foint* const UnsafeBinTreeInsert(BINTREE *tree, foint key, foint info)
 {
     int depth = 0;
     BINTREENODE *p = tree->root, **P = &(tree->root);
@@ -106,28 +112,22 @@ void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P)
     assert(tree->n > 0); tree->n--;
 }
 
-foint* const BinTreeLookup(BINTREE *tree, foint key)
+Boolean BinTreeLookDel(BINTREE *tree, foint key, foint *pInfo)
 {
-    int depth=0;
-    BINTREENODE *p = tree->root, **P = &(tree->root);
-    while(p)
-    {
-	++depth;
-	int cmp = tree->cmpKey(key, p->key);
-	if(cmp == 0) {
-	    tree->maxDepth = MAX(tree->maxDepth, depth);
-	    if(p->deleted) return NULL;
-	    // if(pInfo) *pInfo = p->info; // lookup with assign
-	    return &p->info;
+	Boolean delete = (long)pInfo==1;
+	foint *result = UnsafeBinTreeLookDel(tree, key, delete);
+
+	if (result != NULL) 
+	{
+		if (pInfo && !delete) *pInfo = *result; // lookup with assign
+		return true;
 	}
-	else if(cmp < 0) AssignLocative(P,p,p->left);
-	else             AssignLocative(P,p,p->right);
-    }
-	return NULL;
+	else
+		return false;
 }
 
-// TODO: make helper function for less repeated code?
-const Boolean BinTreeDelete(BINTREE *tree, foint key)
+
+foint* const UnsafeBinTreeLookDel(BINTREE *tree, foint key, Boolean delete)
 {
 	int depth=0;
     BINTREENODE *p = tree->root, **P = &(tree->root);
@@ -137,37 +137,26 @@ const Boolean BinTreeDelete(BINTREE *tree, foint key)
 	int cmp = tree->cmpKey(key, p->key);
 	if(cmp == 0) {
 	    tree->maxDepth = MAX(tree->maxDepth, depth);
-	    if(p->deleted) return false;
-	    break; // delete the element
+	    if(p->deleted) return NULL;
+	    if(delete) break; // delete the element
+	    return &p->info;
 	}
 	else if(cmp < 0) AssignLocative(P,p,p->left);
 	else             AssignLocative(P,p,p->right);
     }
-	tree->maxDepth = MAX(tree->maxDepth, depth);
+    tree->maxDepth = MAX(tree->maxDepth, depth);
     if(p==NULL) { // element not found, nothing deleted. Check depth.
 	unsigned oldSum = tree->depthSum;
 	tree->depthSum += depth;
 	++tree->depthSamples;
 	BinTreeRebalance(tree, (tree->depthSamples < 0 || (depth && tree->depthSum < oldSum)));
-	return false;
+	return NULL;
     }
     // At this point, we know the key has been found.
-    BinTreeDelNode(tree, p, P);
-    return true;
+    if(delete) { BinTreeDelNode(tree, p, P); return (foint*)true; }
+    return &p->info;
 }
 
-const Boolean SBinTreeLookup(BINTREE *tree, foint key, foint* pInfo)
-{
-	foint* result = BinTreeLookup(tree, key);
-
-	if (result != NULL) 
-	{
-		*pInfo = *result;
-		return true;
-	}
-	else
-		return false;
-}
 
 static int BinTreeTraverseHelper ( foint globals, BINTREE *t, BINTREENODE *p, pFointTraverseFcn f)
 {

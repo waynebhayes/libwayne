@@ -174,7 +174,13 @@ unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
     }
 
 
-foint* const AvlTreeInsert(AVLTREE *tree, foint key, foint info)
+void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
+{
+	UnsafeAvlTreeInsert(tree, key, info);
+}
+
+
+foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
     AVLTREENODE *p = tree->root, **P = &(tree->root), // P is a locative used to trace the path
 	*a = NULL, **A = NULL, // Critical node
@@ -297,7 +303,28 @@ foint* const AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 }
 
 
-foint* const AvlTreeLookup(AVLTREE *tree, foint key)
+Boolean AvlTreeLookDel(AVLTREE *tree, foint key, foint *pInfo)
+{
+	if ((long)pInfo==1) return AvlTreeDelete(tree, key);
+	else return AvlTreeLookup(tree, key, pInfo);
+}
+
+
+Boolean AvlTreeLookup(AVLTREE *tree, foint key, foint *pInfo)
+{
+	foint *result = UnsafeAvlTreeLookup(tree, key);
+
+	if (result != NULL) 
+	{
+		*pInfo = *result;
+		return true;
+	}
+	else
+		return false;
+}
+
+
+foint* const UnsafeAvlTreeLookup(AVLTREE *tree, foint key)
 {
     AVLTREENODE *p = tree->root;
 
@@ -313,7 +340,7 @@ foint* const AvlTreeLookup(AVLTREE *tree, foint key)
 }
 
 
-const Boolean AvlTreeDelete(AVLTREE *tree, foint key)
+Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 {
 	AVLTREENODE *p = tree->root, **P = &(tree->root); AVLTREENODE *parent = tree->root;
 
@@ -507,21 +534,6 @@ const Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 
 	return true;
 }
-
-
-const Boolean SAvlTreeLookup(AVLTREE *tree, foint key, foint* pInfo)
-{
-	foint* result = AvlTreeLookup(tree, key);
-
-	if (result != NULL) 
-	{
-		*pInfo = *result;
-		return true;
-	}
-	else
-		return false;
-}
-
 
 static int AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTraverseFcn f)
 {

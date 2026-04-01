@@ -53,7 +53,7 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
 		#endif
 
 		unsigned oldTreeSize = tree->n;
-		foint* result = TreeInsert(tree, keys[currentDepth], data);
+		foint* result = UnsafeTreeInsert(tree, keys[currentDepth], data);
 		assert(tree->n == oldTreeSize || tree->n == oldTreeSize+1); // we either replaced or inserted an element
 		h->n += (tree->n - oldTreeSize);
 
@@ -68,9 +68,9 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
     else {
 		// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,
 		// so to find the next tree we use the key at this level to *look up* the binary tree at the next level down
-		foint* nextLevel = TreeLookup(tree, keys[currentDepth]);
+		foint nextLevel;
 		TREETYPE *nextTree;
-		if(nextLevel == NULL) {
+		if(!TreeLookup(tree, keys[currentDepth], &nextLevel)) {
 			pFointCopyFcn copyInfo = h->copyInfo;
 			pFointFreeFcn freeInfo = h->freeInfo;
 
@@ -84,17 +84,20 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
 			TreeInsert(tree, keys[currentDepth], (foint){.v=nextTree});
 		}
 		else
-		{
-			nextTree = nextLevel->v;
-		}
+			nextTree = nextLevel.v;
 			
 		assert(nextTree);
 		return HTreeInsertHelper(h, currentDepth+1, nextTree, keys, data);
     }
 }
 
-// key is an array with exactly "depth" elements, data is what you want to put at the lowest level.
-foint* const HTreeInsert(HTREE *h, foint keys[], foint data)
+void HTreeInsert(HTREE *h, foint keys[], foint info)
+{
+	UnsafeHTreeInsert(h, keys, info);
+}
+
+// keys is an array with exactly "depth" elements, data is what you want to put at the lowest level.
+foint* const UnsafeHTreeInsert(HTREE *h, foint keys[], foint data)
 {
     foint fkeys[h->depth]; int i; for(i=0; i < h->depth; i++) fkeys[i] = keys[i];
     return HTreeInsertHelper(h, 0, h->tree, fkeys, data);
@@ -127,40 +130,39 @@ static foint* HTreeLookDelHelper(HTREE *h, unsigned char currentDepth, TREETYPE 
 				return TreeDelete(tree, keys[currentDepth]) ? (foint*)1:NULL;
 			}
 		}
-		else return TreeLookup(tree, keys[currentDepth]);
+		else return UnsafeTreeLookup(tree, keys[currentDepth]);
 	}
     else {
-	foint* nextLevel = TreeLookup(tree, keys[currentDepth]);
+	foint nextLevel;
 	TREETYPE *nextTree;
-	if(nextLevel == NULL)
+	if(!TreeLookup(tree, keys[currentDepth], &nextLevel))
 	    return NULL;
 	else
-	    nextTree = nextLevel->v;
+	    nextTree = nextLevel.v;
 	assert(nextTree);
 	return HTreeLookDelHelper(h, currentDepth+1, nextTree, keys, targetDepth, delete);
     }
 }
 
-foint* HTreeLookDel(HTREE *h, foint keys[], unsigned char targetDepth, Boolean delete)
+Boolean HTreeLookDel(HTREE *h, foint keys[], foint *pInfo)
+{
+	foint* result = UnsafeHTreeLookDel(h, keys, h->depth, (long)pInfo==1);
+
+	if (result != NULL) 
+	{
+		if (pInfo) *pInfo = *result; // lookup with assign
+		return true;
+	}
+	else
+		return false;
+}
+
+foint* UnsafeHTreeLookDel(HTREE *h, foint keys[], unsigned char targetDepth, Boolean delete)
 {
 	assert(targetDepth <= h->depth);
 	targetDepth = targetDepth == 0 ? h->depth : targetDepth;
     foint fkeys[h->depth]; int i; for(i=0; i < h->depth; i++) fkeys[i] = keys[i];
     return HTreeLookDelHelper(h, 0, h->tree, fkeys, targetDepth, delete);
-}
-
-const Boolean SHTreeLookup(HTREE* tree, foint keys[], unsigned char targetDepth, foint* pInfo)
-{
-	foint* result = HTreeLookDel(tree, keys, targetDepth, false);
-
-	if (result != NULL) 
-	{
-		if (pInfo != NULL)
-			*pInfo = *result;
-		return true;
-	}
-	else
-		return false;
 }
 
 static int HTreeSizesHelper(HTREE *h, unsigned short currentDepth, TREETYPE *tree, foint keys[], int sizes[])
@@ -170,12 +172,12 @@ static int HTreeSizesHelper(HTREE *h, unsigned short currentDepth, TREETYPE *tre
     if(currentDepth == h->depth-1) // we're hit the lowest level tree; its data elements are the final elements.
 	return 1;
     else {
-	foint* nextLevel = TreeLookup(tree, keys[currentDepth]);
+	foint nextLevel;
 	TREETYPE *nextTree;
-	if(nextLevel == NULL)
+	if(!TreeLookup(tree, keys[currentDepth], &nextLevel))
 	    return 1;
 	else
-	    nextTree = nextLevel->v;
+	    nextTree = nextLevel.v;
 	assert(nextTree);
 	return 1 + HTreeSizesHelper(h, currentDepth+1, nextTree, keys, sizes);
     }
