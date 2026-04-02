@@ -8,6 +8,7 @@ extern "C" {
 
 #include <malloc.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "misc.h"   /* for foint */
 
 
@@ -17,8 +18,19 @@ typedef struct _avlTreeNode
 {
     foint key, info;
     struct _avlTreeNode *left, *right;
-    char balance:2; // 2 bits to store an int between -2 and +1
+	// NOTE: balance is stored in the lower 2 bits of right;
+	// we can do this because the alignment of AVLTREENODE
+	// is guaranteed to be at least 4 on a 32-bit system,
+	// since all members would be 4 bytes, making the lowest 2 bits unused
 } AVLTREENODE;
+
+AVLTREENODE* const getRight(AVLTREENODE* node);
+
+void setRight(AVLTREENODE* node, AVLTREENODE* right);
+
+const char getBalance(AVLTREENODE* node);
+
+void setBalance(AVLTREENODE* node, char balance);
 
 typedef struct _avlTree
 {
@@ -34,13 +46,14 @@ typedef struct _avlTree
 AVLTREE *AvlTreeAlloc(pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeKey,
     pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
-void AvlTreeInsert(AVLTREE *, foint key, foint info); // replaces info if the key already exists
+void AvlTreeInsert(AVLTREE *, foint key, foint info);
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+foint* const UnsafeAvlTreeInsert(AVLTREE *, foint key, foint info);
 
-/* O(log n): both lookup and/or delete: returns false if element not found.
-** If found and (int)pInfo==1, delete it; otherwise if pInfo != NULL, populate with new info; otherwise just return true.
-*/
 Boolean AvlTreeLookDel (AVLTREE *, foint key, foint *pInfo);
 Boolean AvlTreeLookup(AVLTREE *, foint key, foint *pInfo);
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+foint* const UnsafeAvlTreeLookup(AVLTREE *, foint key);
 Boolean AvlTreeDelete(AVLTREE *, foint key);
 
 /*

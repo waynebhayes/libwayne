@@ -29,15 +29,20 @@ typedef struct _hTree
 
 /*-----------   Function Prototypes  -----------*/
 
-HTREE *HTreeAlloc(int depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeKey,
+HTREE *HTreeAlloc(unsigned char depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeKey,
     pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
-// key is an array with exactly "depth" elements, info is what you want to put at the lowest level.
+// keys is an array with exactly "depth" elements, info is what you want to put at the lowest level.
 void HTreeInsert(HTREE *, foint keys[], foint info);
+// returns a pointer to the info just inserted
+foint* const UnsafeHTreeInsert(HTREE *, foint keys[], foint info);
 
 // implements both lookup and delete: if not found, return false. Otherwise, if (int)pInfo==1, delete the element.
 // Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
 Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+// targetDepth allows deletion or query of elements that aren't at the lowest level (0 defaults to actual depth)
+foint* const UnsafeHTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
 #define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
 #define HTreeDelete(h,k)   HTreeLookDel((h),(k),(foint*)1)
 

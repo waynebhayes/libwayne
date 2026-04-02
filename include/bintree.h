@@ -35,9 +35,12 @@ BINTREE *BinTreeAlloc(pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeK
 	    pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
 void BinTreeInsert(BINTREE *, foint key, foint info); // replaces info if the key already exists
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+foint* const UnsafeBinTreeInsert(BINTREE *, foint key, foint info);
 
-/* O(log n); returns false if failure, and true if found and then assigns to *pInfo if *pInfo is non-NULL */
 Boolean BinTreeLookDel(BINTREE *, foint key, foint *pInfo);
+// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+foint* const UnsafeBinTreeLookDel(BINTREE *tree, foint key, Boolean delete);
 #define BinTreeLookup(t,k,p) BinTreeLookDel((t),(k),(p))
 #define BinTreeDelete(t,k)   BinTreeLookDel((t),(k),(foint*)1)
 void BinTreeDelNode(BINTREE *tree, BINTREENODE *p, BINTREENODE **P); // O(1): delete exactly one node
