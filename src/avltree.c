@@ -112,11 +112,10 @@ static void Rotate(AVLTREENODE** N, AVLTREENODE* n, int d) {
 	}
 }
 
-
-#define MaxHeight (int)(log(tree->n+2)*4.7852-0.3277)
+#define MaxHeight (int)(log2f(tree->n+2)*1.44-0.328)
 #ifdef VERBOSE
 #define Print AvlPrint(tree->root, 0, 0)
-void AvlPrint(AVLTREENODE *node, unsigned char level, char side)
+static void AvlPrint(AVLTREENODE *node, unsigned char level, char side)
 {
 	if (node == NULL) return;
 	else if (level == 0) printf("(%i)%i\n", getBalance(node), node->info);
@@ -136,7 +135,7 @@ void AvlPrint(AVLTREENODE *node, unsigned char level, char side)
 
 
 // returns height of subtree to calculate balance where needed
-unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
+static unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
 {
 	if (getRight(node) && node->left)
 	{
@@ -219,7 +218,6 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	#ifdef VERBOSE
 	int worst = MaxHeight;
 	printf("Insertion took %i STEPS to complete with %i ELEMENTS already present; worst case is %i\n", traversal_steps, tree->n, worst);
-	//assert(traversal_steps >= MinHeight && traversal_steps <= worst);
 	assert(traversal_steps <= worst);
 	#endif
 
@@ -394,7 +392,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 		setBalance(parent, (getRight(parent)==*P || parent==*P) ? -1:1);
 	else
 	{ // The height of the subtree has changed; need to check balance potentially all the way to the root
-		STACK *nodePath = StackAlloc(MaxHeight);
+		STACK *nodePath = StackAlloc(Log2(tree->n));
 		StackPush(nodePath, (foint){.v=&(tree->root)}); // Contains locatives
 		p = tree->root;
 		int cmp;
@@ -535,20 +533,25 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	return true;
 }
 
-static int AvlTreeTraverseHelper (foint globals, AVLTREENODE *p, pFointTraverseFcn f)
+static int AvlTreeTraverseHelper (foint globals, STACK* delete, AVLTREENODE *p, pFointTraverseFcn f)
 {
     int cont = 1;
     if(p) {
-	if(p->left) cont = AvlTreeTraverseHelper(globals, p->left, f);
+	if(p->left) cont = AvlTreeTraverseHelper(globals, delete, p->left, f);
 	if(cont) cont = f(globals, p->key, p->info);
-	if(cont && getRight(p)) cont = AvlTreeTraverseHelper(globals, getRight(p), f);
+	if(cont == -1) StackPush(delete, p->key);
+	if(cont && getRight(p)) cont = AvlTreeTraverseHelper(globals, delete, getRight(p), f);
     }
     return cont;
 }
 
 int AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
 {
-    return AvlTreeTraverseHelper(globals, tree->root, f);
+	STACK* delete = StackAlloc(Log2(tree->n));
+	int result = AvlTreeTraverseHelper(globals, delete, tree->root, f);
+	while (StackSize(delete) > 0) AvlTreeDelete(tree, StackPop(delete));
+	StackFree(delete);
+	return result;
 }
 
 static int _avlTreeSanityNodeCount, _avlTreeSanityPhysicalNodeCount;
