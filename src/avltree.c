@@ -389,7 +389,10 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 
 	// Update balance then rotate if necessary
 	if (getBalance(parent) == 0)
-		setBalance(parent, (getRight(parent)==*P || parent==*P) ? -1:1);
+	{
+		p = getNodeFromLocative(P);
+		setBalance(parent, (getRight(parent)==p || parent==p) ? -1:1);
+	}
 	else
 	{ // The height of the subtree has changed; need to check balance potentially all the way to the root
 		STACK *nodePath = StackAlloc(Log2(tree->n));
