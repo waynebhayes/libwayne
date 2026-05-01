@@ -47,12 +47,20 @@ AVLTREE *AvlTreeAlloc(pCmpFcn cmpKey, pFointCopyFcn copyKey, pFointFreeFcn freeK
     pFointCopyFcn copyInfo, pFointFreeFcn freeInfo);
 
 void AvlTreeInsert(AVLTREE *, foint key, foint info);
-// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+/*
+** UnsafeAvlTreeInsert: returns a foint* so that you can modify the inserted element without
+** having to insert it again. Use this with care and disregard the result as soon as you're done with it,
+** as the pointer could later become invalid.
+*/
 foint* const UnsafeAvlTreeInsert(AVLTREE *, foint key, foint info);
 
 Boolean AvlTreeLookDel (AVLTREE *, foint key, foint *pInfo);
 Boolean AvlTreeLookup(AVLTREE *, foint key, foint *pInfo);
-// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
+/*
+** UnsafeAvlTreeLookup: returns a foint* so that you can modify the element at key without having to re-insert it,
+** or NULL if no element is found. Use this with care and disregard the result as soon as you're done with it,
+** as the pointer could later become invalid.
+*/
 foint* const UnsafeAvlTreeLookup(AVLTREE *, foint key);
 Boolean AvlTreeDelete(AVLTREE *, foint key);
 

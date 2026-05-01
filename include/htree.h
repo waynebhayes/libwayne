@@ -34,14 +34,23 @@ HTREE *HTreeAlloc(unsigned char depth, pCmpFcn cmpKey, pFointCopyFcn copyKey, pF
 
 // keys is an array with exactly "depth" elements, info is what you want to put at the lowest level.
 void HTreeInsert(HTREE *, foint keys[], foint info);
-// returns a pointer to the info just inserted
+/*
+** UnsafeHTreeInsert: returns a foint* so that you can modify the inserted element without
+** having to insert it again. Use this with care and disregard the result as soon as you're done with it,
+** as the pointer could later become invalid.
+*/
 foint* const UnsafeHTreeInsert(HTREE *, foint keys[], foint info);
 
 // implements both lookup and delete: if not found, return false. Otherwise, if (int)pInfo==1, delete the element.
 // Otherwise, if pInfo!=NULL, populate it with new info; otherwise just return true (found).
 Boolean HTreeLookDel(HTREE *, foint keys[], foint *pInfo);
-// returns a foint* so that you can modify the element without having to re-insert it, NULL upon failure
-// targetDepth allows deletion or query of elements that aren't at the lowest level (0 defaults to actual depth)
+/*
+** UnsafeHTreeLookDel: returns a foint* so that you can modify the element at key without having to re-insert it,
+** or NULL upon deletion or if no element is found. targetDepth allows you to delete or find sub-trees (the result
+** would instead point to a TREETYPE*) by targeting a depth besides the lowest level,
+** although a targetDepth of 0 will default to the lowest level. Use this with care and disregard
+** the result as soon as you're done with it, as the pointer could later become invalid.
+*/
 foint* const UnsafeHTreeLookDel(HTREE *, foint keys[], unsigned char targetDepth, Boolean delete);
 #define HTreeLookup(h,k,p) HTreeLookDel((h),(k),(p))
 #define HTreeDelete(h,k)   HTreeLookDel((h),(k),(foint*)1)
