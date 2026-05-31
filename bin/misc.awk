@@ -128,17 +128,17 @@ function fact2(k)    {if(k<=1)return 1; else return k*fact2(k-2)}
 function logFact2(k) {if(k<=1)return 0; else return log(k)+logFact2(k-2)}
 # see Reza expansion: (n k) = ((n-1) (k-1)) + ((n-1) k)
 function choose(n,k,     r,i) {if(0<=k&&k<=n){r=1;for(i=1;i<=k;i++)r*=(n-(k-i))/i;} else {r=0; Warn("choose: ("n" choose "k") may not make sense; returning 0")}; return r}
-function logChoose(n,k) {if(n in _memLogChoose && k in _memLogChoose[n]) return _memLogChoose[n][k];
+function logChoose(n,k) {if(n in _logChooseMemory && k in _logChooseMemory[n]) return _logChooseMemory[n][k];
+    #if(k<100) return logChooseClever(n,k); # otherwise using logFastFact below is faster
     if(n<k) return log(0); # remove this line if it causes unnecessary failures
     else ASSERT(0<=k && k <=n,"invalid logChoose("n","k")");
-    return (_memLogChoose[n][k] = logFact(n)-logFact(k)-logFact(n-k));
+    return (_logChooseMemory[n][k] = logFact(n)-logFact(k)-logFact(n-k));
 }
 function logChooseClever(n,k,     r,i) {
-    ASSERT(0<=k&&k<=n,"impossible parameters to logChoose "n" "k)
     if(n in _logChooseMemory && k in _logChooseMemory[n]) return _logChooseMemory[n][k];
+    ASSERT(0<=k&&k<=n,"impossible parameters to logChoose "n" "k)
     r=0;for(i=1;i<=k;i++)r+=log(n-(k-i))-log(i)
-    _logChooseMemory[n][k]=r
-    return r;
+    return (_logChooseMemory[n][k]=r);
 }
 function HalfGamma(k)   {return     sqrt(PI) *   fact2(k-2)/sqrt(2)^(k-1)}
 function logHalfGamma(k){return log(sqrt(PI))+logFact2(k-2)-(k-1)*log(sqrt(2))}
@@ -660,6 +660,61 @@ function logPhi(z){
 }
 
 function Log10Poisson1_CDF(l,k, i,sum,psum){return LogPoisson1_CDF(l,k, i,sum,psum)/2.302585092994046}
+
+#### Fast Factorial (SplitFact, adapted from http://www.luschny.de/math/factorial/csharp/FactorialSplit.cs.html)
+function FastProd(n,  m) {
+    m = int(n / 2);
+    if (m == 0) return (_fastFactCurrentN += 2);
+    if (n == 2) return (_fastFactCurrentN += 2) * (_fastFactCurrentN += 2);
+    return FastProd(n - m) * FastProd(m);
+}
+
+function FastFact(n,   p,r,h,log2n,shift,len,high) {
+    ASSERT(n>=0,"FastFact: cannot work with "n);
+    if (n < 2) return 1;
+    high=p=r=_fastFactCurrentN = 1;
+    h=shift=0; log2n = floor(log2(n));
+
+    while (h != n)
+    {
+	shift += h;
+	h = rshift(n,log2n--);
+	len = high;
+	high = (h-1)%2 ? (h-1):h; # high = (h-1) | 1;
+	len = int((high - len) / 2);
+	if (len > 0) { p *= FastProd(len); r *= p; }
+    }
+
+    return r*2^shift;
+}
+
+function logFastProd(n,  m) {
+    m = int(n / 2);
+    if (m == 0) return log(_fastFactCurrentN += 2);
+    if (n == 2) return log(_fastFactCurrentN += 2) + log(_fastFactCurrentN += 2);
+    return logFastProd(n - m) + logFastProd(m);
+}
+
+function logFastFact(n,   log_p,log_r,h,log2n,shift,len,high) {
+    ASSERT(n>=0,"FastFact: cannot work with "n);
+    if (n < 2) return 0;
+    high=_fastFactCurrentN = 1;
+    log_p=log_r=0;
+    h=shift=0;log2n = floor(log2(n));
+
+    while (h != n)
+    {
+	shift += h;
+	h = rshift(n,log2n--);
+	len = high;
+	high = (h-1)%2 ? (h-1):h; # high = (h-1) | 1;
+	len = int((high - len) / 2);
+	if (len > 0) { log_p += logFastProd(len); log_r += log_p; }
+    }
+
+    return log_r+shift*log(2);
+}
+#### end of FastFact routines
 
 # Hypergeometric distribution: Given: total population N, K of which have desired property.
 # What is the probability of exactly k successes in n draws, without replacement?
