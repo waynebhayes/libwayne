@@ -209,6 +209,19 @@ TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
     return H;
 }
 
+TINY_GRAPH *TinyGraphSortByDegree(TINY_GRAPH *G)
+{
+    int i, j, n = G->n;
+    for(i = 1; i < n; i++) {
+        j = i;
+        while(j > 0 && G->degree[j] < G->degree[j-1]) {
+            TinyGraphSwapNodes(G, j-1, j);
+            j--;
+        }
+    }
+    return G;
+}
+
 unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
     int nodeArray[MAX_TSET], distArray[MAX_TSET];
     return TinyGraphBFS(g, seed, MAX_TSET, nodeArray, distArray);
