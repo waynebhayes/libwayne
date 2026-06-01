@@ -68,6 +68,7 @@ static void Iteration(SIM_ANNEAL *sa) {
 	accept = (drand48() < pBad);
     }
     //Note("Iter: score %g (%g) T %g pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
+    accept = sa->Accept(accept, sa->currentSolution);
     if(accept) sa->currentScore += delta;
 }
 
@@ -96,13 +97,13 @@ Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay) {
 }
 
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
-    double tInitial = 1;
+    double tEnd = 1;
+    while (findPbad(sa, tEnd) > sa->pBadEnd) tEnd /= 2;
+    while (findPbad(sa, tEnd) < sa->pBadEnd) tEnd *= 1.2;
+    double tInitial = tEnd;
     while (findPbad(sa, tInitial) < sa->pBadStart) tInitial *= 2;
     while (findPbad(sa, tInitial) > sa->pBadStart) tInitial /= 2;
     while (findPbad(sa, tInitial) < sa->pBadStart) tInitial *= 1.2;
-    double tEnd = tInitial;
-    while (findPbad(sa, tEnd) > sa->pBadEnd) tEnd /= 2;
-    while (findPbad(sa, tEnd) < sa->pBadEnd) tEnd *= 1.2;
     sa->tInitial = tInitial;
     sa->tDecay = -log(tEnd / tInitial);
     Note("tInitial %g tDecay %g", tInitial, sa->tDecay);
