@@ -209,11 +209,22 @@ TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
     return H;
 }
 
-TINY_GRAPH *TinyGraphSortByDegree(TINY_GRAPH *G)
+TINY_GRAPH *TinyGraphSort(TINY_GRAPH *G, Boolean byCubedSum)
 {
     int i, j, n = G->n;
     for(i = 1; i < n; i++) {
         j = i;
+        if(byCubedSum) {
+            int sum = 0, sumPrev = 0;
+            for(int k = 0; k < n; k++) {
+                if(TinyGraphAreConnected(G, i, k)) sum += G->degree[k] * G->degree[k] * G->degree[k];
+                if(TinyGraphAreConnected(G, i-1, k)) sumPrev += G->degree[k] * G->degree[k] * G->degree[k];
+            }
+            while(j > 0 && sum < sumPrev) {
+                TinyGraphSwapNodes(G, j-1, j);
+                j--;
+            }
+        }
         while(j > 0 && G->degree[j] < G->degree[j-1]) {
             TinyGraphSwapNodes(G, j-1, j);
             j--;
