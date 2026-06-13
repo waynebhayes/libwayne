@@ -170,7 +170,7 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
     int i;
 
     if(dest)
-	dest->n = G1->n;
+	dest->n = G1->n, dest->directed=G1->directed;
     else
 	dest = TinyGraphAlloc(G1->n,G1->selfLoops,G1->directed);
 
