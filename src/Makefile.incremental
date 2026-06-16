@@ -1,33 +1,31 @@
-# This Makefile should be able to "incrementally" build all 4 versions of the library.
-# Use this Makefile if you're making minor changes to libwayne and want to incrementally update the libraries.
-# If you're starting fresh, use Makefile.1 (which needs more setup)
+# Incremental build: recompile changed .c files for all built variants only.
+# Run from libwayne/ via: make incremental
+# Discovers which variants exist by looking for ../libwayne*.a files.
+# Uses per-variant ../build/VARIANT/.cflags to know what flags to compile with.
+# Stamps live in build/.stamps/ — no .o files are written to src/.
 
-OBJS=llfile.o stream48.o longlong.o bitvec.o sets.o smallgraph-transitive.o misc.o dverk.o rkd78.o lsode.o ddriv2.o bsode.o ldbsode.o rk4.o rk4s.o rk12.o rk23.o stack.o event.o heap.o linked-list.o stats.o queue.o compressedInt.o Oalloc.o variable_leapfrog.o leapfrog.o htree.o avltree.o bintree.o eigen.o mem-debug.o smallgraph.o tinygraph.o graph.o combin.o matvec.o sorts.o heun_euler.o multisets.o dynarray.o #raw_hashmap.o #qrkd78.o iqrkd78.o
+SRCS=llfile.c stream48.c longlong.c bitvec.c sets.c smallgraph-transitive.c misc.c dverk.c rkd78.c lsode.c ddriv2.c bsode.c ldbsode.c rk4.c rk4s.c rk12.c rk23.c stack.c event.c heap.c linked-list.c stats.c queue.c compressedInt.c Oalloc.c variable_leapfrog.c leapfrog.c htree.c avltree.c bintree.c eigen.c mem-debug.c smallgraph.c tinygraph.c graph.c combin.c matvec.c sorts.c heun_euler.c multisets.c dynarray.c #raw_hashmap.c #qrkd78.c iqrkd78.c
+
+STAMP_DIR := ../build/.stamps
+STAMPS := $(patsubst %.c,$(STAMP_DIR)/%.stamp,$(filter %.c,$(SRCS)))
 
 INCLUDE=-I../include
-#LIB=$(HOME)/lib/libwayne.a
-
 CFLAGS=$(INCLUDE)
 
-all: libwayne-pg-g.a libwayne-pg.a libwayne-g.a libwayne.a
+BUILT_VARIANTS := $(patsubst ../%.a,%,$(wildcard ../libwayne*.a))
 
-libwayne-pg-g.a: libwayne-pg-g/libwayne-pg-g.a 
-	cp libwayne-pg-g/libwayne-pg-g.a .
+all: mk-dirs $(STAMPS)
 
-libwayne-pg.a: libwayne-pg/libwayne-pg.a 
-	cp libwayne-pg/libwayne-pg.a .
+mk-dirs:
+	@mkdir -p $(STAMP_DIR)
+	@for V in $(BUILT_VARIANTS); do mkdir -p ../build/$$V; done
 
-libwayne-g.a: libwayne-g/libwayne-g.a 
-	cp libwayne-g/libwayne-g.a .
-
-libwayne.a: libwayne/libwayne.a
-	cp libwayne/libwayne.a .
-
-libwayne-pg-g/libwayne-pg-g.a libwayne-pg/libwayne-pg.a libwayne-g/libwayne-g.a libwayne/libwayne.a: $(OBJS)
-
-%.o: %.c ../include/%.h
-	L=-pg-g; $(CC) $(CFLAGS) -pg -ggdb -O0 -c -o libwayne$$L/$@ $<; ar rcvu libwayne$$L/libwayne$$L.a libwayne$$L/$@ &
-	L=-pg  ; $(CC) $(CFLAGS) -pg       -O3 -c -o libwayne$$L/$@ $<; ar rcvu libwayne$$L/libwayne$$L.a libwayne$$L/$@ &
-	L=-g   ; $(CC) $(CFLAGS)     -ggdb -O0 -c -o libwayne$$L/$@ $<; ar rcvu libwayne$$L/libwayne$$L.a libwayne$$L/$@ &
-	L=''   ; $(CC) $(CFLAGS)           -O3 -c -o libwayne$$L/$@ $<; ar rcvu libwayne$$L/libwayne$$L.a libwayne$$L/$@
+$(STAMP_DIR)/%.stamp: %.c
+	@for V in $(BUILT_VARIANTS); do \
+	    F=$$(cat ../build/$$V/.cflags 2>/dev/null || echo "-O2"); \
+	    $(CC) $(CFLAGS) $$F -c -o ../build/$$V/$*.o $< && ar rcvu ../$$V.a ../build/$$V/$*.o & \
+	done; \
+	wait
 	touch $@
+
+.PHONY: all mk-dirs
