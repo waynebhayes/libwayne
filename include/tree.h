@@ -33,8 +33,9 @@ extern "C" {
 #define TreeInsert BinTreeInsert
 #define UnsafeTreeInsert UnsafeBinTreeInsert
 #define TreeLookup BinTreeLookup
-#define UnsafeBinTreeLookup(t,k) UnsafeBinTreeLookDel((t),(k),false)
+#define UnsafeTreeLookup(t,k) UnsafeBinTreeLookDel((t),(k),false)
 #define TreeLookDel BinTreeLookDel
+#define TreeDelete BinTreeDelete
 #define TreeTraverse BinTreeTraverse
 #define TreeFree BinTreeFree
 #endif
