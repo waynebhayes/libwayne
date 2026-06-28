@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <threads.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -84,6 +85,7 @@ AVLTREE *AvlTreeAlloc(pCmpFcn cmpKey,
     tree->copyInfo = copyInfo ? copyInfo : CopyInt;
     tree->freeInfo = freeInfo ? freeInfo : FreeInt;
     tree->n = 0;
+    pthread_rwlock_init(&tree->lock, NULL);
     return tree;
 }
 
@@ -172,7 +174,6 @@ static unsigned char CheckBalance(AVLTREENODE *node, unsigned char level)
     if(ABcmp > 0) { (q) = getRight((p)); } else { (q) = (p); } \
     }
 
-
 void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
 	UnsafeAvlTreeInsert(tree, key, info);
@@ -181,10 +182,12 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 
 foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
-    AVLTREENODE *p = tree->root, **P = &(tree->root), // P is a locative used to trace the path
-	*a = NULL, **A = NULL, // Critical node
+	AVLTREENODE *a = NULL, **A = NULL, // Critical node
 	*r = NULL; // Starting point for nodes that need their balance recalculated
     int cmp; // Temporary storage of a key comparison
+
+	pthread_rwlock_wrlock(&tree->lock);
+	AVLTREENODE *p = tree->root, **P = &(tree->root); // P is a locative used to trace the path
 
 	#ifdef VERBOSE
 	int traversal_steps = 0;
@@ -227,6 +230,8 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 		assert(cmp == tree->cmpKey(key, p->key));
 		tree->freeInfo(p->info);
 		p->info = tree->copyInfo(info);
+
+		pthread_rwlock_unlock(&tree->lock);
 		return &p->info;
     }
 
@@ -296,8 +301,9 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	CheckBalance(tree->root, 0);
 	#endif
 
-    tree->n++;
-	return &p->info;
+	tree->n++;
+	pthread_rwlock_unlock(&tree->lock);
+	return (foint*)((uintptr_t)&p->info | 1); // Modify LSB to be 1 to indicate an element was added
 }
 
 
@@ -324,23 +330,27 @@ Boolean AvlTreeLookup(AVLTREE *tree, foint key, foint *pInfo)
 
 foint* const UnsafeAvlTreeLookup(AVLTREE *tree, foint key)
 {
+    foint* result = NULL;
+    pthread_rwlock_rdlock(&tree->lock);
     AVLTREENODE *p = tree->root;
 
     while(p)
     {
 		int cmp = tree->cmpKey(key, p->key);
-		if(cmp == 0) return &p->info;
+		if(cmp == 0) { result = &p->info; break; }
 		else if(cmp < 0) p = p->left;
 		else             p = getRight(p);
-	}
+    }
     
-    return NULL;
+    pthread_rwlock_unlock(&tree->lock);
+    return result;
 }
 
 
 Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 {
-	AVLTREENODE *p = tree->root, **P = &(tree->root); AVLTREENODE *parent = tree->root;
+    pthread_rwlock_wrlock(&tree->lock);
+    AVLTREENODE *p = tree->root, **P = &(tree->root); AVLTREENODE *parent = tree->root;
 
     while(p)
     {
@@ -353,7 +363,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	}
     
     if(!p) return false; // node not found, nothing deleted
-	assert(tree->n > 0);
+    assert(tree->n > 0);
 
 	// At this point, p points to the node we want to delete
 	if (getRight(p) == NULL) 
@@ -384,6 +394,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 		#ifdef VERBOSE
 		if (tree->n > 0) CheckBalance(tree->root, 0);
 		#endif
+		pthread_rwlock_unlock(&tree->lock);
 		return true; 
 	}
 
@@ -533,6 +544,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	if (tree->n > 0) CheckBalance(tree->root, 0);
 	#endif
 
+	pthread_rwlock_unlock(&tree->lock);
 	return true;
 }
 
@@ -551,8 +563,13 @@ static int AvlTreeTraverseHelper (foint globals, STACK* delete, AVLTREENODE *p, 
 int AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
 {
 	STACK* delete = StackAlloc(Log2(tree->n));
+	pthread_rwlock_rdlock(&tree->lock);
 	int result = AvlTreeTraverseHelper(globals, delete, tree->root, f);
+
+	// We can release the read-lock at this point because AvlTreeDelete will acquire write-lock if needed
+	pthread_rwlock_unlock(&tree->lock);
 	while (StackSize(delete) > 0) AvlTreeDelete(tree, StackPop(delete));
+
 	StackFree(delete);
 	return result;
 }
@@ -624,6 +641,7 @@ void AvlTreeFree(AVLTREE *tree)
 {
     AvlTreeFreeHelper(tree, tree->root);
     assert(tree->n == 0);
+    pthread_rwlock_destroy(&tree->lock);
     free(tree);
 }
 

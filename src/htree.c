@@ -1,5 +1,6 @@
 // This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
 // (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
+#include <stdint.h>
 #include <stdio.h>
 #include <wchar.h>
 #ifdef __cplusplus
@@ -52,10 +53,8 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
 		start = clock();
 		#endif
 
-		unsigned oldTreeSize = tree->n;
 		foint* result = UnsafeTreeInsert(tree, keys[currentDepth], data);
-		assert(tree->n == oldTreeSize || tree->n == oldTreeSize+1); // we either replaced or inserted an element
-		h->n += (tree->n - oldTreeSize);
+		h->n += (uintptr_t)result & 1; // LSB = 1 means an element was added
 
 		#ifdef VERBOSE
 		end = clock();
@@ -63,7 +62,7 @@ static foint* const HTreeInsertHelper(HTREE *h, unsigned char currentDepth, TREE
 		printf("Insertion took %f seconds\n", cpuTimeUsed);
 		#endif
 
-		return result;
+		return (foint*)((uintptr_t)result & ~1); // Return the pointer w/o the LSB modified
 	}
     else {
 		// Otherwise, we are NOT at the lowest level tree; the data members of these nodes are themselves other trees,

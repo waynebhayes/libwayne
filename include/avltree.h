@@ -9,6 +9,7 @@ extern "C" {
 #include <malloc.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "misc.h"   /* for foint */
 
 
@@ -39,6 +40,7 @@ typedef struct _avlTree
     pCmpFcn cmpKey;
     pFointCopyFcn copyKey, copyInfo;
     pFointFreeFcn freeKey, freeInfo;
+    pthread_rwlock_t lock;
 } AVLTREE;
 
 /*-----------   Function Prototypes  -----------*/
