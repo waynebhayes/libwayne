@@ -209,7 +209,7 @@ TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
     return H;
 }
 
-TINY_GRAPH *TinyGraphSort(TINY_GRAPH *G, Boolean byCubedSum)
+TINY_GRAPH *TinyGraphSortPerm(TINY_GRAPH *G, Boolean byCubedSum, int *lab)
 {
     int i, j, n = G->n;
     for(i = 1; i < n; i++) {
@@ -222,15 +222,24 @@ TINY_GRAPH *TinyGraphSort(TINY_GRAPH *G, Boolean byCubedSum)
             }
             while(j > 0 && sum < sumPrev) {
                 TinyGraphSwapNodes(G, j-1, j);
+                if(lab) { int t = lab[j-1]; lab[j-1] = lab[j]; lab[j] = t; }
                 j--;
             }
         }
-        while(j > 0 && G->degree[j] < G->degree[j-1]) {
-            TinyGraphSwapNodes(G, j-1, j);
-            j--;
+            else{
+            while(j > 0 && G->degree[j] < G->degree[j-1]) {
+                TinyGraphSwapNodes(G, j-1, j);
+                if(lab) { int t = lab[j-1]; lab[j-1] = lab[j]; lab[j] = t; }
+                j--;
+            }
         }
     }
     return G;
+}
+
+TINY_GRAPH *TinyGraphSort(TINY_GRAPH *G, Boolean byCubedSum)
+{
+    return TinyGraphSortPerm(G, byCubedSum, NULL);
 }
 
 unsigned TinyGraphNumReachableNodes(TINY_GRAPH *g, int seed) {
