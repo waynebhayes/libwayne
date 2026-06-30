@@ -37,6 +37,9 @@ TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *destination, TINY_GRAPH *G1, TINY_GRAPH *
 int TinyGraphNumEdges(TINY_GRAPH *G); // total number of edges, just the sum of the degrees / 2.
 TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H);
 TINY_GRAPH *TinyGraphSort(TINY_GRAPH *G, Boolean byCubedSum);
+// Same as TinyGraphSort, but if lab != NULL, every node swap applied to G is mirrored onto lab[],
+// so that on return lab[pos] gives the ORIGINAL index of the node now sitting at position pos.
+TINY_GRAPH *TinyGraphSortPerm(TINY_GRAPH *G, Boolean byCubedSum, int *lab);
 #define TinyGraphDegree(G,v) ((G)->degree[v])
 
 /* Returns number of nodes in the the distance-d neighborhood, including seed.
