@@ -9,9 +9,17 @@ extern "C" {
 #include <malloc.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <pthread.h>
 #include "misc.h"   /* for foint */
 
+#if __GNUC__ <= 5 // neutralize threading code, since it doesn't work in GCC 5.x
+#define pthread_rwlock_destroy(x) // NOTHING
+#define pthread_rwlock_init(x,y) // NOTHING
+#define pthread_rwlock_rdlock(x) // NOTHING
+#define pthread_rwlock_unlock(x) // NOTHING
+#define pthread_rwlock_wrlock(x) // NOTHING
+#else
+#include <pthread.h>
+#endif
 
 /*-------------------  Types  ------------------*/
 
