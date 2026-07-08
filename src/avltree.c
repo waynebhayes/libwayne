@@ -85,7 +85,15 @@ AVLTREE *AvlTreeAlloc(pCmpFcn cmpKey,
     tree->copyInfo = copyInfo ? copyInfo : CopyInt;
     tree->freeInfo = freeInfo ? freeInfo : FreeInt;
     tree->n = 0;
+
+#ifdef AVL_MUTEX_ONLY
+	pthread_mutex_init(&tree->readLock, NULL);
+	pthread_mutex_init(&tree->globalLock, NULL);
+	tree->blockingReaders = 0;
+#else
     pthread_rwlock_init(&tree->lock, NULL);
+#endif
+
     return tree;
 }
 
@@ -179,6 +187,23 @@ void AvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	UnsafeAvlTreeInsert(tree, key, info);
 }
 
+void StartWrite(AVLTREE *tree)
+{
+#ifdef AVL_MUTEX_ONLY
+	pthread_mutex_lock(&tree->globalLock);
+#else
+	pthread_rwlock_wrlock(&tree->lock);
+#endif
+}
+
+void EndWrite(AVLTREE *tree)
+{
+#ifdef AVL_MUTEX_ONLY
+	pthread_mutex_unlock(&tree->globalLock);
+#else
+	pthread_rwlock_unlock(&tree->lock);
+#endif
+}
 
 foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 {
@@ -186,7 +211,7 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	*r = NULL; // Starting point for nodes that need their balance recalculated
     int cmp; // Temporary storage of a key comparison
 
-	pthread_rwlock_wrlock(&tree->lock);
+	StartWrite(tree);
 	AVLTREENODE *p = tree->root, **P = &(tree->root); // P is a locative used to trace the path
 
 	#ifdef VERBOSE
@@ -231,7 +256,7 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 		tree->freeInfo(p->info);
 		p->info = tree->copyInfo(info);
 
-		pthread_rwlock_unlock(&tree->lock);
+		EndWrite(tree);
 		return &p->info;
     }
 
@@ -302,7 +327,7 @@ foint* const UnsafeAvlTreeInsert(AVLTREE *tree, foint key, foint info)
 	#endif
 
 	tree->n++;
-	pthread_rwlock_unlock(&tree->lock);
+	EndWrite(tree);
 	return (foint*)((uintptr_t)&p->info | 1); // Modify LSB to be 1 to indicate an element was added
 }
 
@@ -327,11 +352,38 @@ Boolean AvlTreeLookup(AVLTREE *tree, foint key, foint *pInfo)
 		return false;
 }
 
+static void StartRead(AVLTREE *tree)
+{
+#ifdef AVL_MUTEX_ONLY
+	pthread_mutex_lock(&tree->readLock);
+	if (++tree->blockingReaders == 1)
+	{
+		assert(pthread_mutex_lock(&tree->globalLock) == 0);
+	}
+	pthread_mutex_unlock(&tree->readLock);
+#else
+	pthread_rwlock_rdlock(&tree->lock);
+#endif
+}
+
+static void EndRead(AVLTREE * tree)
+{
+#ifdef AVL_MUTEX_ONLY
+	pthread_mutex_lock(&tree->readLock);
+	if (--tree->blockingReaders == 0)
+	{
+		assert(pthread_mutex_unlock(&tree->globalLock) == 0);
+	}
+	pthread_mutex_unlock(&tree->readLock);
+#else
+	pthread_rwlock_unlock(&tree->lock);
+#endif
+}
 
 foint* const UnsafeAvlTreeLookup(AVLTREE *tree, foint key)
 {
     foint* result = NULL;
-    pthread_rwlock_rdlock(&tree->lock);
+    StartRead(tree);
     AVLTREENODE *p = tree->root;
 
     while(p)
@@ -342,14 +394,14 @@ foint* const UnsafeAvlTreeLookup(AVLTREE *tree, foint key)
 		else             p = getRight(p);
     }
     
-    pthread_rwlock_unlock(&tree->lock);
+    EndRead(tree);
     return result;
 }
 
 
 Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 {
-    pthread_rwlock_wrlock(&tree->lock);
+    StartWrite(tree);
     AVLTREENODE *p = tree->root, **P = &(tree->root); AVLTREENODE *parent = tree->root;
 
     while(p)
@@ -394,7 +446,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 		#ifdef VERBOSE
 		if (tree->n > 0) CheckBalance(tree->root, 0);
 		#endif
-		pthread_rwlock_unlock(&tree->lock);
+		EndWrite(tree);
 		return true; 
 	}
 
@@ -544,7 +596,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 	if (tree->n > 0) CheckBalance(tree->root, 0);
 	#endif
 
-	pthread_rwlock_unlock(&tree->lock);
+	EndWrite(tree);
 	return true;
 }
 
@@ -563,11 +615,11 @@ static int AvlTreeTraverseHelper (foint globals, STACK* delete, AVLTREENODE *p, 
 int AvlTreeTraverse (foint globals, AVLTREE *tree, pFointTraverseFcn f)
 {
 	STACK* delete = StackAlloc(Log2(tree->n));
-	pthread_rwlock_rdlock(&tree->lock);
+	StartRead(tree);
 	int result = AvlTreeTraverseHelper(globals, delete, tree->root, f);
 
 	// We can release the read-lock at this point because AvlTreeDelete will acquire write-lock if needed
-	pthread_rwlock_unlock(&tree->lock);
+	EndRead(tree);
 	while (StackSize(delete) > 0) AvlTreeDelete(tree, StackPop(delete));
 
 	StackFree(delete);
@@ -641,7 +693,12 @@ void AvlTreeFree(AVLTREE *tree)
 {
     AvlTreeFreeHelper(tree, tree->root);
     assert(tree->n == 0);
+#ifdef AVL_MUTEX_ONLY
+    pthread_mutex_destroy(&tree->readLock);
+    pthread_mutex_destroy(&tree->globalLock);
+#else
     pthread_rwlock_destroy(&tree->lock);
+#endif
     free(tree);
 }
 

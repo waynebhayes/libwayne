@@ -11,15 +11,10 @@ extern "C" {
 #include <stdint.h>
 #include "misc.h"   /* for foint */
 
-#if __GNUC__ <= 5 // neutralize threading code, since it doesn't work in GCC 5.x
-#define pthread_rwlock_destroy(x) // NOTHING
-#define pthread_rwlock_init(x,y) // NOTHING
-#define pthread_rwlock_rdlock(x) // NOTHING
-#define pthread_rwlock_unlock(x) // NOTHING
-#define pthread_rwlock_wrlock(x) // NOTHING
-#else
-#include <pthread.h>
+#if __GNUC__ <= 5 // POSIX rwlock doesn't work in GCC 5.x
+#define AVL_MUTEX_ONLY
 #endif
+#include <pthread.h>
 
 /*-------------------  Types  ------------------*/
 
@@ -48,7 +43,12 @@ typedef struct _avlTree
     pCmpFcn cmpKey;
     pFointCopyFcn copyKey, copyInfo;
     pFointFreeFcn freeKey, freeInfo;
+#ifdef AVL_MUTEX_ONLY
+    pthread_mutex_t readLock, globalLock;
+    int blockingReaders;
+#else
     pthread_rwlock_t lock;
+#endif
 } AVLTREE;
 
 /*-----------   Function Prototypes  -----------*/
