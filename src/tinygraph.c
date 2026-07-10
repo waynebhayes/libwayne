@@ -14,6 +14,7 @@ extern "C" {
 
 TINY_GRAPH *TinyGraphAlloc(unsigned int n, Boolean selfLoops, Boolean directed)
 {
+    fprintf(stderr,"sizeof(TSET)=%zu sizeof(TINY_GRAPH)=%zu\n",sizeof(TSET), sizeof(TINY_GRAPH));
     static Boolean startup = 1;
     TINY_GRAPH *G = Calloc(1, sizeof(TINY_GRAPH));
     // Note: an assert(n<=MAX_TSET) isn't enough, because it can be turned off with NDEBUG. We need to be CERTAIN.
@@ -37,7 +38,15 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 {
     if(TinyGraphAreConnected(G, i, j)) return G;
     if(i==j) assert(G->selfLoops);
-    TSetAdd(G->A[i], j);
+fprintf(stderr,
+    "connect %d %d  before=%04x mask=%04x after=",
+    i,j,
+    (unsigned)G->A[i],
+    (unsigned)(TSET1<<j));
+
+TSetAdd(G->A[i],j);
+
+fprintf(stderr,"%04x\n",(unsigned)G->A[i]);
     ++G->degree[i];
     if(i==j) assert(G->selfLoops);
     else if(!G->directed){
@@ -51,26 +60,33 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
 {
     if(u==v) return G;
     // TODO FIXME: there's probably a more efficient way to do this than constructing the whole TINY_GRAPH from scratch...
-    static TINY_GRAPH H; // note this is NOT a pointer
-    H.n = G->n;
-    H.selfLoops = G->selfLoops;
-    H.directed = G->directed;
-    TinyGraphEdgesAllDelete(&H);
+    TINY_GRAPH *H=TinyGraphAlloc(G->n,G->selfLoops,G->directed);
+    TinyGraphEdgesAllDelete(H);
     int i,j, perm[MAX_TSET];
+    fprintf(stderr,"%d %d %d <-before swap\n", TinyGraphNumEdges(G), G->n, H->n);
+    fprintf(stderr,"%d %d tsets\n", sizeof(TSET), MAX_TSET);
     for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
     perm[u]=v; perm[v]=u;  // swap u and v
-    for(i=0; i<G->n; i++) for(j=0; j<G->n;j++) if(TinyGraphAreConnected(G,i,j)){
-	assert(i!=j||G->selfLoops);
-	TinyGraphConnect(&H, perm[i], perm[j]);
+    for(i=0; i<G->n; i++){
+        fprintf(stderr,"%d\n", G->degree[i]);
+        for(int j=0; j<G->n; j++) fprintf(stderr,"%d ", !!TinyGraphAreConnected(G,i,j));
+        fprintf(stderr,"\n\n");
     }
-    TinyGraphCopy(G, &H);
+    for(i=0; i<G->n; i++) for(j=(G->directed ? 0 : i); j<G->n;j++) if(!!TinyGraphAreConnected(G,i,j)){
+	assert(i!=j||G->selfLoops);
+	TinyGraphConnect(H, perm[i], perm[j]);
+        //fprintf(stderr,"%d <-after step %d , %d\n", TinyGraphNumEdges(H), i, j);
+    }
+    fprintf(stderr,"%d <-before cpy\n", TinyGraphNumEdges(H));
+    TinyGraphCopy(G, H);
+    fprintf(stderr,"%d <-after cpy\n", TinyGraphNumEdges(G));
     return G;
 }
 
 TINY_GRAPH *TinyGraphEdgesAllDelete(TINY_GRAPH *G)
 {
     int i;
-    for(i=0; i < MAX_TSET; i++)
+    for(i=0; i < G->n; i++)
     {
 	G->degree[i] = 0;
 	TSetEmpty(G->A[i]);
@@ -95,6 +111,12 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j)
 {
+fprintf(stderr,
+    "are %d %d  row=%04x mask=%04x ans=%d\n",
+    i,j,
+    (unsigned)G->A[i],
+    (unsigned)(TSET1<<j),
+    TSetIn(G->A[i],j));
     return TSetIn(G->A[i],j);
 }
 
@@ -168,7 +190,7 @@ TINY_GRAPH *TinyGraphUnion(TINY_GRAPH *dest, TINY_GRAPH *G1, TINY_GRAPH *G2)
 TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 {
     int i;
-
+    //fprintf(stderr,"%d <-G1a\n", TinyGraphNumEdges(G1));
     if(dest)
 	dest->n = G1->n, dest->directed=G1->directed;
     else
@@ -179,11 +201,13 @@ TINY_GRAPH *TinyGraphCopy(TINY_GRAPH *dest, TINY_GRAPH *G1)
 	dest->A[i] = G1->A[i];
 	dest->degree[i] = G1->degree[i];
     }
+    //fprintf(stderr,"%d <-step 1\n", TinyGraphNumEdges(dest));
+    //fprintf(stderr,"%d <-G1\n", TinyGraphNumEdges(G1));
     for(;i < MAX_TSET; i++) {
 	dest->A[i] = TSET_NULLSET;
 	dest->degree[i] = 0;
     }
-
+    //fprintf(stderr,"%d <-step 2\n", TinyGraphNumEdges(dest));
     return dest;
 }
 
@@ -212,25 +236,70 @@ TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
 TINY_GRAPH *TinyGraphSortPerm(TINY_GRAPH *G, Boolean byCubedSum, int *lab)
 {
     int i, j, n = G->n;
-    for(i = 1; i < n; i++) {
-        j = i;
-        if(byCubedSum) {
-            int sum = 0, sumPrev = 0;
-            for(int k = 0; k < n; k++) {
-                if(TinyGraphAreConnected(G, i, k)) sum += G->degree[k] * G->degree[k] * G->degree[k];
-                if(TinyGraphAreConnected(G, i-1, k)) sumPrev += G->degree[k] * G->degree[k] * G->degree[k];
-            }
-            while(j > 0 && sum < sumPrev) {
-                TinyGraphSwapNodes(G, j-1, j);
-                if(lab) { int t = lab[j-1]; lab[j-1] = lab[j]; lab[j] = t; }
-                j--;
-            }
+    if (byCubedSum) {
+        /*
+        for(int ix=0;ix<n;ix++){
+            int bestSum=0;
+            for (int k = 0; k < n; k++)
+                if (TinyGraphAreConnected(G, ix, k))
+                    bestSum += G->degree[k] * G->degree[k] * G->degree[k];
+            fprintf(stderr,"%d ", bestSum);
         }
-            else{
-            while(j > 0 && G->degree[j] < G->degree[j-1]) {
-                TinyGraphSwapNodes(G, j-1, j);
-                if(lab) { int t = lab[j-1]; lab[j-1] = lab[j]; lab[j] = t; }
-                j--;
+        fprintf(stderr, "unsorted\n");*/
+        for (i = 0; i < n - 1; i++) {
+            int best = i;
+            int bestSum = 0;
+            for (int k = 0; k < n; k++)
+                if (TinyGraphAreConnected(G, best, k))
+                    bestSum += G->degree[k] * G->degree[k] * G->degree[k];
+            for (j = i + 1; j < n; j++) {
+                int sum = 0;
+                for (int k = 0; k < n; k++)
+                    if (TinyGraphAreConnected(G, j, k))
+                        sum += G->degree[k] * G->degree[k] * G->degree[k];
+                if (sum < bestSum) {
+                    best = j;
+                    bestSum = sum;
+                }
+            }
+            if (best != i) {
+                TinyGraphSwapNodes(G, i, best);
+                if (lab) {
+                    int t = lab[i];
+                    lab[i] = lab[best];
+                    lab[best] = t;
+                }
+            }
+            /*for(int ix=0;ix<=i;ix++){
+                int bSum=0;
+                for (int k = 0; k < n; k++)
+                    if (TinyGraphAreConnected(G, ix, k))
+                        bSum += G->degree[k] * G->degree[k] * G->degree[k];
+                fprintf(stderr,"%d ", bSum);
+            }
+            fprintf(stderr,"Progress\n");*/
+        }
+        /*for(int ix=0;ix<n;ix++){
+            int bestSum=0;
+            for (int k = 0; k < n; k++)
+                if (TinyGraphAreConnected(G, ix, k))
+                    bestSum += G->degree[k] * G->degree[k] * G->degree[k];
+            fprintf(stderr,"%d ", bestSum);
+        }
+        fprintf(stderr, "sorted\n");*/
+    } else {
+        for (i = 0; i < n - 1; i++) {
+            int best = i;
+            for (j = i + 1; j < n; j++)
+                if (G->degree[j] < G->degree[best])
+                    best = j;
+            if (best != i) {
+                TinyGraphSwapNodes(G, i, best);
+                if (lab) {
+                    int t = lab[i];
+                    lab[i] = lab[best];
+                    lab[best] = t;
+                }
             }
         }
     }

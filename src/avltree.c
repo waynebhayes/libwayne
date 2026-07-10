@@ -414,7 +414,7 @@ Boolean AvlTreeDelete(AVLTREE *tree, foint key)
 		else RightAssignLocative(P,p,p);
 	}
     
-    if(!p) return false; // node not found, nothing deleted
+    if(!p) { EndWrite(tree); return false; } // node not found, nothing deleted
     assert(tree->n > 0);
 
 	// At this point, p points to the node we want to delete

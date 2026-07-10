@@ -13,3 +13,5 @@
 #define float_width 32
 #define sizeof_double 8
 #define double_width 64
+#define sizeof___int128 16
+#define __int128_width 128

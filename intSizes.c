@@ -23,7 +23,7 @@ int main(void) {
     PrintSz(long long);
     PrintSz(float);
     PrintSz(double);
-#if __GLIBCXX_TYPE_INT_N_0 == 128
+#if defined(__SIZEOF_INT128__)
     PrintSz(__int128);
 #endif
 #if 0
