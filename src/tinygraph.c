@@ -69,10 +69,10 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
     perm[u]=v; perm[v]=u;  // swap u and v
     for(i=0; i<G->n; i++){
         fprintf(stderr,"%d\n", G->degree[i]);
-        for(int j=0; j<G->n; j++) fprintf(stderr,"%d ", !!TinyGraphAreConnected(G,i,j));
+        for(int j=0; j<G->n; j++) fprintf(stderr,"%d ", (TinyGraphAreConnected(G,i,j)!=0));
         fprintf(stderr,"\n\n");
     }
-    for(i=0; i<G->n; i++) for(j=(G->directed ? 0 : i); j<G->n;j++) if(!!TinyGraphAreConnected(G,i,j)){
+    for(i=0; i<G->n; i++) for(j=(G->directed ? 0 : i); j<G->n;j++) if(TinyGraphAreConnected(G,i,j)!=0){
 	assert(i!=j||G->selfLoops);
 	TinyGraphConnect(H, perm[i], perm[j]);
         //fprintf(stderr,"%d <-after step %d , %d\n", TinyGraphNumEdges(H), i, j);
@@ -111,13 +111,14 @@ TINY_GRAPH *TinyGraphDisconnect(TINY_GRAPH *G, int i, int j)
 
 Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j)
 {
+TSET value = TSetIn(G->A[i],j);
 fprintf(stderr,
-    "are %d %d  row=%04x mask=%04x ans=%d\n",
+    "are %d %d  row=%04x mask=%04x ans=%d (%d)\n",
     i,j,
     (unsigned)G->A[i],
     (unsigned)(TSET1<<j),
-    TSetIn(G->A[i],j));
-    return TSetIn(G->A[i],j);
+    TSetIn(G->A[i],j),value);
+    return value;
 }
 
 void TinyGraphPrintAdjMatrix(FILE *fp, TINY_GRAPH *G)
