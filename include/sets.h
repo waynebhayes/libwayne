@@ -151,7 +151,7 @@ unsigned *SetSmartArray(unsigned *array, const SET *const s, const unsigned maxS
 #endif
 #define SSET1 1ULL
 #define SSET_NULLSET 0ULL
-#define MAX_SSET (8*sizeof(SSET))
+#define MAX_SSET (16*sizeof(SSET))
 
 #define SSetEmpty(s) s = 0
 #define SSetReset SSetEmpty
@@ -179,7 +179,7 @@ Boolean SSetDictIn(SSETDICT*, SSET);
 void SSetDictFree(SSETDICT*);
 
 #ifndef TINY_SET_SIZE
-#define TINY_SET_SIZE 8
+#define TINY_SET_SIZE 16
 #endif
 
 #if TINY_SET_SIZE >= 64
@@ -219,7 +219,7 @@ void SSetDictFree(SSETDICT*);
 
     #define TSET1 ((TSET)1)
     #define TSET_NULLSET ((TSET)0)
-    #define MAX_TSET (8*sizeof(TSET))
+    #define MAX_TSET (16*sizeof(TSET))
 
     #define TSetEmpty(s) (s) = 0
     #define TSetReset TSetEmpty
