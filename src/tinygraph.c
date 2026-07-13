@@ -52,7 +52,6 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
     if(u==v) return G;
     // TODO FIXME: there's probably a more efficient way to do this than constructing the whole TINY_GRAPH from scratch...
     TINY_GRAPH *H=TinyGraphAlloc(G->n,G->selfLoops,G->directed);
-    TinyGraphEdgesAllDelete(H);
     int i,j, perm[MAX_TSET];
     for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
     perm[u]=v; perm[v]=u;  // swap u and v
@@ -61,6 +60,7 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
 	TinyGraphConnect(H, perm[i], perm[j]);
     }
     TinyGraphCopy(G, H);
+    TinyGraphFree(H);
     return G;
 }
 
