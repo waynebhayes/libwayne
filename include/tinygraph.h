@@ -73,7 +73,7 @@ TINY_GRAPH *TinyGraphReadAdjMatrix(FILE *fp, Boolean directed);
 // #define TinyGraphAreConnected(G,i,j) TSetIn((G)->A[i],(j))
 // #endif
 #ifndef TinyGraphAreConnected
-Boolean TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
+TSET TinyGraphAreConnected(TINY_GRAPH *G, int i, int j);
 #endif
 
 /*
