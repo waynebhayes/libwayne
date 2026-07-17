@@ -190,7 +190,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
 	numSelf +=TinyGraphAreConnected(G,i,i);
     }
     assert(numSelf==0||G->selfLoops);
-    return (numSelf*(1-G->directed)+total)/(2-G->directed);
+    return (-numSelf*(1-G->directed)+total)/(2-G->directed);
 }
 
 TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
