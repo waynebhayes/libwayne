@@ -9,7 +9,7 @@ extern "C" {
 // Include this
 
 #if !defined(HTREE_USES_AVL) && !defined(TREE_USES_AVL)
-#define TREE_USES_AVL 1 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
+#define TREE_USES_AVL 0 // set to 0 to use old "copy to balance" bintree -- which appears faster though uses more RAM
 #else
 #define TREE_USES_AVL 0
 #endif
@@ -17,6 +17,7 @@ extern "C" {
 #if TREE_USES_AVL
 #include "avltree.h"
 #define TREETYPE AVLTREE
+#define TREE AVLTREE
 #define TreeAlloc AvlTreeAlloc
 #define TreeInsert AvlTreeInsert
 #define UnsafeTreeInsert UnsafeAvlTreeInsert
@@ -29,6 +30,7 @@ extern "C" {
 #else
 #include "bintree.h"
 #define TREETYPE BINTREE
+#define TREE BINTREE
 #define TreeAlloc BinTreeAlloc
 #define TreeInsert BinTreeInsert
 #define UnsafeTreeInsert UnsafeBinTreeInsert
