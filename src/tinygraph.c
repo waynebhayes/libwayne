@@ -56,8 +56,6 @@ TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
     int i,j, perm[MAX_TSET];
     for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
     perm[u]=v; perm[v]=u;  // swap u and v
-    for(i=0; i<G->n; i++){
-    }
     for(i=0; i<G->n; i++) for(j=(G->directed ? 0 : i); j<G->n;j++) if(TinyGraphAreConnected(G,i,j)!=0){
 	assert(i!=j||G->selfLoops);
 	TinyGraphConnect(H, perm[i], perm[j]);
@@ -192,7 +190,7 @@ int TinyGraphNumEdges(TINY_GRAPH *G)
 	numSelf +=TinyGraphAreConnected(G,i,i);
     }
     assert(numSelf==0||G->selfLoops);
-    return (numSelf*(1-G->directed)+total)/(2-G->directed);
+    return (-numSelf*(1-G->directed)+total)/(2-G->directed);
 }
 
 TINY_GRAPH *TinyGraphToUndirected(TINY_GRAPH *G, TINY_GRAPH *H)
