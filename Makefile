@@ -47,7 +47,13 @@ parallel: parallel.c
 	$(CC) -o bin/parallel parallel.c
 
 testlib:
-	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity tinygraph-sanity graph-weighted circ_buf sim_anneal; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; IN=/dev/null; [ -f $$x.in ] && IN=$$x.in; cat $$IN | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ 2>&1 || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; /bin/rm -f /tmp/$$x.test$$$$); done
+	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity tinygraph-sanity graph-weighted graph-addedgelist-test circ_buf sim_anneal; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; IN=/dev/null; [ -f $$x.in ] && IN=$$x.in; cat $$IN | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ 2>&1 || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; /bin/rm -f /tmp/$$x.test$$$$); done
+
+# graph-addedgelist-errors-test deliberately Fatal()s (exit 1) on every valid invocation, since it
+# demonstrates GraphAddEdgeList's input-validation failures--so it can't share testlib's generic
+# "exit 0 == pass" loop above. Here, success means the program DID exit nonzero.
+testlib-errors:
+	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); ( cd tests; $(MAKE) graph-addedgelist-errors-test; mv graph-addedgelist-errors-test ../bin; for c in 1 2; do ../bin/graph-addedgelist-errors-test $$c > /tmp/graph-addedgelist-errors-test.$$c 2>&1 && { echo "FAIL: case $$c of graph-addedgelist-errors-test unexpectedly succeeded" >&2; exit 1; }; echo "case $$c correctly failed as expected:"; cat /tmp/graph-addedgelist-errors-test.$$c; /bin/rm -f /tmp/graph-addedgelist-errors-test.$$c; done )
 
 opt:
 	$(MAKE) 'OPT=-O2' 'LIBOUT=libwayne.a' libwayne
