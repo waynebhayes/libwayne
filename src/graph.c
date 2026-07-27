@@ -566,7 +566,7 @@ char *HashString(char *s)
 
 GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNodeNames, Boolean weighted)
 {
-    unsigned numNodes=0;
+    unsigned numNodes=0, lineNum=0;
     unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
     unsigned *pairs = Malloc(2*maxEdges*sizeof(pairs[0]));
     float *fweight = NULL;
@@ -586,6 +586,7 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
     static Boolean selfWarned;
     while(fgets(line, sizeof(line), fp))
     {
+	++lineNum;
 	// nuke all whitespace, including DOS carriage returns, from the end of the line
 	int len = strlen(line);
 	while(isspace(line[len-1])) line[--len]='\0';
@@ -607,9 +608,16 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 	union {int i; char name[BUFSIZ];} v1, v2;
 	foint f1, f2;
 	// Note: if !supportNodeNames, a binary integer will be written into the name unions
-	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
-	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges,
+	int numRead = sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w);
+	if(numRead==1) { // the first two lines may encode _numNodes and _numEdges, respectively
+	    static unsigned _numNodes=-1, _numEdges=-1;
+	    if(lineNum==1) { sscanf(line, "%u", &_numNodes); continue;}
+	    if(lineNum==2) { sscanf(line, "%u", &_numEdges); continue;}
+	}
+	if(numRead != numExpected[weighted]) {
+	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", lineNum,
 		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
+	}
 	if(supportNodeNames)
 	{
 	    assert(numNodes <= maxNodes);
