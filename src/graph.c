@@ -568,6 +568,7 @@ GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNod
     unsigned numNodes=0;     // authoritative once pass 1 finishes
     unsigned numEdgeLines=0; // upper bound on the final G->numEdges
 
+    Note("2pass: first pass reading EdgeList");
     // ---------------- PASS 1: header + exact degree-counting ----------------
     lineNum = 0;
     while(fgets(line, sizeof(line), fp))
@@ -585,10 +586,14 @@ GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNod
 	    unsigned val = ParseNonNegUint(v1, lineNum);
 	    if(lineNum==1) {
 		headerN = val; haveHeaderN = true;
+		Note("first header line claims %u nodes", headerN);
 		namesCap = MAX(headerN,1);
 		degCap = Calloc(namesCap, sizeof(degCap[0])); degCapAlloc = headerN;
 		if(supportNodeNames) names = Malloc(namesCap*sizeof(names[0]));
-	    } else { headerM = val; haveHeaderM = true; } // read for sanity-checking only; pass 1 always computes the real edge count
+	    } else {
+		headerM = val; haveHeaderM = true; // read for sanity-checking only; pass 1 always computes the real edge count
+		Note("second header line claims %u edges", headerM);
+	    }
 	    continue;
 	}
 	if(numRead != numExpected[weighted])
@@ -640,6 +645,7 @@ GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNod
     if(haveHeaderM && headerM != numEdgeLines)
 	Warning("GraphAddEdgeList: header declared %u edges but the file actually contains %u", headerM, numEdgeLines);
 
+    Note("2pass: found %u nodes and %u edges", numNodes, numEdgeLines);
     // ---------------- allocate G and give every array its final, exact size ----------------
     G = GraphAlloc(G, numNodes, directed, supportNodeNames, NULL); // degree[]=0, neighbor[]=NULL (Calloc'd)
     if(weighted) GraphMakeWeighted(G);
@@ -661,6 +667,7 @@ GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNod
     rewind(fp);
     lineNum = 0;
     haveHeaderN = false; // replay the exact same header-detection logic as pass 1
+    Note("2pass: second pass reading EdgeList");
     while(fgets(line, sizeof(line), fp))
     {
 	++lineNum;
