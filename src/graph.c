@@ -568,6 +568,10 @@ GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNod
     unsigned numNodes=0;     // authoritative once pass 1 finishes
     unsigned numEdgeLines=0; // upper bound on the final G->numEdges
 
+    // Try seeking to the end
+    if(fseek(fp, 0L, SEEK_END)!=0) Fatal("Can't seek on this file, so can't do two passes");
+    rewind(fp);
+
     Note("2pass: first pass reading EdgeList");
     // ---------------- PASS 1: header + exact degree-counting ----------------
     lineNum = 0;
