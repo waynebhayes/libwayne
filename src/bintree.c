@@ -308,6 +308,7 @@ void BinTreeRebalance(BINTREE *tree, Boolean force)
     BINTREENODE *p = tree->root;       tree->root       = newTree->root;       newTree->root       = p;
     BinTreeFree(newTree);
     inRebalance = false;
+    fprintf(stderr,"r");
 }
 #ifdef __cplusplus
 } // end extern "C"

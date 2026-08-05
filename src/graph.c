@@ -13,6 +13,8 @@ extern "C" {
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <errno.h>
+#include <limits.h>
 #include "mem-debug.h"
 
 #define MIN_EDGELIST 1024
@@ -507,21 +509,202 @@ GRAPH *GraphReadAdjList(GRAPH *G, FILE *fp, Boolean directed)
     return G;
 }
 
-// Add the list of edges to the graph--should only be called while the graph is being built immediately after Alloc
-GRAPH *GraphAddEdgeList(GRAPH *G, Boolean directed, unsigned m, unsigned *pairs, float *weights)
+// Parses `tok` (already whitespace-trimmed, e.g. by a prior "%s" scanf conversion) as a
+// non-negative integer that fits in an unsigned int, Fatal()ing on a leading '-', non-numeric
+// text, or a value too large. strtoul is used instead of sscanf's %d/%u because, unlike those,
+// it is required by the standard to report its own overflow (via errno==ERANGE) rather than
+// invoking undefined behavior--but since strtoul's own return type (unsigned long) can be wider
+// than unsigned int, a value can clear that check yet still be too big for our target, so it also
+// gets an explicit bound check against UINT_MAX.
+static unsigned ParseNonNegUint(const char *tok, unsigned lineNum)
 {
-    int i;
-    Apology("Sorry, GraphAddEdgeList not yet implemented");
-    if(weights) assert(G->weight);
-    for(i=0; i<m; i++) {
-	if(pairs[2*i] == pairs[2*i+1] && !G->selfAllowed) {
-	    static Boolean warned;
-	    if(!warned) Warning("GraphAddEdgeList: node %d has a self-loop; assuming they are allowed", pairs[2*i]);
-	    warned = G->selfAllowed = true;
+    if(tok[0]=='-')
+	Fatal("GraphAddEdgeList: line %u must be a non-negative integer, but is \"%s\"", lineNum, tok);
+    char *end;
+    errno = 0;
+    unsigned long val = strtoul(tok, &end, 10); // 10 = base-10
+    if(end==tok || *end != '\0')
+	Fatal("GraphAddEdgeList: line %u must be a non-negative integer, but is \"%s\"", lineNum, tok);
+    if(errno==ERANGE || val > UINT_MAX)
+	Fatal("GraphAddEdgeList: line %u: value \"%s\" is too large to fit in an unsigned int", lineNum, tok);
+    return (unsigned)val;
+}
+
+// Reads an edge-list file and builds a fresh GRAPH from it (G is passed to GraphAlloc, so
+// NULL or an existing GRAPH* to be reinitialized are both fine, same convention as GraphReadEdgeList).
+// Unlike GraphReadEdgeList, this makes exactly ONE allocation per node's neighbor (and weight)
+// array and one allocation for the edge list: it reads the file TWICE. Pass 1 discovers the
+// number of nodes and the exact (upper-bound) degree of each node; that lets us size every
+// array at its final length before pass 2 fills them in, so GraphConnect's per-edge Realloc
+// is never invoked. G->A (the adjacency-matrix SET**) is unused elsewhere in this file, so it
+// is left untouched (NULL) here too--only G->neighbor is maintained.
+//
+// File format is the same as GraphReadEdgeList's, with the same optional header: if line 1 is
+// a single whitespace-delimited token, it must be a non-negative integer giving the number of
+// nodes (authoritative--Fatal()s if a larger node id shows up later); if--and only if--line 1
+// was such a header, line 2 may likewise be a single integer giving the number of edges. That
+// count is read and sanity-checked but never relied on, since pass 1 always determines the
+// real count itself.
+//
+// NOTE: fp must be seekable; pass 2 begins with rewind(fp), so this cannot be used on a pipe/stdin.
+GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNodeNames, Boolean weighted)
+{
+    const int numExpected[2] = {2, 3}; // indexed by [weighted]
+    // Always %s%s, even for plain integer node ids: %d/%u via sscanf has undefined behavior on
+    // overflow, so numeric ids are captured as text here and validated/converted explicitly by
+    // ParseNonNegUint below instead.
+    const char *fmt[2] = {"%s%s ", "%s%s%f "}; // indexed by [weighted]
+    char line[BUFSIZ];
+    unsigned lineNum;
+    Boolean haveHeaderN=false, haveHeaderM=false, selfSeen=false;
+    unsigned headerN=0, headerM=0;
+
+    TREETYPE *nameDict=NULL;
+    char **names=NULL;
+    unsigned namesCap=0;
+
+    unsigned *degCap=NULL;   // degCap[v]: exact number of times v will be connected in pass 2 (upper bound; duplicate edges in the input are counted here but silently skipped in pass 2, same as GraphConnect always did)
+    unsigned degCapAlloc=0;
+    unsigned numNodes=0;     // authoritative once pass 1 finishes
+    unsigned numEdgeLines=0; // upper bound on the final G->numEdges
+
+    // Try seeking to the end
+    if(fseek(fp, 0L, SEEK_END)!=0) Fatal("Can't seek on this file, so can't do two passes");
+    rewind(fp);
+
+    Note("2pass: first pass reading EdgeList");
+    // ---------------- PASS 1: header + exact degree-counting ----------------
+    lineNum = 0;
+    while(fgets(line, sizeof(line), fp))
+    {
+	++lineNum;
+	int len = strlen(line);
+	while(len>0 && isspace((unsigned char)line[len-1])) line[--len]='\0';
+	if(len==0) continue;
+
+	float w;
+	char v1[BUFSIZ], v2[BUFSIZ];
+	int numRead = sscanf(line, fmt[weighted], v1, v2, &w);
+
+	if(numRead==1 && lineNum<=2 && (lineNum==1 || haveHeaderN)) {
+	    unsigned val = ParseNonNegUint(v1, lineNum);
+	    if(lineNum==1) {
+		headerN = val; haveHeaderN = true;
+		Note("first header line claims %u nodes", headerN);
+		namesCap = MAX(headerN,1);
+		degCap = Calloc(namesCap, sizeof(degCap[0])); degCapAlloc = headerN;
+		if(supportNodeNames) names = Malloc(namesCap*sizeof(names[0]));
+	    } else {
+		headerM = val; haveHeaderM = true; // read for sanity-checking only; pass 1 always computes the real edge count
+		Note("second header line claims %u edges", headerM);
+	    }
+	    continue;
 	}
-	GraphConnect(G, pairs[2*i], pairs[2*i+1]);
-	if(weights) {assert(weights[i]!=0.0); GraphSetWeight(G, pairs[2*i], pairs[2*i+1], weights[i]);}
+	if(numRead != numExpected[weighted])
+	    Fatal("GraphAddEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", lineNum,
+		(supportNodeNames?"strings":"ints"), (weighted?" and a weight":""), line);
+
+	unsigned i, j;
+	if(supportNodeNames)
+	{
+	    if(!nameDict) nameDict = TreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
+	    if(namesCap==0) { namesCap = MIN_EDGELIST; names = Malloc(namesCap*sizeof(names[0])); }
+	    foint f1, f2;
+	    Boolean new1 = !TreeLookup(nameDict, (foint)v1, &f1);
+	    Boolean new2 = !TreeLookup(nameDict, (foint)v2, &f2);
+	    unsigned newCount = new1 + new2; // how many of v1,v2 are actually new--0, 1, or 2--checked once, not assumed worst-case
+	    if(haveHeaderN && numNodes+newCount > headerN)
+		Fatal("GraphAddEdgeList: header declared only %u nodes but another distinct name appeared on line %d", headerN, lineNum);
+	    while(numNodes+newCount > namesCap) { namesCap *= 2; names = Realloc(names, namesCap*sizeof(names[0])); }
+	    if(new1) { names[numNodes]=Strdup(v1); f1.i=numNodes++; TreeInsert(nameDict,(foint)v1,f1); }
+	    if(new2) { names[numNodes]=Strdup(v2); f2.i=numNodes++; TreeInsert(nameDict,(foint)v2,f2); }
+	    i = f1.i; j = f2.i;
+	}
+	else {
+	    i = ParseNonNegUint(v1, lineNum);
+	    j = ParseNonNegUint(v2, lineNum);
+	    if(haveHeaderN && MAX(i,j)+1 > headerN)
+		Fatal("GraphAddEdgeList: header declared only %u nodes but node %u appeared on line %d", headerN, MAX(i,j), lineNum);
+	    numNodes = MAX(numNodes, MAX(i,j)+1);
+	}
+
+	if(i==j && !selfSeen) {
+	    if(supportNodeNames) Warning("GraphAddEdgeList: line %d has a self-loop (%s to itself); assuming self-loops are allowed", lineNum, v1);
+	    else Warning("GraphAddEdgeList: line %d has a self-loop (%u to itself); assuming self-loops are allowed", lineNum, i);
+	    selfSeen = true;
+	}
+
+	unsigned needed = MAX(i,j)+1;
+	if(needed > degCapAlloc) { // only grows this small per-node counting array, never the neighbor lists themselves
+	    unsigned newCap = MAX(2*degCapAlloc, needed);
+	    degCap = Realloc(degCap, newCap*sizeof(degCap[0]));
+	    memset(degCap+degCapAlloc, 0, (newCap-degCapAlloc)*sizeof(degCap[0]));
+	    degCapAlloc = newCap;
+	}
+	++degCap[i];
+	if(!directed && j!=i) ++degCap[j];
+	++numEdgeLines;
     }
+    if(haveHeaderN) numNodes = headerN;
+    if(haveHeaderM && headerM != numEdgeLines)
+	Warning("GraphAddEdgeList: header declared %u edges but the file actually contains %u", headerM, numEdgeLines);
+
+    Note("2pass: found %u nodes and %u edges", numNodes, numEdgeLines);
+    // ---------------- allocate G and give every array its final, exact size ----------------
+    G = GraphAlloc(G, numNodes, directed, supportNodeNames, NULL); // degree[]=0, neighbor[]=NULL (Calloc'd)
+    if(weighted) GraphMakeWeighted(G);
+    G->selfAllowed = selfSeen;
+    unsigned v;
+    for(v=0; v<numNodes; v++) if(degCap[v]) {
+	G->neighbor[v] = Malloc(degCap[v]*sizeof(G->neighbor[v][0]));
+	if(weighted) G->weight[v] = Malloc(degCap[v]*sizeof(G->weight[v][0]));
+    }
+    G->maxEdges = MAX(numEdgeLines,1);
+    G->edgeList = Realloc(G->edgeList, 2*G->maxEdges*sizeof(G->edgeList[0])); // one Realloc total, not one per edge
+    if(supportNodeNames) {
+	G->name = Realloc(names, MAX(numNodes,1)*sizeof(names[0])); // shrink to exact size, once
+	G->nameDict = nameDict;
+    }
+    Free(degCap);
+
+    // ---------------- PASS 2: rewind and connect every edge, with zero further realloc's ----------------
+    rewind(fp);
+    lineNum = 0;
+    haveHeaderN = false; // replay the exact same header-detection logic as pass 1
+    Note("2pass: second pass reading EdgeList");
+    while(fgets(line, sizeof(line), fp))
+    {
+	++lineNum;
+	int len = strlen(line);
+	while(len>0 && isspace((unsigned char)line[len-1])) line[--len]='\0';
+	if(len==0) continue;
+
+	float w=1;
+	char v1[BUFSIZ], v2[BUFSIZ];
+	int numRead = sscanf(line, fmt[weighted], v1, v2, &w);
+	if(numRead==1 && lineNum<=2 && (lineNum==1 || haveHeaderN)) { if(lineNum==1) haveHeaderN=true; continue; }
+
+	unsigned i, j;
+	if(supportNodeNames) { i = GraphNodeName2Int(G, v1); j = GraphNodeName2Int(G, v2); }
+	else { i = ParseNonNegUint(v1, lineNum); j = ParseNonNegUint(v2, lineNum); }
+	if(weighted) assert(w>0.0);
+
+	if(GraphAreConnected(G, i, j)) continue; // duplicate edge in the input; skip, same semantics as GraphConnect
+	G->neighbor[i][G->degree[i]] = j;
+	if(weighted) G->weight[i][G->degree[i]] = w;
+	G->degree[i]++;
+	if(!directed && j!=i) {
+	    G->neighbor[j][G->degree[j]] = i;
+	    if(weighted) G->weight[j][G->degree[j]] = w;
+	    G->degree[j]++;
+	}
+	G->edgeList[2*G->numEdges] = i;
+	G->edgeList[2*G->numEdges+1] = j;
+	G->numEdges++;
+    }
+
+    assert(G->numEdges <= G->maxEdges);
+    GraphSort(G);
     return G;
 }
 
@@ -566,7 +749,7 @@ char *HashString(char *s)
 
 GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNodeNames, Boolean weighted)
 {
-    unsigned numNodes=0;
+    unsigned numNodes=0, lineNum=0;
     unsigned numEdges=0, maxEdges=MIN_EDGELIST; // these will be increased as necessary during reading
     unsigned *pairs = Malloc(2*maxEdges*sizeof(pairs[0]));
     float *fweight = NULL;
@@ -586,6 +769,7 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
     static Boolean selfWarned;
     while(fgets(line, sizeof(line), fp))
     {
+	++lineNum;
 	// nuke all whitespace, including DOS carriage returns, from the end of the line
 	int len = strlen(line);
 	while(isspace(line[len-1])) line[--len]='\0';
@@ -607,9 +791,16 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 	union {int i; char name[BUFSIZ];} v1, v2;
 	foint f1, f2;
 	// Note: if !supportNodeNames, a binary integer will be written into the name unions
-	if(sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w) != numExpected[weighted])
-	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", numEdges,
+	int numRead = sscanf(line, fmt[supportNodeNames][weighted], v1.name, v2.name, &w);
+	if(numRead==1) { // the first two lines may encode _numNodes and _numEdges, respectively
+	    static unsigned _numNodes=-1, _numEdges=-1;
+	    if(lineNum==1) { sscanf(line, "%u", &_numNodes); continue;}
+	    if(lineNum==2) { sscanf(line, "%u", &_numEdges); continue;}
+	}
+	if(numRead != numExpected[weighted]) {
+	    Fatal("GraphReadEdgeList: line %d must contain 2 %s%s, but instead is\n%s\n", lineNum,
 		(supportNodeNames ? "strings":"ints"), (weighted ? " and a weight":""), line);
+	}
 	if(supportNodeNames)
 	{
 	    assert(numNodes <= maxNodes);

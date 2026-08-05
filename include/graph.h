@@ -110,7 +110,10 @@ int GraphNodeName2Int(GRAPH *G, char *name);
 void GraphPrintConnections(FILE *fp, GRAPH *G);
 GRAPH *GraphReadConnections(GRAPH *, FILE *fp, Boolean directed);
 Boolean GraphAreConnected(GRAPH *G, int i, int j);
-GRAPH *GraphAddEdgeList(GRAPH *G, Boolean directed, unsigned m, unsigned *pairs, float *weights);
+// Two-pass edge-list reader: pass 1 determines node count and exact per-node degree so every
+// neighbor/weight/edgeList array can be allocated once, at its final size (no incremental
+// realloc's during pass 2). fp must be seekable (rewind is used between the two passes).
+GRAPH *GraphAddEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNodeNames, Boolean weighted);
 
 /*
 ** The following subroutines should be used with caution, because they take
