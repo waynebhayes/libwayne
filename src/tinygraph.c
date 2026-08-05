@@ -50,17 +50,37 @@ TINY_GRAPH *TinyGraphConnect(TINY_GRAPH *G, int i, int j)
 TINY_GRAPH *TinyGraphSwapNodes(TINY_GRAPH *G, int u, int v)
 {
     if(u==v) return G;
-    // TODO FIXME: there's probably a more efficient way to do this than constructing the whole TINY_GRAPH from scratch...
-    TINY_GRAPH *H=TinyGraphAlloc(G->n,G->selfLoops,G->directed);
-    TinyGraphEdgesAllDelete(H);
-    int i,j, perm[MAX_TSET];
-    for(i=0; i<G->n; i++) perm[i]=i; // identity permutation
-    perm[u]=v; perm[v]=u;  // swap u and v
-    for(i=0; i<G->n; i++) for(j=(G->directed ? 0 : i); j<G->n;j++) if(TinyGraphAreConnected(G,i,j)!=0){
-	assert(i!=j||G->selfLoops);
-	TinyGraphConnect(H, perm[i], perm[j]);
+    int i=0;
+    int toU[G->n],toV[G->n];
+    for(i=0;i<G->n;i++) toU[i]=0,toV[i]=0;
+    for(i=0;i<G->n;i++){
+	if(i==u||i==v) continue; //ignore edges between u and v for now because those can get complicated
+	if(G->directed && TinyGraphAreConnected(G,u,i)) toU[i]+=2, TinyGraphDisconnect(G,u,i);
+	if(TinyGraphAreConnected(G,i,u)) toU[i]++, TinyGraphDisconnect(G,i,u);
+	if(G->directed && TinyGraphAreConnected(G,v,i)) toV[i]+=2, TinyGraphDisconnect(G,v,i);
+	if(TinyGraphAreConnected(G,i,v)) toV[i]++, TinyGraphDisconnect(G,i,v);
     }
-    TinyGraphCopy(G, H);
+    if(G->selfLoops){ //add self loops back
+	int su = TinyGraphAreConnected(G,u,u); // capture original states first:
+	int sv = TinyGraphAreConnected(G,v,v); // the moves below mutate the graph
+	if(su) TinyGraphDisconnect(G,u,u); // remove both loops first, then
+	if(sv) TinyGraphDisconnect(G,v,v); // re-add them at the swapped nodes, so
+	if(su) TinyGraphConnect(G,v,v);    // the two moves don't interfere
+	if(sv) TinyGraphConnect(G,u,u);
+    }
+    //add u->v / v->u edges back iff the graph is directed - only if one of u->v or v->u exists (otherwise nothing happens on swap)
+    if(G->directed&&((!!TinyGraphAreConnected(G,u,v)) ^ (!!TinyGraphAreConnected(G,v,u)))){
+	if(TinyGraphAreConnected(G,u,v)) TinyGraphDisconnect(G,u,v),TinyGraphConnect(G,v,u);
+	else TinyGraphDisconnect(G,v,u),TinyGraphConnect(G,u,v);
+    }
+    //now add the regular edges back in
+    for(i=0;i<G->n;i++){
+	if(i==u||i==v) continue;
+	if(toU[i]&1) TinyGraphConnect(G,i,v);
+	if(toU[i]&2) TinyGraphConnect(G,v,i);
+	if(toV[i]&1) TinyGraphConnect(G,i,u);
+	if(toV[i]&2) TinyGraphConnect(G,u,i);
+    }
     return G;
 }
 
