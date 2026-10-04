@@ -17,6 +17,10 @@ BUILT_VARIANTS := $(patsubst ../%.a,%,$(wildcard ../libwayne*.a))
 all: mk-dirs $(STAMPS)
 
 mk-dirs:
+	@if [ -z "$(BUILT_VARIANTS)" ]; then \
+	    echo "no libwayne*.a found -- run a full build first ('make -f Makefile.Jason all' one directory up)" >&2; \
+	    exit 1; \
+	fi
 	@mkdir -p $(STAMP_DIR)
 	@for V in $(BUILT_VARIANTS); do mkdir -p ../build/$$V; done
 
