@@ -113,8 +113,8 @@ raw_clean:
 
 clean:
 	rm -f make-successful
-	rm -rf build
-	@/bin/rm -rf src/libwayne*/
+	# rm -rf build # NO! DO NOT NUKE BUILD DIRECTORY. :-)
+	# @/bin/rm -rf src/libwayne*/ # same here, no recursive removes.
 	@# The following is meant to remove the non-Windows binary, ie stats but not stats.exe.
 	@/bin/rm -f bin/stats bin/raw_hashmap bin/hash
 	@/bin/rm -f *.a src/*.a
