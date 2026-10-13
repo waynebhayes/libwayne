@@ -1,0 +1,7 @@
+# The purpose of this Makefile.variant is to be the one-stop shop to build _any_ variant (libwayne, libwayne-nd, -pg, etc)
+
+# The steps in this makefile should work for ANY variant, and the differences between variants should be encoded in the
+# variables VARIANT, GCC_OPTS, and any other things that need to change between variants.
+
+# All of the object files (.o files) will _actually_ be destined to go into the $VARIANT directory, eg $VARIANT/graph.o $VARIANT/sets.o
+# somehow VARIANT and GCC_OPTS get passed in

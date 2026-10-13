@@ -1,0 +1,12 @@
+#First target, defaulte: just build the standard libwayne.a file
+libwayne:	OBJ_DIR=build/libwayne
+libwayne-pg:	OBJ_DIR=build/libwayne-pg
+libwayne-nd:	OBJ_DIR=build/libwayne-nd
+
+
+
+######################################
+In each OBJ_DIR, separately, a Makefile who's job it is to build the libwayne-whatever.a
+- each foo.o will depend on ../../src/foo.c ../../include/foo.h, and any other header files included in foo.c
+- probably the best place to define the gcc options (-O3, -ggdb, -pg, etc.) would be in this per-directory Makefile
+- then for each foo.o, a directive saying "gcc -OPTIONS -o foo.o ../../src/foo.c"
