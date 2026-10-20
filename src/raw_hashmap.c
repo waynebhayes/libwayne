@@ -282,7 +282,7 @@ int raw_hashmap_iterate(raw_hashmap_t in, PFany f) {
     /* Unlock */
     //semaphore_V(m->lock);
 
-        return RAW_HASHMAP_OK;
+    return RAW_HASHMAP_OK;
 }
 
 /*

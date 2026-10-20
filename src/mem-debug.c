@@ -177,38 +177,38 @@ void *Realloc_fl( void *memoryBlock, const size_t newSize, const char *file, con
 	// if realloc moves our memory, we need to mark it as freed BEFORE realloc does it's thing.... we're not allowed
 	// to mess with it after it's moved. But if it doesn't get moved, we need to restore the header. So we store it
 	// temporarily, and restore later if it didn't move.
-	    // prepare for deletion...
-	    align[0] = 0xBEEF;
-	    align[1] = 0xDEAD;
-	    memoryBlockHeader->fileFree = file;
-	    memoryBlockHeader->lineFree = line;
-	    memoryBlockHeader->prev->next = memoryBlockHeader->next;
-	    if( memoryBlockHeader->next != NULL )
-		memoryBlockHeader->next->prev = memoryBlockHeader->prev;
-	    memoryBlockCount--;
-	    assert( memoryBlockCount >= 0 );
-	    memoryTotalUsage -= memoryBlockHeader->size;
-	    assert( memoryTotalUsage >= 0 );
+	// prepare for deletion...
+	align[0] = 0xBEEF;
+	align[1] = 0xDEAD;
+	memoryBlockHeader->fileFree = file;
+	memoryBlockHeader->lineFree = line;
+	memoryBlockHeader->prev->next = memoryBlockHeader->next;
+	if( memoryBlockHeader->next != NULL )
+	    memoryBlockHeader->next->prev = memoryBlockHeader->prev;
+	memoryBlockCount--;
+	assert( memoryBlockCount >= 0 );
+	memoryTotalUsage -= memoryBlockHeader->size;
+	assert( memoryTotalUsage >= 0 );
 
 	/* call true realloc here and check if it has moved or not */
 	size_t totalSize = sizeof(MEMORY_BLOCK_HEADER) + newSize;
 	memoryBlockHeader = realloc( memoryBlockHeader, totalSize ); // this way we cannot touch old one of it moved
 
-	    align = (int*)memoryBlockHeader->align;
-	    align[0] = 0xDEAD;
-	    align[1] = 0xBEEF;
-	    memoryBlockHeader->size = newSize;
-	    memoryBlockHeader->file = file;
-	    memoryBlockHeader->line = line;
-	    memoryBlockHeader->fileFree = "(realloc'd, not yet freed)";
-	    memoryBlockHeader->lineFree = 0;
+	align = (int*)memoryBlockHeader->align;
+	align[0] = 0xDEAD;
+	align[1] = 0xBEEF;
+	memoryBlockHeader->size = newSize;
+	memoryBlockHeader->file = file;
+	memoryBlockHeader->line = line;
+	memoryBlockHeader->fileFree = "(realloc'd, not yet freed)";
+	memoryBlockHeader->lineFree = 0;
 
-	    memoryBlockHeader->prev->next = memoryBlockHeader;
-	    if( memoryBlockHeader->next != NULL )
-		memoryBlockHeader->next->prev = memoryBlockHeader;
-	    memoryBlockCount++;
-	    assert( memoryBlockCount >= 0 );
-	    memoryTotalUsage += newSize;
+	memoryBlockHeader->prev->next = memoryBlockHeader;
+	if( memoryBlockHeader->next != NULL )
+	    memoryBlockHeader->next->prev = memoryBlockHeader;
+	memoryBlockCount++;
+	assert( memoryBlockCount >= 0 );
+	memoryTotalUsage += newSize;
 	    assert( memoryTotalUsage >= 0 );
 
 	return memoryBlock = (void *)( (unsigned char *)memoryBlockHeader + sizeof(MEMORY_BLOCK_HEADER) );
