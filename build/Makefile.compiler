@@ -1,0 +1,20 @@
+# Compiler settings shared by build/Makefile and build/Makefile.variant.
+# Per-variant flags (-O2, -pg, -ggdb, ...) do NOT go here: they live in each
+# variant's own cflags file.
+
+# Attempt to figure out what kind of machine we're on.
+UNAME=$(shell uname -a | awk '{if(/CYGWIN/){V="CYGWIN"}else if(/Darwin/){if(/arm64/)V="arm64";else V="Darwin"}else if(/Linux/){V="Linux"}}END{if(V){print V;exit}else{print "unknown OS" > "/dev/stderr"; exit 1}}')
+
+# Wayne needs gcc-6 on MacOS:
+ifndef GCC_VER
+    GCC_VER=$(shell echo $(UNAME) $(HOME) | awk '/Darwin/&&/Users.wayne/{V="-6"}END{if(V)print V;else{printf "using default gcc: " > "/dev/null"; exit 1}}')
+endif
+GCC=gcc$(GCC_VER) # gcc gcc-4.2 gcc-6 gcc-7 gcc-8 gcc-9 # Possibilities on Darwin
+CXX=g++$(GCC_VER)
+
+# Linker-only flag, so it is only used when linking programs, never for the library objects.
+STACKSIZE=$(shell ($(GCC) -v 2>&1; uname -a) | awk '/CYGWIN/{print "-Wl,--stack,536870912"}/gcc-/{actualGCC=1}/Darwin/&&actualGCC{print "-Wl,-stack_size -Wl,0x5000000"}')
+
+# -Wall must come first, or it turns the -Wno-* flags after it back on.
+WARNINGS=-Wall -Wno-unused-variable -Wno-unused-but-set-variable -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wshadow
+CC=$(GCC) $(WARNINGS)

@@ -1,11 +1,5 @@
 # The one list of libwayne source files.
-#
-# Both build paths include this file: Makefile.all for full builds, and
-# Makefile.Jason for incremental ones. Having it in a single place is not
-# tidiness, it is correctness. When the two kept their own copies they drifted:
-# the incremental build silently skipped sim_anneal.c, hash.c, circ_buf.c and
-# raw_hashmap.c, and it added llfile.o that the full build leaves out, so the
-# two paths produced libraries with different contents.
+# build/Makefile.variant includes it; every variant compiles exactly these.
 #
 # Deliberately NOT built: llfile.c, qrkd78.c, iqrkd78.c
 

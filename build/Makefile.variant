@@ -1,7 +1,55 @@
-# The purpose of this Makefile.variant is to be the one-stop shop to build _any_ variant (libwayne, libwayne-nd, -pg, etc)
+# The one-stop shop to build ANY libwayne variant (libwayne, libwayne-nd, -pg, etc).
+#
+# It runs inside build/<variant>/, whose one-line Makefile includes this file.
+# Nothing has to be passed in; each directory already knows everything:
+#   VARIANT  = the directory's own name, e.g. libwayne-pg
+#   GCC_OPTS = the contents of the directory's cflags file, e.g. -O2 -pg
+# All object files land in this directory, e.g. build/libwayne-pg/graph.o.
+#
+# To add a new variant: make a new directory here holding a cflags file and a
+# copy of the one-line Makefile. Nothing else needs to change.
 
-# The steps in this makefile should work for ANY variant, and the differences between variants should be encoded in the
-# variables VARIANT, GCC_OPTS, and any other things that need to change between variants.
+ifeq ($(wildcard cflags),)
+    $(error no cflags file in $(CURDIR); run make from inside a build/<variant>/ directory)
+endif
 
-# All of the object files (.o files) will _actually_ be destined to go into the $VARIANT directory, eg $VARIANT/graph.o $VARIANT/sets.o
-# somehow VARIANT and GCC_OPTS get passed in
+include ../Makefile.compiler
+
+VARIANT := $(notdir $(CURDIR))
+GCC_OPTS := $(shell cat cflags)
+
+# The list of library sources.
+include ../../src/Makefile.srcs
+OBJS := $(LIBWAYNE_SRCS:.c=.o)
+
+# First target, so a plain 'make' in this directory builds this variant's library
+# and puts a copy at the top of libwayne, where wgcc and BLANT look for it.
+lib: ../../$(VARIANT).a
+
+../../$(VARIANT).a: $(VARIANT).a
+	cp -p $< $@
+
+# Rebuilt from scratch each time, so a source dropped from Makefile.srcs
+# can never linger in the archive.
+$(VARIANT).a: $(OBJS)
+	rm -f $@
+	ar rc $@ $(OBJS)
+	if ranlib $@; then :; else echo "ranlib failed but it's not crucial" >&2; fi
+
+# -MMD -MP writes foo.d, listing every header foo.c includes, so foo.o is
+# rebuilt whenever any of them changes. Depending on cflags means editing a
+# variant's flags rebuilds that variant, and only that variant.
+%.o: ../../src/%.c cflags
+	$(CC) $(GCC_OPTS) -I../../include -MMD -MP -c -o $@ $<
+
+# misc.h needs the generated intSizes.h; build/Makefile normally makes it first.
+$(OBJS): | ../../include/intSizes.h
+../../include/intSizes.h:
+	$(MAKE) -C .. intsizes
+
+-include $(OBJS:.o=.d)
+
+clean:
+	rm -f *.o *.d $(VARIANT).a ../../$(VARIANT).a
+
+.PHONY: lib clean
