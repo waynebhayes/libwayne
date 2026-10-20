@@ -4,7 +4,11 @@
 # Uses per-variant ../build/VARIANT/.cflags to know what flags to compile with.
 # Stamps live in build/.stamps/ — no .o files are written to src/.
 
-SRCS=llfile.c stream48.c longlong.c bitvec.c sets.c smallgraph-transitive.c misc.c dverk.c rkd78.c lsode.c ddriv2.c bsode.c ldbsode.c rk4.c rk4s.c rk12.c rk23.c stack.c event.c heap.c linked-list.c stats.c queue.c compressedInt.c Oalloc.c variable_leapfrog.c leapfrog.c htree.c avltree.c bintree.c eigen.c mem-debug.c smallgraph.c tinygraph.c graph.c combin.c matvec.c sorts.c heun_euler.c multisets.c dynarray.c #raw_hashmap.c #qrkd78.c iqrkd78.c
+# Shared with Makefile.all; see that file. Keeping one list is what stops the
+# incremental build from skipping files the full build compiles.
+include Makefile.srcs
+
+SRCS := $(LIBWAYNE_SRCS)
 
 STAMP_DIR := ../build/.stamps
 STAMPS := $(patsubst %.c,$(STAMP_DIR)/%.stamp,$(filter %.c,$(SRCS)))
@@ -17,6 +21,10 @@ BUILT_VARIANTS := $(patsubst ../%.a,%,$(wildcard ../libwayne*.a))
 all: mk-dirs $(STAMPS)
 
 mk-dirs:
+	@if [ -z "$(BUILT_VARIANTS)" ]; then \
+	    echo "no libwayne*.a found -- run a full build first ('make -f Makefile.Jason all' one directory up)" >&2; \
+	    exit 1; \
+	fi
 	@mkdir -p $(STAMP_DIR)
 	@for V in $(BUILT_VARIANTS); do mkdir -p ../build/$$V; done
 
