@@ -1,0 +1,50 @@
+# The one list of libwayne source files.
+# build/Makefile.variant includes it; every variant compiles exactly these.
+#
+# Deliberately NOT built: llfile.c, qrkd78.c, iqrkd78.c
+
+LIBWAYNE_SRCS = \
+	stream48.c \
+	longlong.c \
+	bitvec.c \
+	sets.c \
+	smallgraph-transitive.c \
+	misc.c \
+	dverk.c \
+	rkd78.c \
+	lsode.c \
+	ddriv2.c \
+	bsode.c \
+	ldbsode.c \
+	rk4.c \
+	rk4s.c \
+	rk12.c \
+	rk23.c \
+	stack.c \
+	event.c \
+	heap.c \
+	linked-list.c \
+	stats.c \
+	queue.c \
+	compressedInt.c \
+	Oalloc.c \
+	variable_leapfrog.c \
+	leapfrog.c \
+	htree.c \
+	avltree.c \
+	bintree.c \
+	eigen.c \
+	mem-debug.c \
+	smallgraph.c \
+	tinygraph.c \
+	graph.c \
+	combin.c \
+	matvec.c \
+	sorts.c \
+	heun_euler.c \
+	multisets.c \
+	dynarray.c \
+	raw_hashmap.c \
+	hash.c \
+	sim_anneal.c \
+	circ_buf.c

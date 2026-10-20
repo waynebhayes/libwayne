@@ -3,3 +3,6 @@ compile_flags.txt
 *.a
 bin/
 make-successful
+*.d
+*.dSYM/
+include/intSizes.h
