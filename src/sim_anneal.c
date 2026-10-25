@@ -67,7 +67,7 @@ static void Iteration(SIM_ANNEAL *sa) {
 	PbadRecord(sa, pBad);
 	accept = (drand48() < pBad);
     }
-    //Note("Iter: score %g (%g) T %g pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
+    //Note("Iter: score %g (%g) T %.3e pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
     accept = sa->Accept(accept, sa->currentSolution);
     if(accept) sa->currentScore += delta;
 }
@@ -121,7 +121,7 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
 	if(pctDone > prevPctDone) {
-	    printf("%d%% T %g pBad %g ", pctDone, sa->temperature, PbadMean(sa));
+	    printf("%d%% T %.2e pBad %.3g ", pctDone, sa->temperature, PbadMean(sa));
 	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
 	    puts("");
 	    double realScore = sa->Score(true, sa->currentSolution);
