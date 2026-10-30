@@ -10,6 +10,7 @@
 # Deliberately NOT built: llfile.c, qrkd78.c, iqrkd78.c
 
 LIBWAYNE_SRCS = \
+	rand48.c \
 	stream48.c \
 	longlong.c \
 	bitvec.c \

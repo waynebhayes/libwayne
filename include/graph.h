@@ -75,6 +75,15 @@ void GraphRandomEdge(GRAPH *G, int *u, int *v); // A return a random edge (u,v) 
  */
 int GraphBFS(GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
 
+/* Same result as GraphBFS (the same nodes in nodeArray, in the same order), but costs time proportional to the
+ * part of the graph it explores rather than G->n. GraphBFS sets all G->n entries of both arrays and allocates a
+ * G->n queue on every call, which dominates when it's called many times on a big graph. Instead:
+ *   distArray must have every entry == -1 on entry (initialize it once), and is left that way on return,
+ *     so the distances are NOT available afterwards; use GraphBFS if you need them.
+ *   nodeArray (at least G->n elements) is also used as the BFS queue; entries past the returned count are garbage.
+ */
+int GraphBFSLocal(GRAPH *G, int seed, int distance, int *nodeArray, int *distArray);
+
 /* Uses DFS on G starting at node v to see if the current connected component has at least k nodes.
 ** More efficient than a full DFS. */
 Boolean GraphCCatLeastK(GRAPH *G, int v, int k);

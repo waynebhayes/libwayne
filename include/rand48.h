@@ -53,6 +53,22 @@ void srand48(long seedval);
 unsigned short *seed48(unsigned short seed16v[3]);
 void lcong48(unsigned short param[7]);
 
+/*
+** The functions above are implemented in src/rand48.c (all except irand48 and krand48), giving exactly the
+** same numbers as libc's. Drand48() is the same as drand48(), and shares its state, but is inline: use it in
+** hot loops, where libc's drand48 costs a call into its general-purpose __drand48_iterate every time.
+** (_rand48State and friends are not static: libc declares drand48 etc. as "leaf" functions, which lets the
+** compiler assume they never touch the caller's file-static data.)
+*/
+extern unsigned long long _rand48State, _rand48A, _rand48C; // X, a, c: X <- (a*X + c) mod 2^48
+#define RAND48_MASK ((1ULL << 48) - 1)
+#define RAND48_TO_DOUBLE (1.0 / (1ULL << 48)) // exact: a 48-bit integer fits in a double's mantissa
+
+static inline unsigned long long Rand48Next(void) {
+    return _rand48State = (_rand48A * _rand48State + _rand48C) & RAND48_MASK;
+}
+static inline double Drand48(void) { return Rand48Next() * RAND48_TO_DOUBLE; }
+
 #endif  /* _RAND48_H */
 #ifdef __cplusplus
 } // end extern "C"

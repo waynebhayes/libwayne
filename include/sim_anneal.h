@@ -26,6 +26,7 @@ typedef void  (*pReportFunc)(int iter, foint f);
 typedef struct _sim_anneal {
     unsigned long iter, maxIters;
     int direction, pBadBufPos, pBadBufLen;
+    int prevPctDone; // last percentage SimAnnealRun reported; per-annealer so a second run reports from 0% again
     double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum, currentScore, pBadStart, pBadEnd;
     foint currentSolution;
     pMoveFunc Move;

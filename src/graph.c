@@ -1015,6 +1015,40 @@ int GraphBFS(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
     return count;
 }
 
+int GraphBFSLocal(GRAPH *G, int root, int distance, int *nodeArray, int *distArray)
+{
+    int head = 0, count = 0;
+
+    assert(0 <= root && root < G->n);
+    assert(distance >= 0);
+    assert(nodeArray != NULL);
+    assert(distArray != NULL);
+    assert(distArray[root] == -1);
+
+    distArray[root] = 0;
+    nodeArray[count++] = root;
+    while(head < count) /* nodeArray[head..count-1] is the queue */
+    {
+	int v = nodeArray[head++];
+	if(distArray[v] < distance) /* v's neighbors will be within BFS distance */
+	{
+	    int j;
+	    for(j=0; j < G->degree[v]; j++)
+	    {
+		int w = G->neighbor[v][j];
+		if(w == v) assert(G->selfAllowed); // nothing to do; don't add self to a BFS
+		else if(distArray[w] == -1) /* some of the neighbors might have already been visited */
+		{
+		    distArray[w] = distArray[v] + 1;
+		    nodeArray[count++] = w;
+		}
+	    }
+	}
+    }
+    for(head=0; head<count; head++) distArray[nodeArray[head]] = -1; /* leave it as we found it */
+    return count;
+}
+
 static Boolean _GraphCCatLeastKHelper(GRAPH *G, SET* visited, int v, int *k);
 Boolean GraphCCatLeastK(GRAPH *G, int v, int k) {
     SET* visited = SetAlloc(G->n);

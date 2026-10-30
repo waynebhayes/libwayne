@@ -1,6 +1,7 @@
 // This software is part of github.com/waynebhayes/libwayne, and is Copyright(C) Wayne B. Hayes 2025, under the GNU LGPL 3.0
 // (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include "sim_anneal.h"
+#include "rand48.h"
 
 SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc Score, pAcceptFunc Accept,
     unsigned long maxIters, double pBadStart, double pBadEnd, pReportFunc Report) {
@@ -65,7 +66,7 @@ static void Iteration(SIM_ANNEAL *sa) {
     else {
 	pBad = exp(-fabs(delta) / sa->temperature);
 	PbadRecord(sa, pBad);
-	accept = (drand48() < pBad);
+	accept = (Drand48() < pBad); // inline drand48(): same stream, no call
     }
     //Note("Iter: score %g (%g) T %.3e pB %g\n", sa->currentScore, delta, sa->temperature, pBad);
     accept = sa->Accept(accept, sa->currentSolution);
@@ -114,13 +115,13 @@ void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
 int SimAnnealRun(SIM_ANNEAL *sa) {
     if(sa->tInitial < 0 || sa->tDecay < 0) SimAnnealAutoSchedule(sa);
     sa->temperature = sa->tInitial;
+    sa->prevPctDone = 0; // was a function-level static, so only the first run in a process ever reported progress
     sa->currentScore = sa->Score(true, sa->currentSolution);
     for(sa->iter = 0; sa->iter < sa->maxIters; sa->iter++) {
 	SetIterTemperature(sa);
 	Iteration(sa);
-	static int prevPctDone;
 	int pctDone = 100.0*sa->iter/sa->maxIters;
-	if(pctDone > prevPctDone) {
+	if(pctDone > sa->prevPctDone) {
 	    printf("%d%% T %.2e pBad %.3g ", pctDone, sa->temperature, PbadMean(sa));
 	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
 	    puts("");
@@ -134,7 +135,7 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 		}
 	    }
 	    sa->currentScore=realScore;
-	    prevPctDone=pctDone;
+	    sa->prevPctDone=pctDone;
 
 	}
     }
