@@ -13,4 +13,8 @@ Makefile: ;
 
 FORCE:
 
+# Hand over one target at a time, so 'make -j4 clean all' cannot run clean during
+# all. Each target still builds in parallel inside build/.
+.NOTPARALLEL:
+
 .PHONY: default FORCE
