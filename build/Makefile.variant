@@ -1,13 +1,14 @@
 # The one-stop shop to build ANY libwayne variant (libwayne, libwayne-nd, -pg, etc).
 #
-# It runs inside build/<variant>/, whose one-line Makefile includes this file.
-# Nothing has to be passed in; each directory already knows everything:
+# It runs inside build/<variant>/, called by build/Makefile or by that directory's
+# one-line Makefile. Nothing has to be passed in; each directory knows everything:
 #   VARIANT  = the directory's own name, e.g. libwayne-pg
 #   GCC_OPTS = the contents of the directory's cflags file, e.g. -O2 -pg
 # All object files land in this directory, e.g. build/libwayne-pg/graph.o.
 #
-# To add a new variant: make a new directory here holding a cflags file and a
-# copy of the one-line Makefile. Nothing else needs to change.
+# To add a new variant: make a new directory here holding a cflags file, then run
+# 'make <variant>' from build/. Nothing else needs to change. Copy the one-line
+# Makefile too if you want to run make from inside the new directory.
 
 ifeq ($(wildcard cflags),)
     $(error no cflags file in $(CURDIR); run make from inside a build/<variant>/ directory)
@@ -15,8 +16,13 @@ endif
 
 include ../Makefile.compiler
 
-VARIANT := $(notdir $(CURDIR))
-GCC_OPTS := $(shell cat cflags)
+# Not $(notdir): it would split a path that has a space in it.
+VARIANT := $(lastword $(subst /, ,$(CURDIR)))
+
+# A # in cflags starts a comment. Left in, it would reach the shell and hide the
+# rest of the compile command.
+HASH := \#
+GCC_OPTS := $(shell sed 's/$(HASH).*//' cflags)
 
 # The list of library sources.
 include ../../src/Makefile.srcs
@@ -30,8 +36,9 @@ lib: ../../$(VARIANT).a
 	cp -p $< $@
 
 # Rebuilt from scratch each time, so a source dropped from Makefile.srcs
-# can never linger in the archive.
-$(VARIANT).a: $(OBJS)
+# can never linger in the archive. Depending on Makefile.srcs is what triggers
+# that: removing a source makes no remaining object newer.
+$(VARIANT).a: $(OBJS) ../../src/Makefile.srcs
 	rm -f $@
 	ar rc $@ $(OBJS)
 	if ranlib $@; then :; else echo "ranlib failed but it's not crucial" >&2; fi
@@ -49,7 +56,13 @@ $(OBJS): | ../../include/intSizes.h
 
 -include $(OBJS:.o=.d)
 
+# With no .d file, make cannot know which headers an object uses, so a header
+# change would be missed. Rebuild any such object, which also remakes its .d.
+MISSING_DEPS := $(filter-out $(wildcard *.d),$(OBJS:.o=.d))
+$(MISSING_DEPS:.d=.o): FORCE
+FORCE:
+
 clean:
 	rm -f *.o *.d $(VARIANT).a ../../$(VARIANT).a
 
-.PHONY: lib clean
+.PHONY: lib clean FORCE
