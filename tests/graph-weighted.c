@@ -8,8 +8,8 @@
 int main(int argc, char *argv[])
 {
     int i,j;
-    Boolean sparse=true, supportNames = false, weighted=true;
-    GRAPH *G = GraphReadEdgeList(NULL, stdin, sparse, supportNames, weighted);
+    Boolean directed=false, supportNames = false, weighted=true;
+    GRAPH *G = GraphReadEdgeList(NULL, stdin, directed, supportNames, weighted);
     for(i=0; i<G->n; i++) for(j=i+1;j<G->n;j++) if(GraphAreConnected(G,i,j)) printf("%d %d %f\n",i,j,GraphGetWeight(G,i,j));
     GraphFree(G);
     return 0;

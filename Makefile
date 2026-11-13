@@ -46,8 +46,19 @@ libwayne_all: parallel
 parallel: parallel.c
 	$(CC) -o bin/parallel parallel.c
 
+# Each test gets its .in file (if any) as both its argument and its stdin; tests without one read empty stdin.
+# A test that crashes or exits nonzero stops the build; output that differs from tests/$x.out is reported by cmp.
 testlib:
-	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity tinygraph-sanity graph-weighted graph-addedgelist-test circ_buf sim_anneal; do rm -f bin/$$x tests/$$x.o; ( cd tests; $(MAKE) $$x; mv $$x ../bin; IN=/dev/null; [ -f $$x.in ] && IN=$$x.in; cat $$IN | ../bin/$$x $$x.in > /tmp/$$x.test$$$$ 2>&1 || exit 1; cat /tmp/$$x.test$$$$ | if [ -f $$x.out ]; then cmp - $$x.out; else wc; fi; /bin/rm -f /tmp/$$x.test$$$$); done
+	export LIBWAYNE_HOME=$(LIBWAYNE_HOME); \
+	for x in ebm covar stats hash raw_hashmap htree-test avltree-test bintree-test CI graph-sanity tinygraph-sanity graph-weighted graph-addedgelist-test circ_buf sim_anneal; do \
+	    rm -f bin/$$x tests/$$x.o; \
+	    ( cd tests; $(MAKE) $$x && mv $$x ../bin || exit 1; \
+	      IN=/dev/null; ARG=; if [ -f $$x.in ]; then IN=$$x.in; ARG=$$x.in; fi; \
+	      T=/tmp/$$x.test$$$$; \
+	      ../bin/$$x $$ARG < $$IN > $$T 2>&1 || { echo "testlib: $$x FAILED (exit status $$?); last lines of its output:" >&2; tail -5 $$T >&2; rm -f $$T; exit 1; }; \
+	      if [ -f $$x.out ]; then cmp $$T $$x.out; else wc < $$T; fi; \
+	      rm -f $$T ) || exit 1; \
+	done
 
 # graph-addedgelist-errors-test deliberately Fatal()s (exit 1) on every valid invocation, since it
 # demonstrates GraphAddEdgeList's input-validation failures--so it can't share testlib's generic

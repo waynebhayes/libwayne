@@ -228,7 +228,7 @@ double GraphGetWeight(GRAPH *G, unsigned i, unsigned j)
     double w = G->weight[i][k];
     assert(w>0);
 
-    if (j!=i) {
+    if (j!=i && !G->directed) { // a directed edge i->j has no reverse entry in j's list (same test as GraphSetWeight)
         k=0;
         while(G->neighbor[j][k] != i) k++;
         assert(k < G->degree[j] && G->neighbor[j][k] == i);
@@ -810,7 +810,7 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 		names = Realloc(names, maxNodes*sizeof(names[0]));
 	    }
 	    if(strcmp(v1.name,v2.name)==0 && !selfWarned) {
-		Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed",numEdges,v1.name);
+		Warning("GraphReadEdgeList: line %d has self-loop (%s to itself); assuming they are allowed",lineNum,v1.name);
 		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
 		selfWarned = true;
 	    }
@@ -830,7 +830,7 @@ GRAPH *GraphReadEdgeList(GRAPH *G, FILE *fp, Boolean directed, Boolean supportNo
 	}
 	else {
 	    if(v1.i==v2.i && !selfWarned) {
-		Warning("GraphReadEdgeList: line %d has self-loop (%d to itself); assuming they are allowed",numEdges,v1.i);
+		Warning("GraphReadEdgeList: line %d has self-loop (%d to itself); assuming they are allowed",lineNum,v1.i);
 		Warning("GraphReadEdgeList: (another warning will appear below from \"GraphFromEdgeList\")");
 		selfWarned = true;
 	    }

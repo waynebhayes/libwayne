@@ -8,6 +8,7 @@
 #include <assert.h>
 
 #define lineLen 40
+#define MAX_LINES 100000
 
 int traverse(foint globals, foint key, foint data)
 {
@@ -22,11 +23,13 @@ int main(int argc, char *argv[])
     FILE *fp = fopen(argv[1], "r");
 	AVLTREE *tree = AvlTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
 	AVLTREE *copy = AvlTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
-    char buf[lineLen], bufs[1000*BUFSIZ][lineLen];
+    // static: this used to be a local 1000*BUFSIZ-line array, which is 327MB on Linux (BUFSIZ=8192) and overflowed the stack
+    char buf[lineLen];
+    static char bufs[MAX_LINES][lineLen];
     foint key, data;
     int lines=0;
 
-    while(fscanf(fp, "%s %d", bufs[lines], &data.i) == 2) {
+    while(lines < MAX_LINES && fscanf(fp, "%39s %d", bufs[lines], &data.i) == 2) {
 	foint key = (foint)(key.s=bufs[lines++]);
 	AvlTreeInsert(tree, key, data);
 	AvlTreeInsert(copy, key, data);
@@ -37,7 +40,7 @@ int main(int argc, char *argv[])
     // No rebalance needed
     AvlTreeSanityCheck(tree);
 
-    while(scanf("%s", buf) == 1)
+    while(scanf("%39s", buf) == 1)
     {
 	AvlTreeSanityCheck(tree);
 	printf("lookup %s = ", key.s=buf);
@@ -45,7 +48,6 @@ int main(int argc, char *argv[])
 	    printf("%d\n", data.i);
 	else
 	  puts("nope");
-	++lines;
 	AvlTreeSanityCheck(tree);
     }
     assert(false == AvlTreeLookup(tree, (foint)(key.s="foo"), &data)); AvlTreeSanityCheck(tree);
