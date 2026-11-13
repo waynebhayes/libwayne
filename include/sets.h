@@ -27,6 +27,7 @@ extern "C" {
 */
 
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "misc.h"
 #include "bitvec.h"
@@ -84,10 +85,84 @@ SET *SetDelete(SET *set, unsigned element); /* delete a single element */
 #define SetDel SetDelete
 Boolean SetInSafe(const SET *set, unsigned element); /* boolean: 0 or 1 */
 #define SetSmallestElement(S) (S->smallestElement)
-#if NDEBUG && !PARANOID_ASSERTS
-#define SetIn(set,e) ( (set)->bitvec ? BitvecIn((set)->bitvec,(e)) : SetInSafe((set),(e)))
-#else
+
+// gcc and clang: portable SIMD (SSE2 on x86, NEON on ARM) via vector extensions. Compile with -DLIBWAYNE_NO_SIMD to use
+// plain loops instead (same results, just slower).
+#if defined(__GNUC__) && !LIBWAYNE_NO_SIMD
+#define _LIBWAYNE_SIMD 1
+typedef unsigned _UnsignedVec4 __attribute__((vector_size(16)));
+typedef int _MaskVec4 __attribute__((vector_size(16))); // result of comparing two _UnsignedVec4s: each lane 0 or -1
+// Unaligned load of a[0..3]; memcpy compiles to a single vector load.
+static inline _UnsignedVec4 _UnsignedVec4Load(const unsigned *a) { _UnsignedVec4 v; memcpy(&v, a, sizeof(v)); return v; }
+#endif
+
+// Is e in a[lo..hi)? (a need not be sorted.) Compares 16 elements per step using SIMD, which is several times faster
+// than a one-at-a-time loop on long lists (eg neighbor lists of hubs, or big SET lists).
+static inline Boolean UnsignedArrayHas(const unsigned *a, unsigned lo, unsigned hi, unsigned e)
+{
+    unsigned i = lo;
+#if _LIBWAYNE_SIMD
+    const _UnsignedVec4 key = {e, e, e, e};
+    for(; i + 16 <= hi; i += 16) {
+	_MaskVec4 m = (_UnsignedVec4Load(a+i) == key) | (_UnsignedVec4Load(a+i+4) == key)
+	    | (_UnsignedVec4Load(a+i+8) == key) | (_UnsignedVec4Load(a+i+12) == key);
+	if(m[0] | m[1] | m[2] | m[3]) return true;
+    }
+#endif
+    for(; i < hi; i++) if(a[i] == e) return true;
+    return false;
+}
+
+// Is a[0..n) strictly increasing? Same SIMD approach as UnsignedArrayHas.
+static inline Boolean UnsignedArrayStrictlyIncreasing(const unsigned *a, unsigned n)
+{
+    unsigned i = 1;
+#if _LIBWAYNE_SIMD
+    for(; i + 16 <= n; i += 16) { // compare a[i-1..i+14] against a[i..i+15]
+	_MaskVec4 bad = (_UnsignedVec4Load(a+i-1) >= _UnsignedVec4Load(a+i))
+	    | (_UnsignedVec4Load(a+i+3) >= _UnsignedVec4Load(a+i+4))
+	    | (_UnsignedVec4Load(a+i+7) >= _UnsignedVec4Load(a+i+8))
+	    | (_UnsignedVec4Load(a+i+11) >= _UnsignedVec4Load(a+i+12));
+	if(bad[0] | bad[1] | bad[2] | bad[3]) return false;
+    }
+#endif
+    for(; i < n; i++) if(a[i-1] >= a[i]) return false;
+    return true;
+}
+
+// Is e in the sorted list[0..n)? Branch-free binary search: the loop always runs ~log2(n) times and the compiler turns
+// the comparison into a conditional move, so there are no mispredicted branches (bsearch() mispredicts about half of
+// its probes, and calls a comparison function through a pointer on each one). Same answer as bsearch() on a sorted list.
+static inline Boolean _SetListBsearch(const SET_ELEMENT_TYPE *list, unsigned n, SET_ELEMENT_TYPE e)
+{
+    if(n == 0) return false;
+    while(n > 1) { // invariant: if e is in the list at all, it's in list[0..n)
+	unsigned half = n / 2;
+	list = (list[half] <= e) ? list + half : list;
+	n -= half;
+    }
+    return *list == e;
+}
+
+// Inline version of SetInSafe (minus its PARANOID_ASSERTS checks); SetIn uses it. The SET_ELEMENT_TYPE list is the
+// sorted prefix list[0..numSorted) followed by an unsorted tail list[numSorted..cardinality).
+static inline Boolean SetInInline(const SET *set, SET_ELEMENT_TYPE element)
+{
+    assert(element < set->maxElem);
+    if(set->bitvec) {
+	const unsigned bits = 8*sizeof(BITVEC_SEGMENT); // == bitvecBits, but a constant so the divide becomes a shift
+	assert(element < set->bitvec->maxElem);
+	return !!(set->bitvec->segment[element/bits] & (1U << (element%bits)));
+    }
+    assert(set->list && set->cardinality <= set->crossover);
+    return (set->numSorted > 0 && _SetListBsearch(set->list, set->numSorted, element))
+	|| UnsignedArrayHas(set->list, set->numSorted, set->cardinality, element);
+}
+
+#if PARANOID_ASSERTS
 #define SetIn SetInSafe
+#else
+#define SetIn(set,e) SetInInline((set),(e))
 #endif
 SET *SetUnion(SET *C, SET *A, SET *B);  /* C = union of A and B */
 SET *SetIntersect(SET *C, SET *A, SET *B);  /* C = intersection of A and B */
