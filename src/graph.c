@@ -320,14 +320,9 @@ static Boolean _rawConnected(GRAPH *G, int i, int j)
     else
 #endif
     {
-	int k, n;
-        unsigned *neighbors;
-        n = G->degree[i];
-        neighbors = G->neighbor[i];
-        for(k=0; k<n; k++)
-            if(neighbors[k] == j)
-                return true;
-        return false;
+	// In an undirected graph j is in i's list iff i is in j's, so scan whichever list is shorter.
+	if(!G->directed && G->degree[j] < G->degree[i]) { int tmp=i; i=j; j=tmp; }
+	return UnsignedArrayHas(G->neighbor[i], 0, G->degree[i], j);
     }
     return false;
 }

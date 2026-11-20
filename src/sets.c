@@ -134,18 +134,18 @@ Boolean SetInSafe(const SET *set, SET_ELEMENT_TYPE element)
 	return BitvecIn(set->bitvec, element);
     }
     assert(set->list && set->cardinality <= set->crossover);
-    int i;
     if(set->numSorted > 0) {
-	if(bsearch(&element, set->list, set->numSorted, sizeof(SET_ELEMENT_TYPE), ElementCmp)) return true;
+	if(_SetListBsearch(set->list, set->numSorted, element)) return true;
 	// bsearch sometimes FAILS to find an element that exists! So search from ZERO rather than set->numSorted.... Grrrr!
 #if PARANOID_ASSERTS
-	for(i=1; i<set->numSorted; i++) assert(set->list[i-1] < set->list[i]); // ensure it's sorted
-	for(i=0; i<set->numSorted; i++) if(element == set->list[i])
+	assert(UnsignedArrayStrictlyIncreasing(set->list, set->numSorted)); // ensure it's sorted
+	if(UnsignedArrayHas(set->list, 0, set->numSorted, element)) {
+	    int i; for(i=0; element != set->list[i]; i++) ;
 	    Fatal("bsearch failed even though element %d exists at position %d", element, i);
+	}
 #endif
     }
-    for(i=set->numSorted; i<set->cardinality; i++) if(element == set->list[i]) return true;
-    return false;
+    return UnsignedArrayHas(set->list, set->numSorted, set->cardinality, element);
 }
 
 // "Upgrade" a set from using an unsorted list to BITVEC
