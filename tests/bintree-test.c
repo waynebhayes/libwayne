@@ -8,7 +8,7 @@
 #include <assert.h>
 
 #define lineLen 40
-#define MAX_LINES 100000
+#define MAX_LINES (1000*BUFSIZ) // capacity for big inputs when comparing bintree vs avltree sizes
 
 int main(int argc, char *argv[])
 {
@@ -16,7 +16,8 @@ int main(int argc, char *argv[])
 {
     FILE *fp = fopen(argv[1], "r");
     BINTREE *tree = BinTreeAlloc((pCmpFcn)strcmp, (pFointCopyFcn)strdup, (pFointFreeFcn)free, NULL, NULL);
-    // static: this used to be a local 1000*BUFSIZ-line array, which is 327MB on Linux (BUFSIZ=8192) and overflowed the stack
+    // static, not local: MAX_LINES*lineLen is 327MB on Linux (BUFSIZ=8192), which overflows the stack. As a static
+    // array only the pages actually used get allocated, so a small input still uses little memory.
     char buf[lineLen];
     static char bufs[MAX_LINES][lineLen];
     foint key, data;
