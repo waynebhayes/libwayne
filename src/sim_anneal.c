@@ -2,6 +2,7 @@
 // (GNU Lesser General Public License, version 3, 2007), a copy of which is contained at the top of the repo.
 #include "sim_anneal.h"
 #include "rand48.h"
+#include "stats.h"
 
 SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc Score, pAcceptFunc Accept,
     unsigned long maxIters, double pBadStart, double pBadEnd, pReportFunc Report) {
@@ -111,12 +112,113 @@ void SimAnnealAutoSchedule(SIM_ANNEAL *sa) {
 }
 
 
+void SimAnnealSetTolerance(SIM_ANNEAL *sa, double tolerance, unsigned long batchSize) {
+    if(tolerance < 0) Fatal("SimAnnealSetTolerance: tolerance must be >= 0, but is %g", tolerance);
+    sa->tolerance = tolerance;
+    sa->batchSize = batchSize;
+}
+
+// Re-score the solution from scratch, warn if the incrementally-maintained score has drifted from it, and resync.
+static void CheckIncrementalScore(SIM_ANNEAL *sa) {
+    double realScore = sa->Score(true, sa->currentSolution);
+    double error = sa->currentScore-realScore;
+    if(error>0) {
+	if(realScore==0) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
+	else {
+	    double relError = fabs(error/realScore);
+	    if(relError>1e-12) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
+	}
+    }
+    sa->currentScore=realScore;
+}
+
+// The tolerance schedule below is a port of SANA's runUsingConfidenceIntervals (github.com/waynebhayes/SANA,
+// src/methods/SANA.cpp), including its heuristic constants.
+#define SA_MAX_TAU_STEP 0.01	// largest step through the schedule: at most 100 temperatures
+#define SA_MIN_TAU_STEP 0.001	// smallest step, used where the score refuses to settle
+#define SA_MIN_BATCHES 30	// batches at a temperature before we even look at the confidence intervals
+#define SA_HAPPY_BATCHES 10000	// after this many batches at one temperature, start shrinking the step instead
+#define SA_MIN_CONFIDENCE 0.99999
+#define SA_TOL_SAFETY_MARGIN 1.07 // from SANA: empirically cuts the failure rate to below 5%
+
+// Walk the same exponential schedule as the fixed-iteration run, T = tInitial*exp(-tDecay*tau) for tau in [0,1], but
+// stay at each temperature until the score has settled there: run batches of batchSize iterations, and move on once
+// the confidence intervals of both the batch-mean score and the batch-mean pBad are narrower than the tolerance
+// (relative to the score). Where the score is changing fast, that takes many batches; where it's flat, MIN_BATCHES.
+static int SimAnnealRunWithTolerance(SIM_ANNEAL *sa) {
+    unsigned long batchSize = sa->batchSize;
+    if(!batchSize) batchSize = MAX(100, (unsigned long)sqrt((double)sa->maxIters));
+    double tau, tauStep = SA_MAX_TAU_STEP;
+    double tolPerStep = sa->tolerance * tauStep / SA_TOL_SAFETY_MARGIN;
+    double confidence = 1-pow(tolPerStep, 1.5); // from SANA: empirically works well
+    if(confidence < SA_MIN_CONFIDENCE) confidence = SA_MIN_CONFIDENCE; // costs little CPU to be more confident
+    Note("SimAnnealRun: tolerance %g, batchSize %lu, confidence %g, tolerance per step %g",
+	sa->tolerance, batchSize, confidence, tolPerStep);
+
+    STAT *scoreBatchMeans = StatAlloc(0, 0.0, 0.0, false, false), *pBadBatchMeans = StatAlloc(0, 0.0, 0.0, false, false);
+    double scoreBatchSum = 0, previousScore = 0;
+    unsigned long batchIters = 0, lastBatchCount = 0;
+    sa->iter = 0;
+    for(tau = 0; tau <= 1; tau += tauStep) {
+	sa->temperature = sa->tInitial * exp(-sa->tDecay * tau);
+	unsigned long batchesHere = 0, itersHere = sa->iter;
+	Boolean satisfied = false;
+	while(!satisfied) {
+	    Iteration(sa);
+	    ++sa->iter;
+	    scoreBatchSum += sa->currentScore;
+	    if(++batchIters < batchSize) continue;
+	    // end of a batch
+	    ++batchesHere;
+	    StatAddSample(scoreBatchMeans, scoreBatchSum / batchIters);
+	    StatAddSample(pBadBatchMeans, PbadMean(sa));
+	    scoreBatchSum = batchIters = 0;
+	    if(StatNumSamples(scoreBatchMeans) < SA_MIN_BATCHES) continue;
+
+	    // The tolerance is relative to the final score, which we don't know yet. Early on, while the score is near zero
+	    // and pBad is high, this is effectively an absolute tolerance scaled by pBad; once the score is bigger than
+	    // pBad it becomes a genuine relative tolerance. Also loosen it slowly the longer we're stuck at one
+	    // temperature, so a score that keeps fluctuating can't hold us here forever.
+	    double relativeMultiplier = MAX(fabs(StatMean(scoreBatchMeans)), StatMean(pBadBatchMeans)) * (1+log(batchesHere));
+	    double interval = tolPerStep * relativeMultiplier;
+	    // "<=" rather than SANA's "<": a frozen score of exactly 0 with pBad 0 has interval 0, and must still finish
+	    if(StatConfInterval(scoreBatchMeans, confidence) <= interval && StatConfInterval(pBadBatchMeans, confidence) <= interval)
+		satisfied = true;
+	    else if(StatNumSamples(scoreBatchMeans) >= SA_HAPPY_BATCHES) {
+		if(sa->direction*StatMean(scoreBatchMeans) > sa->direction*previousScore) {
+		    // still improving steadily: the early batches bias the mean, so start the statistics over
+		    previousScore = StatMean(scoreBatchMeans);
+		    lastBatchCount = 0; StatReset(scoreBatchMeans); StatReset(pBadBatchMeans);
+		} else if(tauStep > SA_MIN_TAU_STEP && StatNumSamples(scoreBatchMeans) >= SA_HAPPY_BATCHES+lastBatchCount) {
+		    tauStep = MAX(tauStep*2.0/3.0, SA_MIN_TAU_STEP); // not improving and not settling: take smaller steps
+		    lastBatchCount = StatNumSamples(scoreBatchMeans);
+		}
+	    }
+	}
+	printf("%.1f%% T %.2e pBad %.3g iters %lu ", 100*tau, sa->temperature, PbadMean(sa), sa->iter - itersHere);
+	if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
+	puts("");
+	CheckIncrementalScore(sa);
+	if(tauStep < SA_MAX_TAU_STEP) {
+	    if(StatNumSamples(scoreBatchMeans) < SA_HAPPY_BATCHES) tauStep = MIN(tauStep*3, SA_MAX_TAU_STEP); // easy again
+	    else if(sa->direction*StatMean(scoreBatchMeans) < sa->direction*previousScore)
+		tauStep = MIN(tauStep*10, SA_MAX_TAU_STEP); // score is going nowhere here: skip ahead
+	}
+	previousScore = StatMean(scoreBatchMeans);
+	StatReset(scoreBatchMeans); StatReset(pBadBatchMeans);
+    }
+    Note("SimAnnealRun: %lu iterations in total", sa->iter);
+    StatFree(scoreBatchMeans); StatFree(pBadBatchMeans);
+    return 1;
+}
+
 // returns >0 if success, 0 if not done and can continue, <0 if error
 int SimAnnealRun(SIM_ANNEAL *sa) {
     if(sa->tInitial < 0 || sa->tDecay < 0) SimAnnealAutoSchedule(sa);
     sa->temperature = sa->tInitial;
     sa->prevPctDone = 0; // was a function-level static, so only the first run in a process ever reported progress
     sa->currentScore = sa->Score(true, sa->currentSolution);
+    if(sa->tolerance > 0) return SimAnnealRunWithTolerance(sa);
     for(sa->iter = 0; sa->iter < sa->maxIters; sa->iter++) {
 	SetIterTemperature(sa);
 	Iteration(sa);
@@ -125,16 +227,7 @@ int SimAnnealRun(SIM_ANNEAL *sa) {
 	    printf("%d%% T %.2e pBad %.3g ", pctDone, sa->temperature, PbadMean(sa));
 	    if(sa->Report) sa->Report(sa->iter, sa->currentSolution);
 	    puts("");
-	    double realScore = sa->Score(true, sa->currentSolution);
-	    double error = sa->currentScore-realScore;
-	    if(error>0) {
-		if(realScore==0) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
-		else {
-		    double relError = fabs(error/realScore);
-		    if(relError>1e-12) Note("[incEvalError: %g vs. real %g (error %g)]", sa->currentScore, realScore, error);
-		}
-	    }
-	    sa->currentScore=realScore;
+	    CheckIncrementalScore(sa);
 	    sa->prevPctDone=pctDone;
 
 	}
