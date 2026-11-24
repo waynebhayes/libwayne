@@ -20,7 +20,7 @@ DIR="`dirname $0`"
 FIELD_SEP=" " # space
 PROFILE= # set to the single letter p for profiling
 PROF_OUT=
-CONVERT="$DIR/../gawk-trees/tools/convert/convert.py"
+CONVERT="$DIR/../gawk-trees/tools/convert/convert.awk"
 while true; do
     case "$1" in
     -T) FIELD_SEP="$TAB";;
@@ -48,7 +48,7 @@ if [ -n "$CONVERT" ]; then
 	elif [ ! -f "$AWKLIBPATH/htrees.so" ]; then
 		warn "alego: AWKLIBPATH is set, but can't find $AWKLIBPATH/htrees.so"
 	else
-		if CONVERTED=$(python3 "$CONVERT" "$PROG" ); then
+		if CONVERTED=$("$CONVERT" "$PROG" ); then
 			PROG="$CONVERTED"
 			HTREES=" -lhtrees"
 		fi
