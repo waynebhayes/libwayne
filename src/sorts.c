@@ -247,7 +247,7 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 	mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 	nMerge++;
     }
-    printf("Done with bookends!  nMerge %d\n", nMerge); fflush(stdout);
+    //printf("Done with bookends!  nMerge %d\n", nMerge); fflush(stdout);
     //for(i=0; i<=nMerge; i++) printf(" %d", mergeSeparator[i]);
     //printf("\n");
     //assert(false);
@@ -263,79 +263,125 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 ** This generic, stable version of Bookend Sort, and these comments, were written
 ** by Claude (Anthropic's Claude Sonnet 5.5, via Claude Code) in November 2026,
 ** working with Wayne Hayes and building on his Bookend Sort design described
-** above.  Wayne asked for it to be stable, and then for it to be stable
-** without recording each element's original position.
+** above.  Wayne asked for it to be stable, then for it to be stable without
+** recording each element's original position, and then to try nesting the
+** bookends.
 **
-** OVERVIEW.  With only a comparison function there's no "distance" metric, so:
-** - "closest top" means the smallest top that is > the new element, and
-**   "closest bottom" means the largest bottom that is <= the new element;
-** - if both exist, we use whichever of those two bookends has more room;
-** - we can't interpolate a bookend's starting position, so each bookend is a
-**   circular buffer, which can grow in either direction until it's full.
-** When we need a new bookend and none are free, all the bookends are merged into
-** one sorted "run"; the runs are merged together at the end using a heap.
-** There are about ln(n) bookends, each holding about n/ln(n) elements.
+** OVERVIEW.  The bookends are kept NESTED: each one's range of values lies
+** inside the range of the one before it.  That is,
+**	if p < q, top(p) <= top(q) and bottom(q) <= bottom(p).
+** A new element x is placed as follows.  Let k be the first (lowest-numbered)
+** bookend whose range does NOT contain x, ie., x < top(k) or x > bottom(k);
+** because of nesting, no later bookend contains x either, so k is found by
+** binary search.  Then
+** - if x equals the bottom of bookend k-1, and there's room, append it there;
+** - otherwise put x on bookend k: on top if x < top(k), else at the bottom.
+**   If there's no bookend k, start a new one.
+** Both choices preserve nesting.  If bookend k is full, or a new one is needed
+** and none is free, all the bookends are merged into one sorted "run" and we
+** start over (putting x anywhere else would break the nesting).  The runs are
+** merged together at the end using a heap.
+**
+** We can't interpolate a bookend's starting position (there's no "distance"
+** metric with only a comparison function), so each bookend is a circular
+** buffer, which can grow in either direction until it's full.  Note that
+** nesting dictates which bookend gets x, so unlike BookendSortInts, we don't
+** look for the "closest" top or bottom.
+**
+** MERGING BOOKENDS.  Nesting means the tops are already in increasing order
+** when a merge starts, so we get a sorted list of bookends for free.  We take
+** the top of the first one, then re-insert that bookend into the list by binary
+** search, first checking whether it can simply stay first.  That costs about
+** log(q) comparisons per element for q bookends, instead of q-1 for a scan of
+** all the tops.
+**
+** There are BOOKEND_FACTOR*(ln(n)+1) bookends, holding about n elements in all.
 ** O(n log n); uses O(n*w) extra space (from the heap, not the stack).
 **
 ** STABILITY.  Elements that compare equal come out in their original order.
 ** This is purely a property of the algorithm: we don't record any element's
 ** original position.  It takes three rules.
 **
-** 1) Within a bookend: an element only goes on top if it's STRICTLY smaller than
-**    the top, while an element equal to the bottom may be appended below it.
-**    So equal elements are always in arrival order from top to bottom.
+** 1) Within a bookend: an element only goes on top if it's STRICTLY smaller
+**    than the top, while an element equal to the bottom may be appended below
+**    it.  So equal elements are always in arrival order from top to bottom.
 **
 ** 2) Across bookends: we maintain the invariant
 **	  if p < q, every element in bookend p arrived before any equal element
 **	  in bookend q
-**    so that when merging bookends, ties simply go to the lowest-numbered bookend.
+**    so that when merging bookends, ties simply go to the lowest-numbered one.
 **    To maintain it, a new element x may not go into bookend p if some
-**    higher-numbered bookend might already hold an element equal to x.  "Might
-**    hold" means top <= x <= bottom, so we only need to look at the two ends
-**    of each bookend, which we're looking at anyway.  So we scan the bookends from
-**    the highest number down, and stop at the first one whose range contains x:
-**    every bookend below it is off limits.  That bookend itself can still take x at
-**    its bottom, if x equals the bottom and there's room.  Note that a FULL
-**    bookend can't accept x, but it can still block the bookends below it.
+**    higher-numbered bookend contains x in its range (and so might hold an
+**    element equal to x).  Nesting gives us this for free: x goes into
+**    bookend k or k-1, and by the choice of k, no bookend numbered k or higher
+**    contains x.
 **
-**    Why this works: when x goes into bookend p, no higher bookend contains x's
-**    value.  So any equal element that reaches a higher bookend does so later.
-**    From then on that higher bookend's range contains the value (a bookend's range
-**    only grows until it's merged away), which blocks any further equal
-**    elements from going into p.  A newly created bookend is the highest-numbered
-**    one, and holds the latest element, so it satisfies the invariant too.
-**    The range test is conservative (the bookend may not really contain a value
-**    equal to x), which costs us some placement choices but never stability.
+**    Why the invariant follows: when x goes into bookend p, no higher bookend
+**    contains x's value.  So any equal element that reaches a higher bookend
+**    does so later.  From then on that higher bookend's range contains the
+**    value (a bookend's range only grows until it's merged away), which blocks
+**    any further equal elements from going into p.  A newly created bookend is
+**    the highest-numbered one, and holds the latest element, so it satisfies
+**    the invariant too.
+**
+**    Note the choice of k-1 when x equals its bottom: lower bookends may have
+**    the same bottom, but putting x in one of them would break the rule.
 **
 ** 3) Across runs: each run holds a contiguous stretch of the input, earlier
 **    runs holding earlier elements, so when merging runs, ties go to the
 **    earlier run.
 **
-** COST.  Every element is copied exactly 3 times: into a bookend, from the bookend
-** into a run, and from the run back into the original array.  That's far fewer
-** copies than MergeSort, CombSort or HeapSort, which matters for large
-** elements, but it takes more comparisons than MergeSort.
+** COST.  Every element is copied exactly 3 times: into a bookend, from the
+** bookend into a run, and from the run back into the original array.  That's
+** far fewer copies than MergeSort, CombSort or HeapSort, which matters for
+** large elements.  On random data it takes more comparisons than MergeSort, but
+** on some inputs it takes fewer (see below).
 **
-** An alternative way to get stability is to record each element's original
-** position (one size_t per element) and use it to break ties between bookends,
-** which allows any bookend to be used.  Perhaps surprisingly, the rule above
-** usually needs FEWER comparisons than that, even though it restricts the
-** choice of bookend: we stop scanning early, and we don't look at a bookend's bottom
-** if x is less than its top.  The exception is already-sorted or reversed
-** input, probably because full bookends could be skipped without any comparisons
-** in the alternative, but here must be checked to see if they block.
-** Measured (Nov 2026) on one sort of 4,194,304 8-byte records, millions of
-** comparisons (seconds), recorded positions vs. this algorithm:
-**	random			266.6 (2.50)	212.2 (2.52)
-**	256 distinct values	276.9 (1.92)	221.4 (1.91)
-**	4 distinct values	114.6 (0.58)	 91.1 (0.62)
-**	nearly sorted		320.5 (1.39)	280.0 (1.44)
-**	reversed, duplicates	173.3 (0.69)	110.2 (0.66)
-**	sorted			 39.8 (0.31)	102.8 (0.61)
-**	reversed		 39.8 (0.31)	 67.1 (0.44)
-** In the TEST_SORTS program below (two sorts, many duplicate keys) it took
-** 455M comparisons, vs. 569M with recorded positions, and 494M for an earlier
-** version that wasn't stable at all; MergeSort took 174M.
+** OBSERVATIONS (Claude, Nov 2026).  One sort of 4,194,304 8-byte records;
+** millions of comparisons, with seconds in parentheses (single runs, gcc -O2,
+** Cygwin).  The columns are:
+**   unnested	the previous version: closest fit, linear-scan merge of
+**		bookends, BOOKEND_FACTOR 1
+**   nest only	nested placement, but still the linear-scan merge, factor 1
+**   nested x1	nesting and the ordered merge, factor 1
+**   nested x4	the same with factor 4, which is THIS code
+**   merge	MergeSort
+**
+**			unnested     nest only    nested x1    nested x4    merge
+** random		212.1 (2.42) 191.2 (2.38) 155.9 (2.14) 151.5 (1.30)  87.0 (1.36)
+** 256 values		228.3 (1.77) 208.4 (1.72) 174.0 (1.45) 177.9 (1.19)  86.9 (1.11)
+** 4 values		 77.6 (0.64)  45.1 (0.38)  36.4 (0.28)  63.5 (0.41)  77.7 (0.97)
+** sorted		102.8 (0.61)  32.2 (0.22)  32.2 (0.25)  54.1 (0.34)  46.1 (0.91)
+** reversed		 67.1 (0.44)  28.0 (0.23)  28.0 (0.23)  49.9 (0.34)  46.1 (0.83)
+** reversed, dups	110.2 (0.67) 123.8 (0.69)  96.3 (0.48)  86.2 (0.44)  50.4 (0.84)
+** nearly sorted		205.3 (1.13)  97.8 (0.83)  58.5 (0.50)  69.5 (0.55)  55.2 (1.00)
+**
+** - Nesting alone helped on every input except reversed data with duplicates,
+**   where the ordered merge was needed to come out ahead.
+** - With the same number of bookends (nested x1 vs. unnested), nesting plus the
+**   ordered merge needed fewer comparisons on every input.
+** - With factor 1, fewer comparisons than MergeSort on sorted, reversed and
+**   4-valued data; with factor 4, only on 4-valued data.  MergeSort still wins
+**   clearly on comparisons for random data.
+** - Even so, on several inputs this sort ran faster than MergeSort despite
+**   making more comparisons (though comparisons were cheap here).
+** - Copies: exactly 3 per element (12.6M here), vs. 96.5M for MergeSort.
+** - In the TEST_SORTS program below (two sorts, many duplicate keys) it took
+**   360M comparisons (2.25s); the previous version 455M (3.3s); MergeSort
+**   174M (2.19s).
+**
+** HISTORY, for the curious.  The first stable version recorded each element's
+** original position (one size_t per element) to break ties.  The second kept
+** it stable without that, using rule 2 alone: it scanned all the bookends from
+** the highest down, stopping at the first containing x, and picked the closest
+** fit; perhaps surprisingly, it usually needed fewer comparisons than recording
+** positions, even though it restricted the choice of bookend.  Nesting then
+** reduced comparisons on every input measured.
+**
+** BOOKEND_FACTOR trades one kind of input against another: with a factor of 1,
+** random data took about 3% more comparisons and noticeably more time (it
+** makes many more runs), but sorted, reversed and few-valued data took
+** substantially fewer comparisons.
 **
 ** RELATED WORK (Claude's commentary, Nov 2026).  Skiena's paper was read in
 ** full, but this is not a thorough literature search; check the literature
@@ -344,7 +390,8 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 **
 ** - Skiena's "encroaching lists" and the sort built on them, Melsort (S.S.
 **   Skiena, "Encroaching lists as a measure of presortedness", BIT
-**   28:775-784, 1988) are the closest relative found.
+**   28:775-784, 1988) are the closest relative found, and the nesting used
+**   here is essentially that paper's idea:
 **	* Each element is put on either end of the OLDEST sorted list on which
 **	  it fits, else it starts a new list.  This keeps the lists nested, so
 **	  the right list is found by binary search, in O(log m) for m lists.
@@ -352,15 +399,15 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 **	  hence linear on well-ordered data.  m is proved to average at most
 **	  2 sqrt(n), and conjectured to be about sqrt(2n).
 **	* It also suggests BOUNDING the number of lists: when the space for them
-**	  fills up, merge them into one list, set it aside, and carry on, which
-**	  reduces the auxiliary space.  That is much like our merging the
-**	  bookends into runs, so that idea is NOT new.
+**	  fills up, merge them into one list, set it aside, and carry on.
 **	* Skiena states that Melsort, as specified there, is NOT stable.
 **	* Skiena notes that linked lists are slower than arrays, which hampers
 **	  Melsort's practicality.
-** - A later paper (arXiv:1802.05662) adapts encroaching lists to a heap, and
-**   there picks the closest-fitting list end, so "closest fit" is not by
-**   itself new either.
+**   So the nesting, the binary search, and bounding the number of lists are NOT
+**   new.  Our placement differs in how it treats equal elements (strictly less
+**   to go on top; the highest containing bookend when equal to its bottom),
+**   which is what makes it stable.
+** - A later paper (arXiv:1802.05662) adapts encroaching lists to a heap.
 ** - Patience sorting is a one-ended cousin: elements are only added to one end
 **   of each pile, and the piles can be merged using a priority queue.
 **   Chandramouli & Goldstein ("Patience is a Virtue", SIGMOD 2014) make it
@@ -380,10 +427,11 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 **   rearranging the elements afterwards.
 ** Our low count comes mainly from merging many sorted lists at once, helped by
 ** circular buffers, which never shift elements when adding at either end.  So
-** the more defensible claim to novelty is the COMBINATION: two-ended lists in
-** contiguous circular buffers, merged many at a time for exactly 3 copies per
-** element whatever the input order, and stability without recording positions.
-** We did not find out whether that combination has been published.
+** the more defensible claim to novelty is the COMBINATION: nested two-ended
+** lists in contiguous circular buffers, merged many at a time (exploiting the
+** nesting) for exactly 3 copies per element whatever the input order, and
+** stability without recording positions.  We did not find out whether that
+** combination has been published.
 **
 ** SOURCES
 ** - Skiena 1988:			https://doi.org/10.1007/BF01954897
@@ -395,6 +443,8 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 ** - Chandramouli & Goldstein (publisher's page, seen only via search):
 **	https://www.microsoft.com/en-us/research/?p=166281
 */
+#define BOOKEND_FACTOR 4	// number of bookends is this times (ln(n)+1)
+
 typedef struct {size_t head, count; char *a;} BOOKEND; // head is the slot of the top element
 
 // address of the k'th element (counting from the top) of a bookend
@@ -403,24 +453,41 @@ static char *BookendElem(const BOOKEND *bookend, size_t k, size_t bookendSize, s
     return bookend->a + w * ((bookend->head + k) % bookendSize);
 }
 
-// Merge (and empty) a bunch of bookends into dest; returns the number of elements merged.
+// does the top of bookend p come out before the top of bookend q?
+static Boolean BookendBefore(const BOOKEND *bookend, int p, int q, size_t bookendSize, size_t w, pfnCmpFcn compare)
+{
+    int c = compare(BookendElem(bookend+p, 0, bookendSize, w), BookendElem(bookend+q, 0, bookendSize, w));
+    return c < 0 || (c == 0 && p < q); // ties go to the lower-numbered bookend (stability rule 2)
+}
+
+// Merge (and empty) a bunch of NESTED bookends into dest; returns the number of elements merged.
 static size_t BookendMerge(char *dest, int numBookends, BOOKEND *bookend, size_t bookendSize, size_t w, pfnCmpFcn compare)
 {
     size_t n=0;
-    while(true)
+    // order[first..numBookends-1] lists the non-empty bookends, the next one to take from first.
+    // Nesting means they start out in order, so this costs no comparisons.
+    int order[numBookends], first=0, i;
+    for(i=0; i<numBookends; i++) order[i] = i;
+
+    while(first < numBookends)
     {
-	int smallest = -1, p;
-	// Must use "<", not "<=", so that ties go to the lowest-numbered bookend,
-	// which holds the earliest of the equal elements (stability rule 2).
-	for(p=0; p < numBookends; p++)
-	    if(bookend[p].count > 0 && (smallest == -1 ||
-		compare(BookendElem(bookend+p, 0, bookendSize, w), BookendElem(bookend+smallest, 0, bookendSize, w)) < 0))
-		smallest = p;
-	if(smallest == -1) return n;
-	memcpy(dest + w*n++, BookendElem(bookend+smallest, 0, bookendSize, w), w);
-	bookend[smallest].head = (bookend[smallest].head + 1) % bookendSize;
-	bookend[smallest].count--;
+	int p = order[first];
+	memcpy(dest + w*n++, BookendElem(bookend+p, 0, bookendSize, w), w);
+	bookend[p].head = (bookend[p].head + 1) % bookendSize;
+	if(--bookend[p].count == 0) { ++first; continue; }
+	// Put p back in its place; often it can stay first.
+	if(first+1 == numBookends || BookendBefore(bookend, p, order[first+1], bookendSize, w, compare)) continue;
+	int lo = first+2, hi = numBookends; // binary search for the first one that p comes before
+	while(lo < hi)
+	{
+	    int mid = (lo+hi)/2;
+	    if(BookendBefore(bookend, p, order[mid], bookendSize, w, compare)) hi = mid;
+	    else lo = mid+1;
+	}
+	memmove(order+first, order+first+1, (lo-first-1) * sizeof(order[0]));
+	order[lo-1] = p;
     }
+    return n;
 }
 
 // Used by the heap to compare the next unmerged element of two runs
@@ -437,9 +504,10 @@ int BookendSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 {
     if(n < 2) return 0;
 
-    int numBookends = (int)log(n) + 1, usedBookends = 0, nRuns = 0, p, r;
+    int numBookends = BOOKEND_FACTOR * ((int)log(n) + 1), used = 0, nRuns = 0, p, r;
     size_t bookendSize = n/numBookends + 1, i, merged = 0;
-    size_t maxRuns = n/numBookends + 1; // every run but the last has at least numBookends elements
+    // every run but the last either used all the bookends, or filled one of them
+    size_t maxRuns = n/MIN((size_t)numBookends, bookendSize) + 1;
     char *A = (char*)a;
     char *store = Malloc(numBookends * bookendSize * w);
     char *runs = Malloc(n * w); // one long array of consecutive sorted runs
@@ -454,64 +522,56 @@ int BookendSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
     for(i=0; i < n; i++)
     {
 	const char *x = A + w*i;
-	int topBookend = -1, bottomBookend = -1;
-	// Find the best bookend for x.  Go from the highest-numbered bookend down,
-	// stopping at the first one that might hold an element equal to x: lower
-	// bookends are off limits (stability rule 2, above).
-	for(p=usedBookends-1; p >= 0; p--)
+	// Binary search for k, the first bookend whose range does not contain x
+	int lo = 0, hi = used;
+	Boolean onTop = false;	  // if bookend k exists: does x go on its top?
+	Boolean atBottom = false; // does x equal the bottom of bookend k-1?
+	while(lo < hi)
 	{
-	    Boolean full = (bookend[p].count == bookendSize); // can't take x, but may still block
-	    char *top = BookendElem(bookend+p, 0, bookendSize, w);
-	    if(compare(x, top) < 0) // strictly less, for stability (rule 1)
+	    int mid = (lo+hi)/2;
+	    if(compare(x, BookendElem(bookend+mid, 0, bookendSize, w)) < 0) // strictly less (rule 1)
 	    {
-		if(!full && (topBookend == -1 || compare(top, BookendElem(bookend+topBookend, 0, bookendSize, w)) < 0))
-		    topBookend = p;
-		continue; // x is outside this bookend's range, so no need to look at its bottom
+		hi = mid; onTop = true;
+		continue;
 	    }
-	    char *bottom = BookendElem(bookend+p, bookend[p].count-1, bookendSize, w);
-	    int c = compare(x, bottom);
-	    if(c >= 0 && !full && (bottomBookend == -1 ||
-		compare(bottom, BookendElem(bookend+bottomBookend, bookend[bottomBookend].count-1, bookendSize, w)) > 0))
-		bottomBookend = p;
-	    if(c <= 0) break; // top <= x <= bottom: this bookend blocks all lower ones
+	    int c = compare(x, BookendElem(bookend+mid, bookend[mid].count-1, bookendSize, w));
+	    if(c > 0) { hi = mid; onTop = false; }
+	    else { lo = mid+1; atBottom = (c == 0); } // the last such mid is k-1
 	}
+	int k = lo;
 
-	if(topBookend != -1 && bottomBookend != -1) // choose the one with more room
+	if(k > 0 && atBottom && bookend[k-1].count < bookendSize) // append to bookend k-1
+	    memcpy(BookendElem(bookend+k-1, bookend[k-1].count++, bookendSize, w), x, w);
+	else
 	{
-	    if(bookend[topBookend].count <= bookend[bottomBookend].count) bottomBookend = -1;
-	    else topBookend = -1;
-	}
-
-	if(topBookend != -1) // put it on top
-	{
-	    p = topBookend;
-	    bookend[p].head = (bookend[p].head + bookendSize - 1) % bookendSize;
-	    bookend[p].count++;
-	    memcpy(BookendElem(bookend+p, 0, bookendSize, w), x, w);
-	}
-	else if(bottomBookend != -1) // append to the bottom
-	{
-	    p = bottomBookend;
-	    memcpy(BookendElem(bookend+p, bookend[p].count++, bookendSize, w), x, w);
-	}
-	else // it needs a new bookend
-	{
-	    if(usedBookends == numBookends) // none free: merge them all into a new run
+	    // if x can't go on bookend k, merge them all into a new run
+	    if(k < used ? bookend[k].count == bookendSize : used == numBookends)
 	    {
-		size_t nItems = BookendMerge(runs + w*merged, usedBookends, bookend, bookendSize, w, compare);
+		size_t nItems = BookendMerge(runs + w*merged, used, bookend, bookendSize, w, compare);
 		merged += nItems;
 		numCopies += nItems;
 		runStart[++nRuns] = merged;
-		usedBookends = 0;
+		used = k = 0;
 	    }
-	    p = usedBookends++;
-	    bookend[p].head = 0;
-	    bookend[p].count = 1;
-	    memcpy(bookend[p].a, x, w);
+	    if(k == used) // it needs a new bookend
+	    {
+		++used;
+		bookend[k].head = 0;
+		bookend[k].count = 1;
+		memcpy(bookend[k].a, x, w);
+	    }
+	    else if(onTop)
+	    {
+		bookend[k].head = (bookend[k].head + bookendSize - 1) % bookendSize;
+		bookend[k].count++;
+		memcpy(BookendElem(bookend+k, 0, bookendSize, w), x, w);
+	    }
+	    else // append to the bottom
+		memcpy(BookendElem(bookend+k, bookend[k].count++, bookendSize, w), x, w);
 	}
 	++numCopies;
     }
-    size_t nItems = BookendMerge(runs + w*merged, usedBookends, bookend, bookendSize, w, compare);
+    size_t nItems = BookendMerge(runs + w*merged, used, bookend, bookendSize, w, compare);
     merged += nItems;
     numCopies += nItems;
     runStart[++nRuns] = merged;
@@ -986,8 +1046,8 @@ int FredSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 #if TEST_SORTS
 #include <stdio.h>
 
-#define TOTBYTES (4*1024*1024)
-#define ElementSize (1)
+#define TOTBYTES (72*1024*1024)
+#define ElementSize (253)
 #define NUM (TOTBYTES/ElementSize)
 
 #define PreSortCmp ElementCmpj
@@ -1073,19 +1133,6 @@ do
 
     printf("Starting sorts\n");
 
-    printf("Bookend Sort: "); fflush(stdout);
-    _compareCount = 0;
-    t = uTime();
-    cpCnt = BookendSortInts(ints, NUM);
-    cm = _compareCount; secs = uTime()-t;
-    stable = true; // NOT checked: equal ints are indistinguishable (see BookendSortInts)
-    for(i=0; i<NUM-1; i++)
-    {
-	assert(ints[i]<= ints[i+1]);
-    }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
-	stable?"":"un");
-
     printf("qsort: "); fflush(stdout);
     _compareCount = 0;
     t = uTime();
@@ -1105,7 +1152,20 @@ do
     printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
-    printf("bsort: "); fflush(stdout);
+    printf("bSort: "); fflush(stdout);
+    _compareCount = 0;
+    t = uTime();
+    cpCnt = BookendSortInts(ints, NUM);
+    cm = _compareCount; secs = uTime()-t;
+    stable = true; // NOT checked: equal ints are indistinguishable (see BookendSortInts)
+    for(i=0; i<NUM-1; i++)
+    {
+	assert(ints[i]<= ints[i+1]);
+    }
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
+	stable?"":"un");
+
+    printf("psort: "); fflush(stdout);
     _compareCount = 0;
     t = uTime();
     cpCnt = PointerSort(BookendSort,e, NUM, sizeof(ELEMENT), PreSortCmp);
