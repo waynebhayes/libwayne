@@ -20,14 +20,14 @@ typedef int (*pfnCmpFcn)(const void*, const void*);
 */
 typedef int SortFcn(void *, size_t nel, size_t width, pfnCmpFcn);
 
-/* some sort funcitons. MergeSort is the only nlogn stable one. */
+/* some sort funcitons. MergeSort and PileSort are the stable nlogn ones. */
 extern SortFcn
     QuickSort,	    /* nlogn, in-place.  I just call the stdlib qsort */
     CombSort,	    /* simple, in-place nlogn sort; see BYTE Apr 1991 */
     HeapSort,	    /* nlogn, in-place. */
     MergeSort,	    /* nlogn, but requires n*w extra space. */
     InsertionSort,  /* n^2 insertion sort, in-place. */
-    PileSort,       /* Wayne's sorting method... HayesSort? */
+    PileSort,       /* Wayne's sorting method... HayesSort?  nlogn, stable, O(n) extra space. */
     FredSort;       /* Fredrickson's O(n^2 log n) space*time algorithm */
 extern void InsertionSortInt(int A[],size_t k);
 /*

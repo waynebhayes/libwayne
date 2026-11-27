@@ -68,11 +68,11 @@ int QuickSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 ** alternately we can merge them more frequently to minimize the number of
 ** piles that are in the MergeQueue.
 */
-typedef struct {int top, bottom, *a;} PILE;
+typedef struct {int top, bottom, *a;} PILEInts;
 
 // Merge a bunch of piles into destination; you must ensure it has space
 // Returns the number of things merged.
-int PileMerge(int *dest, int numPiles, PILE *pile)
+static int PileMergeInts(int *dest, int numPiles, PILEInts *pile)
 {
     Boolean done = false;
     int n=0;
@@ -86,8 +86,12 @@ int PileMerge(int *dest, int numPiles, PILE *pile)
 	    if(top <= bottom)
 	    {
 		done = false;
-		if(smallest == -1 || pile[p].a[top] < pile[smallest].a[pile[smallest].top])
-		    smallest = p;
+		if(smallest == -1) smallest = p;
+		else
+		{
+		    _compareCount++;
+		    if(pile[p].a[top] < pile[smallest].a[pile[smallest].top]) smallest = p;
+		}
 	    }
 	}
 	assert(done || smallest != -1);
@@ -98,7 +102,7 @@ int PileMerge(int *dest, int numPiles, PILE *pile)
 
 
 static int *_tempMerge, *_mergePosition;
-int TempMergeCmp(const foint X, const foint Y)
+static int TempMergeCmpInts(const foint X, const foint Y)
 {
     const int tm1 = X.i, tm2 = Y.i;
     _compareCount++;
@@ -108,14 +112,14 @@ int TempMergeCmp(const foint X, const foint Y)
 // A tempMerge list is one big long array containing subarrays that are each sorted.
 // The subarrays start at mergeSeparator[i] for i going from 0 to numMerges
 // Returns the number of things merged.
-int PileMergeTemps(int *dest, int nMerge, int mergeSeparator[nMerge+1], int *tempMerge)
+static int PileMergeTempsInts(int *dest, int nMerge, int mergeSeparator[nMerge+1], int *tempMerge)
 {
     int mergePosition[nMerge];
     int i, n=0;
 
     _tempMerge = tempMerge;
     _mergePosition = mergePosition;
-    HEAP *heap = HeapAlloc(nMerge, (pCmpFcn)TempMergeCmp, NULL);
+    HEAP *heap = HeapAlloc(nMerge, (pCmpFcn)TempMergeCmpInts, NULL);
     for(i=0; i<nMerge; i++)
     {
 	mergePosition[i]=mergeSeparator[i];
@@ -133,17 +137,21 @@ int PileMergeTemps(int *dest, int nMerge, int mergeSeparator[nMerge+1], int *tem
     return n;
 }
 
-#if 0
-int PileSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
-#else
-int PileSortInts(int *a, size_t n)	// for now only sort ints, because you need a "distance" metric
-#endif
+/* Note that the algorithm below is NOT stable: it can put an element on top of
+** an equal one that arrived earlier, and its merges don't break ties by arrival
+** order.  With bare integers you can't tell, but don't copy this logic to sort
+** records; use PileSort (further below), which is stable.
+** The ints must be non-negative: the interpolation that picks a new pile's
+** starting position assumes it.
+*/
+int PileSortInts(int *a, size_t n)	// integer-only version, which uses a "distance" metric
 {
-    int p, i;
+    if(n < 2) return 0;
+    int p, i, numCopies = 0;
     int numPiles = (log(n))+1, pileSize=(n/numPiles), nextFreePile=0;
     //int numPiles = log(n)/log(2)+1, pileSize=numPiles, nextFreePile=0;
-    int tempMerge[n], mergeSeparator[n], nMerge=0; // probably way too many merge separators
-    PILE pile[numPiles];
+    int tempMerge[n], mergeSeparator[n+1], nMerge=0; // probably way too many merge separators
+    PILEInts pile[numPiles];
     mergeSeparator[0]=0;
 
     // initialize the piles
@@ -158,6 +166,7 @@ int PileSortInts(int *a, size_t n)	// for now only sort ints, because you need a
     // Thus the number of elements in a pile is bottom-top+1.
     for(i=0; i < n; i++)
     {
+	++numCopies;
 	unsigned int minDistance = UINT_INFINITY;
 	int bestPile = INT_INFINITY;
 	Boolean useTop = maybe;
@@ -183,12 +192,14 @@ int PileSortInts(int *a, size_t n)	// for now only sort ints, because you need a
 	    assert(p == nextFreePile);
 	    assert(0 <= nextFreePile && nextFreePile < numPiles);
 	    int interpolant = pileSize*(a[i]/(double)(INT_INFINITY));
+	    if(interpolant >= pileSize) interpolant = pileSize-1; // happens if a[i] == INT_INFINITY
 	    pile[nextFreePile].top = pile[nextFreePile].bottom = interpolant;
 	    pile[nextFreePile].a[pile[nextFreePile].top] = a[i];
 	    nextFreePile++;
 	    if(nextFreePile >= numPiles)
 	    {
-		int nItems = PileMerge(tempMerge + mergeSeparator[nMerge], numPiles, pile);
+		int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], numPiles, pile);
+		numCopies += nItems;
 		mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 		nMerge++;
 		nextFreePile = 0;
@@ -213,7 +224,7 @@ int PileSortInts(int *a, size_t n)	// for now only sort ints, because you need a
 	    double bottomSpace = 1-(pile[bestPile].a[pile[bestPile].bottom]/(double)(INT_INFINITY));
 	    if(topSpace < 1/(double)pileSize && bottomSpace < 1/(double)pileSize) // end elements are too close to 0 or infinity, move to mergeQueue
 	    {
-		int nItems = PileMerge(tempMerge + mergeSeparator[nMerge], numPiles, pile);
+		int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], numPiles, pile);
 		mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 		nMerge++;
 		nextFreePile = 0;
@@ -221,17 +232,254 @@ int PileSortInts(int *a, size_t n)	// for now only sort ints, because you need a
 #endif
 	}
     }
-    int nItems = PileMerge(tempMerge + mergeSeparator[nMerge], numPiles, pile);
-    mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
-    nMerge++;
+    // Merge what's left. Only piles below nextFreePile are in use; the rest may never have been initialized.
+    int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], nextFreePile, pile);
+    numCopies += nItems;
+    if(nItems > 0) // PileMergeTempsInts can't handle an empty run
+    {
+	mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
+	nMerge++;
+    }
     printf("Done with piles!  nMerge %d\n", nMerge); fflush(stdout);
     //for(i=0; i<=nMerge; i++) printf(" %d", mergeSeparator[i]);
     //printf("\n");
     //assert(false);
     // At this point, all the piles should be sorted, now it's time to merge them all together.
-    nItems = PileMergeTemps(a, nMerge, mergeSeparator, tempMerge);
+    nItems = PileMergeTempsInts(a, nMerge, mergeSeparator, tempMerge);
     assert(nItems == n);
-    return 0;
+    numCopies += nItems;
+    return numCopies;
+}
+
+/* Generic Pile Sort: same interface as the other SortFcn's.
+**
+** This generic, stable version of Pile Sort, and these comments, were written
+** by Claude (Anthropic's Claude Sonnet 5.5, via Claude Code) in November 2026,
+** working with Wayne Hayes and building on his Pile Sort design described
+** above.  Wayne asked for it to be stable, and then for it to be stable
+** without recording each element's original position.
+**
+** OVERVIEW.  With only a comparison function there's no "distance" metric, so:
+** - "closest top" means the smallest top that is > the new element, and
+**   "closest bottom" means the largest bottom that is <= the new element;
+** - if both exist, we use whichever of those two piles has more room;
+** - we can't interpolate a pile's starting position, so each pile is a
+**   circular buffer, which can grow in either direction until it's full.
+** When we need a new pile and none are free, all the piles are merged into
+** one sorted "run"; the runs are merged together at the end using a heap.
+** There are about ln(n) piles, each holding about n/ln(n) elements.
+** O(n log n); uses O(n*w) extra space (from the heap, not the stack).
+**
+** STABILITY.  Elements that compare equal come out in their original order.
+** This is purely a property of the algorithm: we don't record any element's
+** original position.  It takes three rules.
+**
+** 1) Within a pile: an element only goes on top if it's STRICTLY smaller than
+**    the top, while an element equal to the bottom may be appended below it.
+**    So equal elements are always in arrival order from top to bottom.
+**
+** 2) Across piles: we maintain the invariant
+**	  if p < q, every element in pile p arrived before any equal element
+**	  in pile q
+**    so that when merging piles, ties simply go to the lowest-numbered pile.
+**    To maintain it, a new element x may not go into pile p if some
+**    higher-numbered pile might already hold an element equal to x.  "Might
+**    hold" means top <= x <= bottom, so we only need to look at the two ends
+**    of each pile, which we're looking at anyway.  So we scan the piles from
+**    the highest number down, and stop at the first one whose range contains x:
+**    every pile below it is off limits.  That pile itself can still take x at
+**    its bottom, if x equals the bottom and there's room.  Note that a FULL
+**    pile can't accept x, but it can still block the piles below it.
+**
+**    Why this works: when x goes into pile p, no higher pile contains x's
+**    value.  So any equal element that reaches a higher pile does so later.
+**    From then on that higher pile's range contains the value (a pile's range
+**    only grows until it's merged away), which blocks any further equal
+**    elements from going into p.  A newly created pile is the highest-numbered
+**    one, and holds the latest element, so it satisfies the invariant too.
+**    The range test is conservative (the pile may not really contain a value
+**    equal to x), which costs us some placement choices but never stability.
+**
+** 3) Across runs: each run holds a contiguous stretch of the input, earlier
+**    runs holding earlier elements, so when merging runs, ties go to the
+**    earlier run.
+**
+** COST.  Every element is copied exactly 3 times: into a pile, from the pile
+** into a run, and from the run back into the original array.  That's far fewer
+** copies than MergeSort, CombSort or HeapSort, which matters for large
+** elements, but it takes more comparisons than MergeSort.
+**
+** An alternative way to get stability is to record each element's original
+** position (one size_t per element) and use it to break ties between piles,
+** which allows any pile to be used.  Perhaps surprisingly, the rule above
+** usually needs FEWER comparisons than that, even though it restricts the
+** choice of pile: we stop scanning early, and we don't look at a pile's bottom
+** if x is less than its top.  The exception is already-sorted or reversed
+** input, probably because full piles could be skipped without any comparisons
+** in the alternative, but here must be checked to see if they block.
+** Measured (Nov 2026) on one sort of 4,194,304 8-byte records, millions of
+** comparisons (seconds), recorded positions vs. this algorithm:
+**	random			266.6 (2.50)	212.2 (2.52)
+**	256 distinct values	276.9 (1.92)	221.4 (1.91)
+**	4 distinct values	114.6 (0.58)	 91.1 (0.62)
+**	nearly sorted		320.5 (1.39)	280.0 (1.44)
+**	reversed, duplicates	173.3 (0.69)	110.2 (0.66)
+**	sorted			 39.8 (0.31)	102.8 (0.61)
+**	reversed		 39.8 (0.31)	 67.1 (0.44)
+** In the TEST_SORTS program below (two sorts, many duplicate keys) it took
+** 455M comparisons, vs. 569M with recorded positions, and 494M for an earlier
+** version that wasn't stable at all; MergeSort took 174M.
+*/
+typedef struct {size_t head, count; char *a;} PILE; // head is the slot of the top element
+
+// address of the k'th element (counting from the top) of a pile
+static char *PileElem(const PILE *pile, size_t k, size_t pileSize, size_t w)
+{
+    return pile->a + w * ((pile->head + k) % pileSize);
+}
+
+// Merge (and empty) a bunch of piles into dest; returns the number of elements merged.
+static size_t PileMerge(char *dest, int numPiles, PILE *pile, size_t pileSize, size_t w, pfnCmpFcn compare)
+{
+    size_t n=0;
+    while(true)
+    {
+	int smallest = -1, p;
+	// Must use "<", not "<=", so that ties go to the lowest-numbered pile,
+	// which holds the earliest of the equal elements (stability rule 2).
+	for(p=0; p < numPiles; p++)
+	    if(pile[p].count > 0 && (smallest == -1 ||
+		compare(PileElem(pile+p, 0, pileSize, w), PileElem(pile+smallest, 0, pileSize, w)) < 0))
+		smallest = p;
+	if(smallest == -1) return n;
+	memcpy(dest + w*n++, PileElem(pile+smallest, 0, pileSize, w), w);
+	pile[smallest].head = (pile[smallest].head + 1) % pileSize;
+	pile[smallest].count--;
+    }
+}
+
+// Used by the heap to compare the next unmerged element of two runs
+static const char *_runData;
+static size_t *_runNext, _runWidth;
+static pfnCmpFcn _runCompare;
+static int RunCmp(const foint X, const foint Y)
+{
+    int c = _runCompare(_runData + _runWidth * _runNext[X.i], _runData + _runWidth * _runNext[Y.i]);
+    return c ? c : X.i - Y.i; // for stability, ties go to the earlier run
+}
+
+int PileSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
+{
+    if(n < 2) return 0;
+
+    int numPiles = (int)log(n) + 1, usedPiles = 0, nRuns = 0, p, r;
+    size_t pileSize = n/numPiles + 1, i, merged = 0;
+    size_t maxRuns = n/numPiles + 1; // every run but the last has at least numPiles elements
+    char *A = (char*)a;
+    char *store = Malloc(numPiles * pileSize * w);
+    char *runs = Malloc(n * w); // one long array of consecutive sorted runs
+    size_t *runStart = Malloc((maxRuns+1) * sizeof(runStart[0]));
+    PILE pile[numPiles];
+    int numCopies = 0;
+
+    for(p=0; p<numPiles; p++) pile[p].a = store + p * pileSize * w;
+    runStart[0] = 0;
+
+    // STEP 1: build piles
+    for(i=0; i < n; i++)
+    {
+	const char *x = A + w*i;
+	int topPile = -1, bottomPile = -1;
+	// Find the best pile for x.  Go from the highest-numbered pile down,
+	// stopping at the first one that might hold an element equal to x: lower
+	// piles are off limits (stability rule 2, above).
+	for(p=usedPiles-1; p >= 0; p--)
+	{
+	    Boolean full = (pile[p].count == pileSize); // can't take x, but may still block
+	    char *top = PileElem(pile+p, 0, pileSize, w);
+	    if(compare(x, top) < 0) // strictly less, for stability (rule 1)
+	    {
+		if(!full && (topPile == -1 || compare(top, PileElem(pile+topPile, 0, pileSize, w)) < 0))
+		    topPile = p;
+		continue; // x is outside this pile's range, so no need to look at its bottom
+	    }
+	    char *bottom = PileElem(pile+p, pile[p].count-1, pileSize, w);
+	    int c = compare(x, bottom);
+	    if(c >= 0 && !full && (bottomPile == -1 ||
+		compare(bottom, PileElem(pile+bottomPile, pile[bottomPile].count-1, pileSize, w)) > 0))
+		bottomPile = p;
+	    if(c <= 0) break; // top <= x <= bottom: this pile blocks all lower ones
+	}
+
+	if(topPile != -1 && bottomPile != -1) // choose the one with more room
+	{
+	    if(pile[topPile].count <= pile[bottomPile].count) bottomPile = -1;
+	    else topPile = -1;
+	}
+
+	if(topPile != -1) // put it on top
+	{
+	    p = topPile;
+	    pile[p].head = (pile[p].head + pileSize - 1) % pileSize;
+	    pile[p].count++;
+	    memcpy(PileElem(pile+p, 0, pileSize, w), x, w);
+	}
+	else if(bottomPile != -1) // append to the bottom
+	{
+	    p = bottomPile;
+	    memcpy(PileElem(pile+p, pile[p].count++, pileSize, w), x, w);
+	}
+	else // it needs a new pile
+	{
+	    if(usedPiles == numPiles) // none free: merge them all into a new run
+	    {
+		size_t nItems = PileMerge(runs + w*merged, usedPiles, pile, pileSize, w, compare);
+		merged += nItems;
+		numCopies += nItems;
+		runStart[++nRuns] = merged;
+		usedPiles = 0;
+	    }
+	    p = usedPiles++;
+	    pile[p].head = 0;
+	    pile[p].count = 1;
+	    memcpy(pile[p].a, x, w);
+	}
+	++numCopies;
+    }
+    size_t nItems = PileMerge(runs + w*merged, usedPiles, pile, pileSize, w, compare);
+    merged += nItems;
+    numCopies += nItems;
+    runStart[++nRuns] = merged;
+    assert(merged == n && nRuns <= maxRuns);
+
+    // STEP 2: merge the runs back into the original array
+    size_t *runNext = Malloc(nRuns * sizeof(runNext[0]));
+    _runData = runs;
+    _runNext = runNext;
+    _runWidth = w;
+    _runCompare = compare;
+    HEAP *heap = HeapAlloc(nRuns, (pCmpFcn)RunCmp, NULL);
+    for(r=0; r<nRuns; r++)
+    {
+	foint f; f.i = r;
+	runNext[r] = runStart[r];
+	HeapInsert(heap, f);
+    }
+    for(i=0; HeapSize(heap) > 0; i++)
+    {
+	foint f = HeapNext(heap);
+	memcpy(A + w*i, runs + w*runNext[f.i]++, w);
+	++numCopies;
+	if(runNext[f.i] < runStart[f.i+1]) HeapInsert(heap, f);
+    }
+    assert(i == n);
+
+    HeapFree(heap);
+    free(runNext);
+    free(runStart);
+    free(runs);
+    free(store);
+    return numCopies;
 }
 
 /* insertion sort. Good for lists that are already "nearly" sorted, ie no
@@ -457,14 +705,14 @@ int HeapSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 }
 
 
+#ifndef PointerSort
 static pfnCmpFcn _PointerSortCompare;
-int _PointerSortCmp(const void *x, const void *y)
+static int _PointerSortCmp(const void *x, const void *y)
 {
     const char *const*X = x, *const*Y = y;
     return _PointerSortCompare(*X, *Y);
 }
 
-#ifndef PointerSort
 int PointerSort(SortFcn Sort, void *a, size_t n, size_t w, pfnCmpFcn compare)
 {
     void *tmp = alloca(w);
@@ -682,7 +930,7 @@ int FredSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 
 typedef struct _foo {unsigned char i,j; unsigned char f[ElementSize]; } ELEMENT;
 
-int ElementCmp(const void *X, const void *Y)
+static __attribute__((unused)) int ElementCmp(const void *X, const void *Y)
 {
     const ELEMENT *x = X, *y = Y;
     int i;
@@ -696,21 +944,21 @@ int ElementCmp(const void *X, const void *Y)
     return 0;
 }
 
-int ElementCmpi(const void *X, const void *Y)
+static int ElementCmpi(const void *X, const void *Y)
 {
     const ELEMENT *x = X, *y = Y;
     _compareCount++;
     return x->i - y->i;
 }
 
-int ElementCmpj(const void *X, const void *Y)
+static int ElementCmpj(const void *X, const void *Y)
 {
     const ELEMENT *x = X, *y = Y;
     _compareCount++;
     return x->j - y->j;
 }
 
-void ElementDmp(const ELEMENT *x)
+static __attribute__((unused)) void ElementDmp(const ELEMENT *x)
 {
     int i;
     printf("%d.%d[", x->i, x->j);
@@ -728,8 +976,8 @@ do
 {
     ELEMENT a[NUM], b[NUM], c[NUM], d[NUM], e[NUM], f[NUM], g[NUM];
     int ints[NUM];
-    int i, cpCnt;
-    double t;
+    int i, cpCnt, cm;
+    double t, secs;
     Boolean stable;
 
     printf("generating random list..."); fflush(stdout);
@@ -764,12 +1012,13 @@ do
     _compareCount = 0;
     t = uTime();
     cpCnt = PileSortInts(ints, NUM);
-    stable = true;
+    cm = _compareCount; secs = uTime()-t;
+    stable = true; // NOT checked: equal ints are indistinguishable (see PileSortInts)
     for(i=0; i<NUM-1; i++)
     {
 	assert(ints[i]<= ints[i+1]);
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
     printf("qsort: "); fflush(stdout);
@@ -777,6 +1026,7 @@ do
     t = uTime();
     cpCnt = PointerSort(QuickSort,a, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += PointerSort(QuickSort,a, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -787,7 +1037,24 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
+	stable?"":"un");
+
+    printf("psort: "); fflush(stdout);
+    _compareCount = 0;
+    t = uTime();
+    cpCnt = PointerSort(PileSort,e, NUM, sizeof(ELEMENT), PreSortCmp);
+    cpCnt += PointerSort(PileSort,e, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
+    stable = true;
+    for(i=0; i<NUM-1; i++)
+    {
+	assert(SortCmp(e+i, e+i+1) <= 0);
+	assert(SortCmp(a+i,e+i) == 0);
+	if(SortCmp(e+i, e+i+1) == 0 && PreSortCmp(e+i, e+i+1) > 0)
+	    stable = false; // but keep checking that it's sorted
+    }
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
     printf("csort: "); fflush(stdout);
@@ -795,6 +1062,7 @@ do
     t = uTime();
     cpCnt = PointerSort(CombSort,b, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += PointerSort(CombSort,b, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -807,7 +1075,7 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
     printf("msort: "); fflush(stdout);
@@ -815,6 +1083,7 @@ do
     t = uTime();
     cpCnt = PointerSort(MergeSort,c, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += PointerSort(MergeSort,c, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -827,7 +1096,7 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
     printf("hsort: "); fflush(stdout);
@@ -835,6 +1104,7 @@ do
     t = uTime();
     cpCnt = PointerSort(HeapSort,d, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += PointerSort(HeapSort,d, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -847,7 +1117,7 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
 #if 0
@@ -856,6 +1126,7 @@ do
     t = uTime();
     cpCnt = PointerSort(InsertionSort, e, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += PointerSort(InsertionSort, e, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -868,15 +1139,17 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 #endif
 
+#if 0	/* FIXME: FredSort has an infinite loop */
     printf("fsort: "); fflush(stdout);
     _compareCount = 0;
     t = uTime();
     cpCnt = FredSort(f, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += FredSort(f, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -889,8 +1162,9 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
+#endif
 
 #if 0	/* David Neto's FredSort */
     printf("dfsort: "); fflush(stdout);
@@ -898,6 +1172,7 @@ do
     t = uTime();
     cpCnt = FredSort(g, NUM, sizeof(ELEMENT), PreSortCmp);
     cpCnt += FredSort(g, NUM, sizeof(ELEMENT), SortCmp);
+    cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
     {
@@ -910,7 +1185,7 @@ do
 	    break;
 	}
     }
-    printf("cm: %9d cp: %9d (%gs) %sstable\n", _compareCount, cpCnt, uTime()-t,
+    printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 #endif
 } while(1);
