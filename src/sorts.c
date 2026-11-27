@@ -295,6 +295,14 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 ** log(q) comparisons per element for q bookends, instead of q-1 for a scan of
 ** all the tops.
 **
+** CREDITS for the binary searches.  Using binary search to PLACE an element
+** among nested lists is Skiena's idea (1988; see RELATED WORK below), not new
+** here; Wayne asked to try nesting the bookends.  Using binary search in the
+** MERGE, to exploit the order that nesting gives us for free, was Claude's
+** idea (Nov 2026), as was the handling of equal elements that keeps the nested
+** placement stable.  Binary insertion is a standard technique, and we haven't
+** checked whether this use of it has been published.
+**
 ** There are BOOKEND_FACTOR*(ln(n)+1) bookends, holding about n elements in all.
 ** O(n log n); uses O(n*w) extra space (from the heap, not the stack).
 **
