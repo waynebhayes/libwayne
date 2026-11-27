@@ -31,7 +31,14 @@ int QuickSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
     return 0;
 }
 
-/* Pile Sort
+/* Bookend Sort
+** Named for what it does: each bookend can grow at either end.  Originally called
+** "Garage Sort", and then "Pile Sort"; it was renamed because "pile sorting"
+** is a common term in psychology for grouping cards by concept, which has
+** nothing to do with ordering.
+** The original description below calls the sorted stacks of items "piles";
+** the code calls them "bookends".
+**
 ** Inspired by physically sorting a few hundred shipping labels in my garage
 ** because I had to look for duplicates.  It's inspired by MergeSort, which
 ** I've used before: the goal is to build up a small set of lists, each of
@@ -68,11 +75,11 @@ int QuickSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 ** alternately we can merge them more frequently to minimize the number of
 ** piles that are in the MergeQueue.
 */
-typedef struct {int top, bottom, *a;} PILEInts;
+typedef struct {int top, bottom, *a;} BOOKENDInts;
 
-// Merge a bunch of piles into destination; you must ensure it has space
+// Merge a bunch of bookends into destination; you must ensure it has space
 // Returns the number of things merged.
-static int PileMergeInts(int *dest, int numPiles, PILEInts *pile)
+static int BookendMergeInts(int *dest, int numBookends, BOOKENDInts *bookend)
 {
     Boolean done = false;
     int n=0;
@@ -80,9 +87,9 @@ static int PileMergeInts(int *dest, int numPiles, PILEInts *pile)
     {
 	done = true;
 	int smallest = -1, p;
-	for(p=0; p < numPiles; p++)
+	for(p=0; p < numBookends; p++)
 	{
-	    int top = pile[p].top, bottom = pile[p].bottom;
+	    int top = bookend[p].top, bottom = bookend[p].bottom;
 	    if(top <= bottom)
 	    {
 		done = false;
@@ -90,12 +97,12 @@ static int PileMergeInts(int *dest, int numPiles, PILEInts *pile)
 		else
 		{
 		    _compareCount++;
-		    if(pile[p].a[top] < pile[smallest].a[pile[smallest].top]) smallest = p;
+		    if(bookend[p].a[top] < bookend[smallest].a[bookend[smallest].top]) smallest = p;
 		}
 	    }
 	}
 	assert(done || smallest != -1);
-	if(!done) dest[n++] = pile[smallest].a[pile[smallest].top++];
+	if(!done) dest[n++] = bookend[smallest].a[bookend[smallest].top++];
     }
     return n;
 }
@@ -112,7 +119,7 @@ static int TempMergeCmpInts(const foint X, const foint Y)
 // A tempMerge list is one big long array containing subarrays that are each sorted.
 // The subarrays start at mergeSeparator[i] for i going from 0 to numMerges
 // Returns the number of things merged.
-static int PileMergeTempsInts(int *dest, int nMerge, int mergeSeparator[nMerge+1], int *tempMerge)
+static int BookendMergeTempsInts(int *dest, int nMerge, int mergeSeparator[nMerge+1], int *tempMerge)
 {
     int mergePosition[nMerge];
     int i, n=0;
@@ -140,182 +147,182 @@ static int PileMergeTempsInts(int *dest, int nMerge, int mergeSeparator[nMerge+1
 /* Note that the algorithm below is NOT stable: it can put an element on top of
 ** an equal one that arrived earlier, and its merges don't break ties by arrival
 ** order.  With bare integers you can't tell, but don't copy this logic to sort
-** records; use PileSort (further below), which is stable.
-** The ints must be non-negative: the interpolation that picks a new pile's
+** records; use BookendSort (further below), which is stable.
+** The ints must be non-negative: the interpolation that picks a new bookend's
 ** starting position assumes it.
 */
-int PileSortInts(int *a, size_t n)	// integer-only version, which uses a "distance" metric
+int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "distance" metric
 {
     if(n < 2) return 0;
     int p, i, numCopies = 0;
-    int numPiles = (log(n))+1, pileSize=(n/numPiles), nextFreePile=0;
-    //int numPiles = log(n)/log(2)+1, pileSize=numPiles, nextFreePile=0;
+    int numBookends = (log(n))+1, bookendSize=(n/numBookends), nextFreeBookend=0;
+    //int numBookends = log(n)/log(2)+1, bookendSize=numBookends, nextFreeBookend=0;
     int tempMerge[n], mergeSeparator[n+1], nMerge=0; // probably way too many merge separators
-    PILEInts pile[numPiles];
+    BOOKENDInts bookend[numBookends];
     mergeSeparator[0]=0;
 
-    // initialize the piles
-    for(p=0; p<numPiles; p++)
+    // initialize the bookends
+    for(p=0; p<numBookends; p++)
     {
-	pile[p].a = alloca(pileSize * sizeof(pile[0].a[0])); // it's OK not to initialize bottom and top.
+	bookend[p].a = alloca(bookendSize * sizeof(bookend[0].a[0])); // it's OK not to initialize bottom and top.
     }
 #define UINT_INFINITY ((unsigned int)(-1))
 #define INT_INFINITY (UINT_INFINITY/2)
-    // STEP 1: build piles
-    // top and bottom point to the *actual* element and will be equal if there's only one element in the pile.
-    // Thus the number of elements in a pile is bottom-top+1.
+    // STEP 1: build bookends
+    // top and bottom point to the *actual* element and will be equal if there's only one element in the bookend.
+    // Thus the number of elements in a bookend is bottom-top+1.
     for(i=0; i < n; i++)
     {
 	++numCopies;
 	unsigned int minDistance = UINT_INFINITY;
-	int bestPile = INT_INFINITY;
+	int bestBookend = INT_INFINITY;
 	Boolean useTop = maybe;
-	for(p=0;p<nextFreePile;p++)
+	for(p=0;p<nextFreeBookend;p++)
 	{
-	    int top = pile[p].top, bottom = pile[p].bottom;
-	    assert(0 <= top && top <= bottom && bottom < pileSize);
-	    if(a[i] <= pile[p].a[top] && pile[p].a[top]-a[i] < minDistance)
+	    int top = bookend[p].top, bottom = bookend[p].bottom;
+	    assert(0 <= top && top <= bottom && bottom < bookendSize);
+	    if(a[i] <= bookend[p].a[top] && bookend[p].a[top]-a[i] < minDistance)
 	    {
-		minDistance = pile[p].a[top]-a[i]; bestPile=p; useTop=true;
+		minDistance = bookend[p].a[top]-a[i]; bestBookend=p; useTop=true;
 	    }
-	    if(a[i] >= pile[p].a[bottom] && a[i]-pile[p].a[bottom] < minDistance)
+	    if(a[i] >= bookend[p].a[bottom] && a[i]-bookend[p].a[bottom] < minDistance)
 	    {
-		minDistance = a[i]-pile[p].a[bottom]; bestPile=p; useTop=false;
+		minDistance = a[i]-bookend[p].a[bottom]; bestBookend=p; useTop=false;
 	    }
 	    _compareCount += 2;
 	}
 	//assert(useTop != maybe);
 
-	// need to put it in a new pile?
-	if(bestPile == INT_INFINITY || (useTop && pile[bestPile].top == 0) || (!useTop && pile[bestPile].bottom == pileSize-1))
+	// need to put it in a new bookend?
+	if(bestBookend == INT_INFINITY || (useTop && bookend[bestBookend].top == 0) || (!useTop && bookend[bestBookend].bottom == bookendSize-1))
 	{
-	    assert(p == nextFreePile);
-	    assert(0 <= nextFreePile && nextFreePile < numPiles);
-	    int interpolant = pileSize*(a[i]/(double)(INT_INFINITY));
-	    if(interpolant >= pileSize) interpolant = pileSize-1; // happens if a[i] == INT_INFINITY
-	    pile[nextFreePile].top = pile[nextFreePile].bottom = interpolant;
-	    pile[nextFreePile].a[pile[nextFreePile].top] = a[i];
-	    nextFreePile++;
-	    if(nextFreePile >= numPiles)
+	    assert(p == nextFreeBookend);
+	    assert(0 <= nextFreeBookend && nextFreeBookend < numBookends);
+	    int interpolant = bookendSize*(a[i]/(double)(INT_INFINITY));
+	    if(interpolant >= bookendSize) interpolant = bookendSize-1; // happens if a[i] == INT_INFINITY
+	    bookend[nextFreeBookend].top = bookend[nextFreeBookend].bottom = interpolant;
+	    bookend[nextFreeBookend].a[bookend[nextFreeBookend].top] = a[i];
+	    nextFreeBookend++;
+	    if(nextFreeBookend >= numBookends)
 	    {
-		int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], numPiles, pile);
+		int nItems = BookendMergeInts(tempMerge + mergeSeparator[nMerge], numBookends, bookend);
 		numCopies += nItems;
 		mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 		nMerge++;
-		nextFreePile = 0;
+		nextFreeBookend = 0;
 	    }
 	}
 	else
 	{
-	    assert(0 <= bestPile && bestPile < nextFreePile);
+	    assert(0 <= bestBookend && bestBookend < nextFreeBookend);
 	    if(useTop)
 	    {
-		assert(pile[bestPile].top > 0);
-		pile[bestPile].a[--pile[bestPile].top] = a[i];
+		assert(bookend[bestBookend].top > 0);
+		bookend[bestBookend].a[--bookend[bestBookend].top] = a[i];
 	    }
 	    else
 	    {
-		assert(pile[bestPile].bottom < pileSize-1);
-		pile[bestPile].a[++pile[bestPile].bottom] = a[i];
+		assert(bookend[bestBookend].bottom < bookendSize-1);
+		bookend[bestBookend].a[++bookend[bestBookend].bottom] = a[i];
 	    }
 #if 0
-	    // Check to see if the pile is getting too full
-	    double topSpace = (pile[bestPile].a[pile[bestPile].top]/(double)(INT_INFINITY));
-	    double bottomSpace = 1-(pile[bestPile].a[pile[bestPile].bottom]/(double)(INT_INFINITY));
-	    if(topSpace < 1/(double)pileSize && bottomSpace < 1/(double)pileSize) // end elements are too close to 0 or infinity, move to mergeQueue
+	    // Check to see if the bookend is getting too full
+	    double topSpace = (bookend[bestBookend].a[bookend[bestBookend].top]/(double)(INT_INFINITY));
+	    double bottomSpace = 1-(bookend[bestBookend].a[bookend[bestBookend].bottom]/(double)(INT_INFINITY));
+	    if(topSpace < 1/(double)bookendSize && bottomSpace < 1/(double)bookendSize) // end elements are too close to 0 or infinity, move to mergeQueue
 	    {
-		int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], numPiles, pile);
+		int nItems = BookendMergeInts(tempMerge + mergeSeparator[nMerge], numBookends, bookend);
 		mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 		nMerge++;
-		nextFreePile = 0;
+		nextFreeBookend = 0;
 	    }
 #endif
 	}
     }
-    // Merge what's left. Only piles below nextFreePile are in use; the rest may never have been initialized.
-    int nItems = PileMergeInts(tempMerge + mergeSeparator[nMerge], nextFreePile, pile);
+    // Merge what's left. Only bookends below nextFreeBookend are in use; the rest may never have been initialized.
+    int nItems = BookendMergeInts(tempMerge + mergeSeparator[nMerge], nextFreeBookend, bookend);
     numCopies += nItems;
-    if(nItems > 0) // PileMergeTempsInts can't handle an empty run
+    if(nItems > 0) // BookendMergeTempsInts can't handle an empty run
     {
 	mergeSeparator[nMerge+1] = mergeSeparator[nMerge] + nItems;
 	nMerge++;
     }
-    printf("Done with piles!  nMerge %d\n", nMerge); fflush(stdout);
+    printf("Done with bookends!  nMerge %d\n", nMerge); fflush(stdout);
     //for(i=0; i<=nMerge; i++) printf(" %d", mergeSeparator[i]);
     //printf("\n");
     //assert(false);
-    // At this point, all the piles should be sorted, now it's time to merge them all together.
-    nItems = PileMergeTempsInts(a, nMerge, mergeSeparator, tempMerge);
+    // At this point, all the bookends should be sorted, now it's time to merge them all together.
+    nItems = BookendMergeTempsInts(a, nMerge, mergeSeparator, tempMerge);
     assert(nItems == n);
     numCopies += nItems;
     return numCopies;
 }
 
-/* Generic Pile Sort: same interface as the other SortFcn's.
+/* Generic Bookend Sort: same interface as the other SortFcn's.
 **
-** This generic, stable version of Pile Sort, and these comments, were written
+** This generic, stable version of Bookend Sort, and these comments, were written
 ** by Claude (Anthropic's Claude Sonnet 5.5, via Claude Code) in November 2026,
-** working with Wayne Hayes and building on his Pile Sort design described
+** working with Wayne Hayes and building on his Bookend Sort design described
 ** above.  Wayne asked for it to be stable, and then for it to be stable
 ** without recording each element's original position.
 **
 ** OVERVIEW.  With only a comparison function there's no "distance" metric, so:
 ** - "closest top" means the smallest top that is > the new element, and
 **   "closest bottom" means the largest bottom that is <= the new element;
-** - if both exist, we use whichever of those two piles has more room;
-** - we can't interpolate a pile's starting position, so each pile is a
+** - if both exist, we use whichever of those two bookends has more room;
+** - we can't interpolate a bookend's starting position, so each bookend is a
 **   circular buffer, which can grow in either direction until it's full.
-** When we need a new pile and none are free, all the piles are merged into
+** When we need a new bookend and none are free, all the bookends are merged into
 ** one sorted "run"; the runs are merged together at the end using a heap.
-** There are about ln(n) piles, each holding about n/ln(n) elements.
+** There are about ln(n) bookends, each holding about n/ln(n) elements.
 ** O(n log n); uses O(n*w) extra space (from the heap, not the stack).
 **
 ** STABILITY.  Elements that compare equal come out in their original order.
 ** This is purely a property of the algorithm: we don't record any element's
 ** original position.  It takes three rules.
 **
-** 1) Within a pile: an element only goes on top if it's STRICTLY smaller than
+** 1) Within a bookend: an element only goes on top if it's STRICTLY smaller than
 **    the top, while an element equal to the bottom may be appended below it.
 **    So equal elements are always in arrival order from top to bottom.
 **
-** 2) Across piles: we maintain the invariant
-**	  if p < q, every element in pile p arrived before any equal element
-**	  in pile q
-**    so that when merging piles, ties simply go to the lowest-numbered pile.
-**    To maintain it, a new element x may not go into pile p if some
-**    higher-numbered pile might already hold an element equal to x.  "Might
+** 2) Across bookends: we maintain the invariant
+**	  if p < q, every element in bookend p arrived before any equal element
+**	  in bookend q
+**    so that when merging bookends, ties simply go to the lowest-numbered bookend.
+**    To maintain it, a new element x may not go into bookend p if some
+**    higher-numbered bookend might already hold an element equal to x.  "Might
 **    hold" means top <= x <= bottom, so we only need to look at the two ends
-**    of each pile, which we're looking at anyway.  So we scan the piles from
+**    of each bookend, which we're looking at anyway.  So we scan the bookends from
 **    the highest number down, and stop at the first one whose range contains x:
-**    every pile below it is off limits.  That pile itself can still take x at
+**    every bookend below it is off limits.  That bookend itself can still take x at
 **    its bottom, if x equals the bottom and there's room.  Note that a FULL
-**    pile can't accept x, but it can still block the piles below it.
+**    bookend can't accept x, but it can still block the bookends below it.
 **
-**    Why this works: when x goes into pile p, no higher pile contains x's
-**    value.  So any equal element that reaches a higher pile does so later.
-**    From then on that higher pile's range contains the value (a pile's range
+**    Why this works: when x goes into bookend p, no higher bookend contains x's
+**    value.  So any equal element that reaches a higher bookend does so later.
+**    From then on that higher bookend's range contains the value (a bookend's range
 **    only grows until it's merged away), which blocks any further equal
-**    elements from going into p.  A newly created pile is the highest-numbered
+**    elements from going into p.  A newly created bookend is the highest-numbered
 **    one, and holds the latest element, so it satisfies the invariant too.
-**    The range test is conservative (the pile may not really contain a value
+**    The range test is conservative (the bookend may not really contain a value
 **    equal to x), which costs us some placement choices but never stability.
 **
 ** 3) Across runs: each run holds a contiguous stretch of the input, earlier
 **    runs holding earlier elements, so when merging runs, ties go to the
 **    earlier run.
 **
-** COST.  Every element is copied exactly 3 times: into a pile, from the pile
+** COST.  Every element is copied exactly 3 times: into a bookend, from the bookend
 ** into a run, and from the run back into the original array.  That's far fewer
 ** copies than MergeSort, CombSort or HeapSort, which matters for large
 ** elements, but it takes more comparisons than MergeSort.
 **
 ** An alternative way to get stability is to record each element's original
-** position (one size_t per element) and use it to break ties between piles,
-** which allows any pile to be used.  Perhaps surprisingly, the rule above
+** position (one size_t per element) and use it to break ties between bookends,
+** which allows any bookend to be used.  Perhaps surprisingly, the rule above
 ** usually needs FEWER comparisons than that, even though it restricts the
-** choice of pile: we stop scanning early, and we don't look at a pile's bottom
+** choice of bookend: we stop scanning early, and we don't look at a bookend's bottom
 ** if x is less than its top.  The exception is already-sorted or reversed
-** input, probably because full piles could be skipped without any comparisons
+** input, probably because full bookends could be skipped without any comparisons
 ** in the alternative, but here must be checked to see if they block.
 ** Measured (Nov 2026) on one sort of 4,194,304 8-byte records, millions of
 ** comparisons (seconds), recorded positions vs. this algorithm:
@@ -329,32 +336,90 @@ int PileSortInts(int *a, size_t n)	// integer-only version, which uses a "distan
 ** In the TEST_SORTS program below (two sorts, many duplicate keys) it took
 ** 455M comparisons, vs. 569M with recorded positions, and 494M for an earlier
 ** version that wasn't stable at all; MergeSort took 174M.
+**
+** RELATED WORK (Claude's commentary, Nov 2026).  Skiena's paper was read in
+** full, but this is not a thorough literature search; check the literature
+** before claiming anything here is new.  Sources are listed at the end of this
+** comment.
+**
+** - Skiena's "encroaching lists" and the sort built on them, Melsort (S.S.
+**   Skiena, "Encroaching lists as a measure of presortedness", BIT
+**   28:775-784, 1988) are the closest relative found.
+**	* Each element is put on either end of the OLDEST sorted list on which
+**	  it fits, else it starts a new list.  This keeps the lists nested, so
+**	  the right list is found by binary search, in O(log m) for m lists.
+**	* The lists are linked lists, merged two at a time; O(n log m) overall,
+**	  hence linear on well-ordered data.  m is proved to average at most
+**	  2 sqrt(n), and conjectured to be about sqrt(2n).
+**	* It also suggests BOUNDING the number of lists: when the space for them
+**	  fills up, merge them into one list, set it aside, and carry on, which
+**	  reduces the auxiliary space.  That is much like our merging the
+**	  bookends into runs, so that idea is NOT new.
+**	* Skiena states that Melsort, as specified there, is NOT stable.
+**	* Skiena notes that linked lists are slower than arrays, which hampers
+**	  Melsort's practicality.
+** - A later paper (arXiv:1802.05662) adapts encroaching lists to a heap, and
+**   there picks the closest-fitting list end, so "closest fit" is not by
+**   itself new either.
+** - Patience sorting is a one-ended cousin: elements are only added to one end
+**   of each pile, and the piles can be merged using a priority queue.
+**   Chandramouli & Goldstein ("Patience is a Virtue", SIGMOD 2014) make it
+**   fast on modern processors, merging runs two at a time.
+**
+** COPIES.  Our low copy count is a real strength, but probably not unique.
+** The following is inferred from how these algorithms work, not measured:
+** - Melsort's linked lists need not move elements at all, but pay for pointers,
+**   which merging two at a time rewrites a number of times growing like
+**   log(m); and the data must be, or end up, in a linked list, or else be
+**   copied.
+** - Patience sorting with a priority-queue merge needs about 2 copies per
+**   element (onto a pile, then to the output).
+** - Any version that merges its lists two at a time, in arrays, makes a number
+**   of copies that grows like the log of the number of lists.
+** - Any comparison sort can move few elements by sorting pointers to them and
+**   rearranging the elements afterwards.
+** Our low count comes mainly from merging many sorted lists at once, helped by
+** circular buffers, which never shift elements when adding at either end.  So
+** the more defensible claim to novelty is the COMBINATION: two-ended lists in
+** contiguous circular buffers, merged many at a time for exactly 3 copies per
+** element whatever the input order, and stability without recording positions.
+** We did not find out whether that combination has been published.
+**
+** SOURCES
+** - Skiena 1988:			https://doi.org/10.1007/BF01954897
+** - List Heaps, the "later paper":	https://arxiv.org/abs/1802.05662
+** - Encroaching List Set (MathWorld):
+**	https://mathworld.wolfram.com/EncroachingListSet.html
+** - Patience sorting (Wikipedia, seen only as a search summary):
+**	https://en.wikipedia.org/wiki/Patience_sorting
+** - Chandramouli & Goldstein (publisher's page, seen only via search):
+**	https://www.microsoft.com/en-us/research/?p=166281
 */
-typedef struct {size_t head, count; char *a;} PILE; // head is the slot of the top element
+typedef struct {size_t head, count; char *a;} BOOKEND; // head is the slot of the top element
 
-// address of the k'th element (counting from the top) of a pile
-static char *PileElem(const PILE *pile, size_t k, size_t pileSize, size_t w)
+// address of the k'th element (counting from the top) of a bookend
+static char *BookendElem(const BOOKEND *bookend, size_t k, size_t bookendSize, size_t w)
 {
-    return pile->a + w * ((pile->head + k) % pileSize);
+    return bookend->a + w * ((bookend->head + k) % bookendSize);
 }
 
-// Merge (and empty) a bunch of piles into dest; returns the number of elements merged.
-static size_t PileMerge(char *dest, int numPiles, PILE *pile, size_t pileSize, size_t w, pfnCmpFcn compare)
+// Merge (and empty) a bunch of bookends into dest; returns the number of elements merged.
+static size_t BookendMerge(char *dest, int numBookends, BOOKEND *bookend, size_t bookendSize, size_t w, pfnCmpFcn compare)
 {
     size_t n=0;
     while(true)
     {
 	int smallest = -1, p;
-	// Must use "<", not "<=", so that ties go to the lowest-numbered pile,
+	// Must use "<", not "<=", so that ties go to the lowest-numbered bookend,
 	// which holds the earliest of the equal elements (stability rule 2).
-	for(p=0; p < numPiles; p++)
-	    if(pile[p].count > 0 && (smallest == -1 ||
-		compare(PileElem(pile+p, 0, pileSize, w), PileElem(pile+smallest, 0, pileSize, w)) < 0))
+	for(p=0; p < numBookends; p++)
+	    if(bookend[p].count > 0 && (smallest == -1 ||
+		compare(BookendElem(bookend+p, 0, bookendSize, w), BookendElem(bookend+smallest, 0, bookendSize, w)) < 0))
 		smallest = p;
 	if(smallest == -1) return n;
-	memcpy(dest + w*n++, PileElem(pile+smallest, 0, pileSize, w), w);
-	pile[smallest].head = (pile[smallest].head + 1) % pileSize;
-	pile[smallest].count--;
+	memcpy(dest + w*n++, BookendElem(bookend+smallest, 0, bookendSize, w), w);
+	bookend[smallest].head = (bookend[smallest].head + 1) % bookendSize;
+	bookend[smallest].count--;
     }
 }
 
@@ -368,85 +433,85 @@ static int RunCmp(const foint X, const foint Y)
     return c ? c : X.i - Y.i; // for stability, ties go to the earlier run
 }
 
-int PileSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
+int BookendSort(void *a, size_t n, size_t w, pfnCmpFcn compare)
 {
     if(n < 2) return 0;
 
-    int numPiles = (int)log(n) + 1, usedPiles = 0, nRuns = 0, p, r;
-    size_t pileSize = n/numPiles + 1, i, merged = 0;
-    size_t maxRuns = n/numPiles + 1; // every run but the last has at least numPiles elements
+    int numBookends = (int)log(n) + 1, usedBookends = 0, nRuns = 0, p, r;
+    size_t bookendSize = n/numBookends + 1, i, merged = 0;
+    size_t maxRuns = n/numBookends + 1; // every run but the last has at least numBookends elements
     char *A = (char*)a;
-    char *store = Malloc(numPiles * pileSize * w);
+    char *store = Malloc(numBookends * bookendSize * w);
     char *runs = Malloc(n * w); // one long array of consecutive sorted runs
     size_t *runStart = Malloc((maxRuns+1) * sizeof(runStart[0]));
-    PILE pile[numPiles];
+    BOOKEND bookend[numBookends];
     int numCopies = 0;
 
-    for(p=0; p<numPiles; p++) pile[p].a = store + p * pileSize * w;
+    for(p=0; p<numBookends; p++) bookend[p].a = store + p * bookendSize * w;
     runStart[0] = 0;
 
-    // STEP 1: build piles
+    // STEP 1: build bookends
     for(i=0; i < n; i++)
     {
 	const char *x = A + w*i;
-	int topPile = -1, bottomPile = -1;
-	// Find the best pile for x.  Go from the highest-numbered pile down,
+	int topBookend = -1, bottomBookend = -1;
+	// Find the best bookend for x.  Go from the highest-numbered bookend down,
 	// stopping at the first one that might hold an element equal to x: lower
-	// piles are off limits (stability rule 2, above).
-	for(p=usedPiles-1; p >= 0; p--)
+	// bookends are off limits (stability rule 2, above).
+	for(p=usedBookends-1; p >= 0; p--)
 	{
-	    Boolean full = (pile[p].count == pileSize); // can't take x, but may still block
-	    char *top = PileElem(pile+p, 0, pileSize, w);
+	    Boolean full = (bookend[p].count == bookendSize); // can't take x, but may still block
+	    char *top = BookendElem(bookend+p, 0, bookendSize, w);
 	    if(compare(x, top) < 0) // strictly less, for stability (rule 1)
 	    {
-		if(!full && (topPile == -1 || compare(top, PileElem(pile+topPile, 0, pileSize, w)) < 0))
-		    topPile = p;
-		continue; // x is outside this pile's range, so no need to look at its bottom
+		if(!full && (topBookend == -1 || compare(top, BookendElem(bookend+topBookend, 0, bookendSize, w)) < 0))
+		    topBookend = p;
+		continue; // x is outside this bookend's range, so no need to look at its bottom
 	    }
-	    char *bottom = PileElem(pile+p, pile[p].count-1, pileSize, w);
+	    char *bottom = BookendElem(bookend+p, bookend[p].count-1, bookendSize, w);
 	    int c = compare(x, bottom);
-	    if(c >= 0 && !full && (bottomPile == -1 ||
-		compare(bottom, PileElem(pile+bottomPile, pile[bottomPile].count-1, pileSize, w)) > 0))
-		bottomPile = p;
-	    if(c <= 0) break; // top <= x <= bottom: this pile blocks all lower ones
+	    if(c >= 0 && !full && (bottomBookend == -1 ||
+		compare(bottom, BookendElem(bookend+bottomBookend, bookend[bottomBookend].count-1, bookendSize, w)) > 0))
+		bottomBookend = p;
+	    if(c <= 0) break; // top <= x <= bottom: this bookend blocks all lower ones
 	}
 
-	if(topPile != -1 && bottomPile != -1) // choose the one with more room
+	if(topBookend != -1 && bottomBookend != -1) // choose the one with more room
 	{
-	    if(pile[topPile].count <= pile[bottomPile].count) bottomPile = -1;
-	    else topPile = -1;
+	    if(bookend[topBookend].count <= bookend[bottomBookend].count) bottomBookend = -1;
+	    else topBookend = -1;
 	}
 
-	if(topPile != -1) // put it on top
+	if(topBookend != -1) // put it on top
 	{
-	    p = topPile;
-	    pile[p].head = (pile[p].head + pileSize - 1) % pileSize;
-	    pile[p].count++;
-	    memcpy(PileElem(pile+p, 0, pileSize, w), x, w);
+	    p = topBookend;
+	    bookend[p].head = (bookend[p].head + bookendSize - 1) % bookendSize;
+	    bookend[p].count++;
+	    memcpy(BookendElem(bookend+p, 0, bookendSize, w), x, w);
 	}
-	else if(bottomPile != -1) // append to the bottom
+	else if(bottomBookend != -1) // append to the bottom
 	{
-	    p = bottomPile;
-	    memcpy(PileElem(pile+p, pile[p].count++, pileSize, w), x, w);
+	    p = bottomBookend;
+	    memcpy(BookendElem(bookend+p, bookend[p].count++, bookendSize, w), x, w);
 	}
-	else // it needs a new pile
+	else // it needs a new bookend
 	{
-	    if(usedPiles == numPiles) // none free: merge them all into a new run
+	    if(usedBookends == numBookends) // none free: merge them all into a new run
 	    {
-		size_t nItems = PileMerge(runs + w*merged, usedPiles, pile, pileSize, w, compare);
+		size_t nItems = BookendMerge(runs + w*merged, usedBookends, bookend, bookendSize, w, compare);
 		merged += nItems;
 		numCopies += nItems;
 		runStart[++nRuns] = merged;
-		usedPiles = 0;
+		usedBookends = 0;
 	    }
-	    p = usedPiles++;
-	    pile[p].head = 0;
-	    pile[p].count = 1;
-	    memcpy(pile[p].a, x, w);
+	    p = usedBookends++;
+	    bookend[p].head = 0;
+	    bookend[p].count = 1;
+	    memcpy(bookend[p].a, x, w);
 	}
 	++numCopies;
     }
-    size_t nItems = PileMerge(runs + w*merged, usedPiles, pile, pileSize, w, compare);
+    size_t nItems = BookendMerge(runs + w*merged, usedBookends, bookend, bookendSize, w, compare);
     merged += nItems;
     numCopies += nItems;
     runStart[++nRuns] = merged;
@@ -1008,12 +1073,12 @@ do
 
     printf("Starting sorts\n");
 
-    printf("Pile Sort: "); fflush(stdout);
+    printf("Bookend Sort: "); fflush(stdout);
     _compareCount = 0;
     t = uTime();
-    cpCnt = PileSortInts(ints, NUM);
+    cpCnt = BookendSortInts(ints, NUM);
     cm = _compareCount; secs = uTime()-t;
-    stable = true; // NOT checked: equal ints are indistinguishable (see PileSortInts)
+    stable = true; // NOT checked: equal ints are indistinguishable (see BookendSortInts)
     for(i=0; i<NUM-1; i++)
     {
 	assert(ints[i]<= ints[i+1]);
@@ -1040,11 +1105,11 @@ do
     printf("cm: %9d cp: %9d (%gs) %sstable\n", cm, cpCnt, secs,
 	stable?"":"un");
 
-    printf("psort: "); fflush(stdout);
+    printf("bsort: "); fflush(stdout);
     _compareCount = 0;
     t = uTime();
-    cpCnt = PointerSort(PileSort,e, NUM, sizeof(ELEMENT), PreSortCmp);
-    cpCnt += PointerSort(PileSort,e, NUM, sizeof(ELEMENT), SortCmp);
+    cpCnt = PointerSort(BookendSort,e, NUM, sizeof(ELEMENT), PreSortCmp);
+    cpCnt += PointerSort(BookendSort,e, NUM, sizeof(ELEMENT), SortCmp);
     cm = _compareCount; secs = uTime()-t;
     stable = true;
     for(i=0; i<NUM-1; i++)
