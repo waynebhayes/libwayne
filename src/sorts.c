@@ -373,7 +373,9 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 **   clearly on comparisons for random data.
 ** - Even so, on several inputs this sort ran faster than MergeSort despite
 **   making more comparisons (though comparisons were cheap here).
-** - Copies: exactly 3 per element (12.6M here), vs. 96.5M for MergeSort.
+** - Copies: exactly 3 per element (12.6M here), vs. 184.5M (2*log2(n) = 44
+**   per element) for MergeSort.  MergeSort's own return value says 96.5M,
+**   because it counts each whole-array memcpy back from tmp as ONE copy.
 ** - In the TEST_SORTS program below (two sorts, many duplicate keys) it took
 **   360M comparisons (2.25s); the previous version 455M (3.3s); MergeSort
 **   174M (2.19s).
