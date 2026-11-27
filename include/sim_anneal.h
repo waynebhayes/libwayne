@@ -28,6 +28,8 @@ typedef struct _sim_anneal {
     int direction, pBadBufPos, pBadBufLen;
     int prevPctDone; // last percentage SimAnnealRun reported; per-annealer so a second run reports from 0% again
     double temperature, tInitial, tDecay, pBadBuf[PBAD_CIRC_BUF], pBadSum, currentScore, pBadStart, pBadEnd;
+    double tolerance; // >0: iterations per temperature are chosen adaptively (see SimAnnealSetTolerance); 0: fixed maxIters
+    unsigned long batchSize; // iterations per batch when tolerance>0; 0 means sqrt(maxIters) (at least 100)
     foint currentSolution;
     pMoveFunc Move;
     pAcceptFunc Accept;
@@ -39,6 +41,14 @@ typedef struct _sim_anneal {
 SIM_ANNEAL *SimAnnealAlloc(double direction, foint initSol, pMoveFunc Move, pScoreFunc, pAcceptFunc Accept,
     unsigned long maxIters, double pBadStart, double pBadEnd, pReportFunc Report);
 Boolean SimAnnealSetSchedule(SIM_ANNEAL *sa, double tInitial, double tDecay);
+
+// Instead of spending exactly maxIters iterations spread evenly over the temperature schedule, spend however many
+// iterations each temperature needs for the score to settle there (SANA's "-tolerance"; see SANA.cpp,
+// runUsingConfidenceIntervals). Temperatures where the score is still changing get many iterations; temperatures where
+// it is flat (very hot, or nearly frozen) get few. tolerance is the target *relative* precision of the final score:
+// smaller is more careful and slower; 0 (the default) turns this off. When on, maxIters no longer sets the run length;
+// it's only used for the default batchSize. Set batchSize=0 for that default (sqrt(maxIters), at least 100).
+void SimAnnealSetTolerance(SIM_ANNEAL *sa, double tolerance, unsigned long batchSize);
 void SimAnnealAutoSchedule(SIM_ANNEAL *sa); // to automatically create schedule
 int SimAnnealRun(SIM_ANNEAL *sa); // returns >0 if success, 0 if not done and can continue, <0 if error
 foint SimAnnealSol(SIM_ANNEAL *sa);

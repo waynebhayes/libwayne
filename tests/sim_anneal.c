@@ -59,7 +59,8 @@ Boolean AcceptReject(Boolean accept, const foint f) {
 }
 
 
-int main(void) {
+// Optional argument: a tolerance, to use the adaptive schedule (see SimAnnealSetTolerance) instead of maxIters.
+int main(int argc, char *argv[]) {
     int i;
     foint f;
     // srand48(GetFancySeed(false)); // comment out this line for reproducible results
@@ -69,6 +70,7 @@ int main(void) {
     printf("%g\n", Score(true, f));
     SIM_ANNEAL *sa = SimAnnealAlloc(-1, (foint)(void*)_array, SwapElements, Score, AcceptReject, maxIters, 0,0,NULL);
     SimAnnealAutoSchedule(sa);
+    if(argc > 1) SimAnnealSetTolerance(sa, atof(argv[1]), 0);
     int result = SimAnnealRun(sa);
     printf("SimAnnealRun returned %d\n", result);
     printf("%g\n", Score(true, f));
