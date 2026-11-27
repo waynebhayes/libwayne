@@ -354,6 +354,10 @@ int BookendSortInts(int *a, size_t n)	// integer-only version, which uses a "dis
 **   nested x1	nesting and the ordered merge, factor 1
 **   nested x4	the same with factor 4, which is THIS code
 **   merge	MergeSort
+** These came from an early ad-hoc test (its own input generators, single
+** timings).  The paper's tables come from a separate benchmark, with each
+** timing averaged over at least 10 seconds of repeated sorts, and differ
+** somewhat (e.g. 53.6M comparisons on 4 values, not 63.5M).
 **
 **			unnested     nest only    nested x1    nested x4    merge
 ** random		212.1 (2.42) 191.2 (2.38) 155.9 (2.14) 151.5 (1.30)  87.0 (1.36)
